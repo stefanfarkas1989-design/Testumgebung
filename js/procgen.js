@@ -225,6 +225,44 @@ const PG_THEME = {
   void:  { floor: 'marble', wall: 'marblewall', top: 'marbletop' },
 };
 
+// Echte CC0-Fototexturen (Poly Haven) ersetzen die prozeduralen Texturen, sobald sie geladen sind.
+// Fehlt eine Datei oder ist das Netz weg, bleibt die prozedurale Textur stehen.
+const PG_PHOTO = {
+  flag: 'cobblestone_floor_01', brick: 'rock_wall_08', rough: 'dark_rock',
+  rock: 'rock_boulder_dry', rockwall: 'dark_rock', rockrough: 'dark_rock_02',
+  obsbrick: 'broken_brick_wall', lavarough: 'dark_rock_02',
+  marble: 'marble_01', marblewall: 'marble_01',
+};
+// Farbstich pro Material, damit die Fotos zur Stimmung der Welt passen
+const PG_TINT = {
+  flag: 0xd8d4dc, brick: 0xc8c8d0, rough: 0xb8b4bc, rock: 0x8c969e, rockwall: 0xa8b0b8, rockrough: 0x9aa2aa,
+  obsbrick: 0x8a5a52, lavarough: 0x8a6a68, marble: 0x8a90ac, marblewall: 0x70758c,
+};
+// Fotos decken mehr Weltfläche ab als die prozeduralen Texturen (Wiederholung < 1 = größer)
+const PG_SCALE = { flag: 0.3, brick: 0.7, rough: 0.5, rock: 0.45, rockwall: 0.6, rockrough: 0.5, obsbrick: 0.45, lavarough: 0.5, marble: 0.5, marblewall: 0.5 };
+PG.photoOn = !/[?&]nophoto/.test(location.search);
+
+function pgLoadPhoto(kind, set) {
+  const name = PG_PHOTO[kind];
+  if (!name || !PG.photoOn || typeof Image === 'undefined') return;
+  const parts = { map: 'diff', normal: 'nor_gl', orm: 'arm' };
+  let left = 3, ok = true;
+  const imgs = {};
+  for (const k in parts) {
+    const im = new Image();
+    im.onload = () => { imgs[k] = im; if (--left === 0 && ok) pgApplyPhoto(kind, set, imgs); };
+    im.onerror = () => { ok = false; left--; };
+    im.src = 'assets/tex/' + name + '_' + parts[k] + '.jpg';
+  }
+}
+function pgApplyPhoto(kind, set, imgs) {
+  const sc = PG_SCALE[kind] || 1;
+  for (const k in imgs) { const t = set[k]; t.dispose(); t.image = imgs[k]; t.repeat.set(sc, sc); t.needsUpdate = true; }
+  set.photo = true;
+  PG.photoLoaded = (PG.photoLoaded || 0) + 1;
+  if (PG.onPhoto) PG.onPhoto(kind);
+}
+
 // Liefert { map, normalMap, orm, emissive } als THREE-Texturen (zwischengespeichert)
 function pgTextures(kind, renderer) {
   if (PG.sets[kind]) return PG.sets[kind];
@@ -239,5 +277,7 @@ function pgTextures(kind, renderer) {
     t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter;
     return t;
   };
-  return PG.sets[kind] = { map: mk(out.albedo, true), normal: mk(out.normal, false), orm: mk(out.orm, false), emissive: out.emissive ? mk(out.emissive, true) : null };
+  const set = PG.sets[kind] = { map: mk(out.albedo, true), normal: mk(out.normal, false), orm: mk(out.orm, false), emissive: out.emissive ? mk(out.emissive, true) : null };
+  pgLoadPhoto(kind, set);
+  return set;
 }

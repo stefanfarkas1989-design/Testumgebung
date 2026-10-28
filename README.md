@@ -38,7 +38,8 @@ python3 -m http.server 8000
 - Synthetisierter Sound (WebAudio, Hall, 3D-Positionierung) und Kampf-Feedback: Trefferpause, Betäubung, Rückstoß, Kamerawackeln, Herzschlag bei wenig Leben (🔊-Button schaltet stumm)
 - **3D-Grafik** (Three.js, in `lib/` mitgeliefert): perspektivische Kamera, 3D-Wände und -Figuren aus Low-Poly-Formen, dynamisches Licht mit Fackeln, Glüh-Effekte, Partikel. Realistischere Optik durch Relief (Normal-Maps), weiche Schatten (Qualität „Hoch“), Filmfarben, Wandgesimse und Fackelfunken. Die Kamera lässt sich im Pause-Menü (Zoom, Neigung) und mit dem Mausrad einstellen. Im Pause-Menü lässt sich auf 2D umschalten und die Qualität wählen (Auto passt sich der Leistung des Geräts an)
 - **Physikalisch basierte Grafik (PBR):** prozedural erzeugte, kachelbare Materialien (Flaggensteine mit Moos und nassen Stellen, Ziegel mit Mörtel und Ruß, Fels mit Mineraladern, Basalt mit glühenden Lavarissen, polierter Marmor) mit Normalen-, Rauheits- und Verdeckungskarten, Umgebungsreflexen, Bloom-Nachbearbeitung (Filmfarben, Vignette, Korn) und Schatten vom Spielerlicht. Hohe Qualität nutzt alles, Mittel spart Reflexe und Schatten, Niedrig auch die Nachbearbeitung
-- Prozedurale Grafik ohne Bilddateien: Stein-Texturen, dynamisches Licht (Fackeln, Feuerball, Blitz), animierte Figuren, Blut- und Knochenspuren
+- **Foto-Texturen (CC0):** Poly-Haven-Materialien in `assets/tex/` (siehe `assets/tex/CREDITS.md`); mit `?nophoto` in der Adresse lässt sich die rein prozedurale Grafik testen
+- Prozedurale Grafik als Grundlage und Notlösung: Stein-Texturen, dynamisches Licht (Fackeln, Feuerball, Blitz), animierte Figuren, Blut- und Knochenspuren
 
 ## Balance
 

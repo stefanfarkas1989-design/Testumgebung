@@ -259,10 +259,20 @@ function cycleQuality() {
 }
 
 // ---------- Materialien für Boden, Wände, Oberseiten ----------
+// Farbstich der Fototextur (die prozeduralen sind schon passend gefärbt)
+function tintLevelMat(m, T) {
+  const k = m.userData.kind, tint = (T && T.photo && PG_TINT[k]) || 0xffffff;
+  m.color.setHex(tint);
+  if (m.userData.echo) m.color.multiply(new THREE.Color(0xb4bed8));
+}
+if (typeof PG !== 'undefined') PG.onPhoto = kind => {
+  for (const m of R3.levelMats || []) if (m.userData.kind === kind) tintLevelMat(m, PG.sets[kind]);
+};
+
 function levelMat(role) {
   const th = R3.levelTheme, base = th.id.replace('_e', ''), kinds = PG_THEME[base] || PG_THEME.crypt;
   const T = pgTextures(kinds[role], R3.renderer), q = R3.level_q;
-  const common = { map: T.map, vertexColors: true, color: th.id.endsWith('_e') ? 0xb4bed8 : 0xffffff };
+  const common = { map: T.map, vertexColors: true, color: 0xffffff };
   let m;
   if (q === 'high') {
     m = new THREE.MeshStandardMaterial(Object.assign(common, {
@@ -272,6 +282,8 @@ function levelMat(role) {
   } else {
     m = new THREE.MeshLambertMaterial(Object.assign(common, q === 'mid' ? { normalMap: T.normal, normalScale: new THREE.Vector2(1, 1), aoMap: T.orm } : {}));
   }
+  m.userData.kind = kinds[role]; m.userData.echo = th.id.endsWith('_e');
+  R3.levelMats.push(m); tintLevelMat(m, T);
   if (T.emissive && role === 'floor') {
     m.emissiveMap = T.emissive; m.emissive = new THREE.Color(0xffffff); m.emissiveIntensity = base === 'cave' ? 0.9 : 1.2;
     R3.glowMat = m; R3.glowBase = m.emissiveIntensity;
@@ -302,7 +314,7 @@ function buildLevel() {
   }
   R3.flames = []; R3.stairsMesh = null;
   const th = G.theme;
-  R3.levelTheme = th; R3.glowMat = null;
+  R3.levelTheme = th; R3.glowMat = null; R3.levelMats = [];
   pgTable();
   const T = TILE, WALL = 96, LOW = 24, S = 96;
   const isF = (x, y) => x >= 0 && y >= 0 && x < MW && y < MH && (G.map[y * MW + x] === 1 || G.deco[y * MW + x] === 1);
