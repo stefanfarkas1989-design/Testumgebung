@@ -17,7 +17,7 @@ python3 -m http.server 8000
 | Feuerball | Linksklick halten / `1` | großer Button rechts unten (Auto-Zielen) |
 | Frostnova / Kettenblitz / Teleport | `2` / `3` / `4` | Buttons im Bogen |
 | Heiltrank | `Q` | 🧪-Button |
-| Inventar | `I` / `Tab` | 🎒-Button |
+| Inventar | `I` / `Tab` | 🎒-Button (Item antippen = Details und Vergleich, nochmal antippen = anlegen) |
 | Pause | `P` / `Esc` | ⏸-Button (pausiert auch automatisch beim App-Wechsel) |
 
 ## Inhalt

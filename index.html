@@ -40,19 +40,26 @@
 </div>
 
 <div id="panel" class="hidden">
-  <div class="pbox">
-    <header><h2>Charakter</h2><button id="pClose">✕</button></header>
+  <div class="pbox inv" id="invBox" data-tab="eq">
+    <header>
+      <h2>Inventar <small id="lvlInfo"></small></h2>
+      <div class="hbtns"><button id="btnSort">Sortieren</button><button id="pClose">✕</button></div>
+    </header>
+    <div class="tabs"><button data-t="eq" class="on">Ausrüstung</button><button data-t="bag">Rucksack <span id="invCount"></span></button></div>
     <div class="pcols">
       <section class="colL">
         <h3>Ausrüstung</h3><div id="eqGrid"></div>
         <h3>Werte</h3><div id="statList"></div>
       </section>
       <section class="colM">
-        <h3>Rucksack <small id="invCount"></small></h3>
+        <h3>Rucksack <small id="invCount2"></small></h3>
         <div id="invGrid"></div>
         <button id="btnJunk" class="wide">Normale Items wegwerfen</button>
       </section>
-      <section class="colR"><h3>Details</h3><div id="detail"><p class="muted">Tippe ein Item an.</p></div></section>
+      <section class="colR" id="sheet">
+        <div class="sheetHead"><h3>Details</h3><button id="sheetClose" aria-label="Schließen">✕</button></div>
+        <div id="detail"><p class="muted">Tippe ein Item an. Tippe es nochmal, um es anzulegen.</p></div>
+      </section>
     </div>
   </div>
 </div>

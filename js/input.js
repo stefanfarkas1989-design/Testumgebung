@@ -110,6 +110,9 @@ const Input = {
   $('sReset').onclick = () => { respec(); UI.renderSkills(); };
   $('btnSkills').addEventListener('pointerdown', e => { e.preventDefault(); UI.showPanel('skills'); });
   $('btnJunk').onclick = () => UI.junk();
+  $('btnSort').onclick = () => UI.sortInv();
+  $('sheetClose').onclick = () => { UI.sel = null; UI.renderPanel(); };
+  document.querySelectorAll('#invBox .tabs button').forEach(b => { b.onclick = () => UI.setTab(b.dataset.t); });
   $('btnSnd').addEventListener('pointerdown', e => { e.preventDefault(); Sfx.init(); Sfx.setMuted(!Sfx.muted); });
   // Browser erlauben Audio erst nach der ersten Eingabe
   const unlock = () => Sfx.init();
