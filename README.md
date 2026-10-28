@@ -18,6 +18,7 @@ python3 -m http.server 8000
 | Frostnova / Kettenblitz / Teleport | `2` / `3` / `4` | Buttons im Bogen |
 | Heiltrank | `Q` | 🧪-Button |
 | Inventar | `I` / `Tab` | 🎒-Button |
+| Pause | `P` / `Esc` | ⏸-Button (pausiert auch automatisch beim App-Wechsel) |
 
 ## Inhalt
 

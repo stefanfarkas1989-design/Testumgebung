@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 
 const G = {
   state: 'title',      // title | play | dead
-  paused: false,
+  paused: false, pausedMenu: false,
   floor: 1,
   map: null, rooms: [], startRoom: null, bossRoom: null,
   explored: new Uint8Array(MW * MH),

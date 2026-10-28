@@ -120,11 +120,35 @@ const UI = {
   },
 
   // ---------- Inventar ----------
-  updateSndButton() { $('btnSnd').textContent = Sfx.muted ? '🔇' : '🔊'; },
+  updateSndButton() {
+    $('btnSnd').textContent = Sfx.muted ? '🔇' : '🔊';
+    $('pSound').textContent = Sfx.muted ? '🔇 Ton: aus' : '🔊 Ton: an';
+  },
+
+  // ---------- Pause ----------
+  setPause(on) {
+    if (G.state !== 'play') return;
+    if (on) {
+      UI.showPanel(null);
+      G.paused = true; G.pausedMenu = true;
+      Input.releaseAll();
+      $('pauseOverlay').classList.remove('hidden');
+      if (Sfx.ctx) Sfx.ctx.suspend();
+    } else {
+      G.paused = false; G.pausedMenu = false;
+      $('pauseOverlay').classList.add('hidden');
+      if (Sfx.ctx) Sfx.ctx.resume();
+    }
+  },
+  togglePause() {
+    if (G.pausedMenu) UI.setPause(false);
+    else if (G.paused) UI.showPanel(null);
+    else UI.setPause(true);
+  },
 
   // which: 'inv' | 'skills' | null (alles schließen)
   showPanel(which) {
-    if (G.state !== 'play') return;
+    if (G.state !== 'play' || G.pausedMenu) return;
     const cur = !$('panel').classList.contains('hidden') ? 'inv' : !$('skillPanel').classList.contains('hidden') ? 'skills' : null;
     const next = which === cur ? null : which;
     $('panel').classList.toggle('hidden', next !== 'inv');

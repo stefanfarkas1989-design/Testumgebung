@@ -87,6 +87,12 @@ const Input = {
   $('btnPot').addEventListener('pointerdown', e => { e.preventDefault(); usePotion(); });
   $('btnInv').addEventListener('pointerdown', e => { e.preventDefault(); UI.togglePanel(); });
   $('pClose').onclick = () => UI.showPanel(null);
+  $('btnPause').addEventListener('pointerdown', e => { e.preventDefault(); UI.setPause(true); });
+  $('pResume').onclick = () => UI.setPause(false);
+  $('pSound').onclick = () => { Sfx.init(); Sfx.setMuted(!Sfx.muted); };
+  $('pMenu').onclick = () => { saveGame(); UI.setPause(false); UI.showTitle(); };
+  // Beim Wegwischen der App / Tab-Wechsel automatisch pausieren
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play' && !G.pausedMenu) UI.setPause(true); });
   $('sClose').onclick = () => UI.showPanel(null);
   $('sReset').onclick = () => { respec(); UI.renderSkills(); };
   $('btnSkills').addEventListener('pointerdown', e => { e.preventDefault(); UI.showPanel('skills'); });
@@ -104,7 +110,8 @@ const Input = {
     if (e.repeat) return;
     if (k === 'i' || k === 'tab') { UI.showPanel('inv'); return; }
     if (k === 'k') { UI.showPanel('skills'); return; }
-    if (k === 'escape' && G.paused) { UI.showPanel(null); return; }
+    if (k === 'escape') { UI.togglePause(); return; }
+    if (k === 'p') { UI.togglePause(); return; }
     Input.keys[k] = true;
     if (k >= '1' && k <= '4') { Input.held[+k - 1] = true; }
     if (k === 'q') usePotion();
