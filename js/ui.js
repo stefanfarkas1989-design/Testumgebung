@@ -134,6 +134,7 @@ const UI = {
     $('pGfx').textContent = `Grafik: ${G.gfx === '3d' ? '3D' : '2D'}`;
     $('pQual').textContent = `Qualität: ${q}`;
     $('pQual').style.display = G.gfx === '3d' ? '' : 'none';
+    $('pCam').style.display = G.gfx === '3d' ? '' : 'none';
   },
 
   updateSndButton() {
@@ -145,6 +146,7 @@ const UI = {
   setPause(on) {
     if (G.state !== 'play') return;
     if (on) {
+      if (UI.camSync) UI.camSync();
       UI.showPanel(null);
       G.paused = true; G.pausedMenu = true;
       Input.releaseAll();

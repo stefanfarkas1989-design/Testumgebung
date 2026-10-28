@@ -4,9 +4,26 @@
 
 const M3 = { mats: {}, geos: {}, cur: null };
 
+// Feine Körnung für alle Oberflächen: bricht das Plastik-Aussehen
+function detailTex() {
+  if (M3.detail) return M3.detail;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d'), R = mulberry(4242);
+  for (let y = 0; y < 64; y += 2) for (let x = 0; x < 64; x += 2) {
+    const v = 190 + R() * 65 | 0;
+    g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, y, 2, 2);
+  }
+  g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 1;
+  for (let i = 0; i < 14; i++) { const x = R() * 64, y = R() * 64; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (R() - 0.5) * 22, y + (R() - 0.5) * 22); g.stroke(); }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
+  return M3.detail = t;
+}
 function lam(color, emissive, ei) {
   const k = color + '|' + (emissive || 0) + '|' + (ei || 0);
-  return M3.mats[k] || (M3.mats[k] = new THREE.MeshLambertMaterial({ color, emissive: emissive || 0, emissiveIntensity: ei || 1 }));
+  if (M3.mats[k]) return M3.mats[k];
+  const d = detailTex();
+  return M3.mats[k] = new THREE.MeshLambertMaterial({ color, emissive: emissive || 0, emissiveIntensity: ei || 1, map: d, bumpMap: d, bumpScale: 1.6 });
 }
 function bas(color) {
   const k = 'b' + color;

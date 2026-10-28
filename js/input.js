@@ -90,6 +90,17 @@ const Input = {
   $('btnPause').addEventListener('pointerdown', e => { e.preventDefault(); UI.setPause(true); });
   $('pResume').onclick = () => UI.setPause(false);
   $('pSound').onclick = () => { Sfx.init(); Sfx.setMuted(!Sfx.muted); };
+  // Kamera
+  const camSave = () => { try { localStorage.setItem('aschenfall-cam', JSON.stringify({ z: G.camZoom, t: G.camTilt })); } catch (e) { /* egal */ } };
+  const camSync = () => { $('camZoom').value = Math.round(G.camZoom * 100); $('camTilt').value = Math.round(G.camTilt * 100); };
+  $('camZoom').oninput = e => { G.camZoom = e.target.value / 100; camSave(); };
+  $('camTilt').oninput = e => { G.camTilt = e.target.value / 100; camSave(); };
+  $('camReset').onclick = () => { G.camZoom = 1; G.camTilt = 0.95; camSync(); camSave(); };
+  UI.camSync = camSync;
+  window.addEventListener('wheel', e => {
+    if (G.state !== 'play' || G.paused) return;
+    G.camZoom = clamp(G.camZoom * (e.deltaY < 0 ? 1.08 : 0.926), 0.6, 1.7); camSave(); camSync();
+  }, { passive: true });
   $('pGfx').onclick = () => { setGfx(G.gfx === '3d' ? '2d' : '3d'); };
   $('pQual').onclick = () => cycleQuality();
   $('pMenu').onclick = () => { saveGame(); UI.setPause(false); UI.showTitle(); };

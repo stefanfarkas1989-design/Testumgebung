@@ -35,6 +35,10 @@ function initR3() {
   if (!renderer.capabilities.isWebGL2 && !renderer.getContext()) return false;
   renderer.useLegacyLights = true;
   renderer.setClearColor(0x050408, 1);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.25;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   R3.renderer = renderer;
   // Auf Handys kann der GPU-Kontext beim App-Wechsel verloren gehen: Wiederherstellung erlauben
   renderer.domElement.addEventListener('webglcontextlost', e => e.preventDefault());
@@ -44,7 +48,14 @@ function initR3() {
   R3.level = new THREE.Group(); R3.dyn = new THREE.Group();
   R3.scene.add(R3.level, R3.dyn);
   R3.amb = new THREE.AmbientLight(0x404060, 1.2); R3.scene.add(R3.amb);
-  R3.scene.fog = new THREE.Fog(0x050408, 420, 1050);
+  // „Mond“-Licht: wirft weiche Schatten (nur Qualität Hoch)
+  R3.sun = new THREE.DirectionalLight(0x9aa8e0, 0.55);
+  R3.sun.castShadow = false;
+  R3.sun.shadow.mapSize.set(1024, 1024);
+  const shc = R3.sun.shadow.camera; shc.left = -520; shc.right = 520; shc.top = 520; shc.bottom = -520; shc.near = 50; shc.far = 1900;
+  R3.sun.shadow.bias = -0.0007; R3.sun.shadow.normalBias = 0.9;
+  R3.scene.add(R3.sun, R3.sun.target);
+  R3.scene.fog = new THREE.Fog(0x050408, 380, 1050);
 
   // Licht-Pool
   for (let i = 0; i < 8; i++) {
@@ -109,6 +120,8 @@ function initR3() {
 function applyQuality() {
   const Q = Q_LEVELS[R3.level_q];
   R3.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pr));
+  R3.sun.castShadow = R3.level_q === 'high';
+  if (R3.levelMesh && R3.atlasCur) { const old = R3.levelMesh.material; R3.levelMesh.material = levelMaterial(R3.atlasCur); old.dispose(); }
   for (let i = 0; i < R3.slots.length; i++) {
     const vis = i < Q.lights;
     if (R3.slots[i].light.visible !== vis) R3.slots[i].light.visible = vis;
@@ -152,21 +165,54 @@ function cycleQuality() {
 function buildAtlas(theme) {
   if (R3.atlas[theme.id]) return R3.atlas[theme.id];
   const S = getSet(theme), pal = theme.pal, k = THEMES.indexOf(theme) * 1000;
-  const C = 48, W = C * 8, H = C * 3;
+  const C = 96, W = C * 8, H = C * 3;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
   const gcv = pal.glow ? document.createElement('canvas') : null;
   if (gcv) { gcv.width = W; gcv.height = H; }
   const gg = gcv ? gcv.getContext('2d') : null;
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
   const put = (img, col, row) => {
-    g.drawImage(img, col * C, row * C);
-    if (gg && img.glowTex) gg.drawImage(img.glowTex, col * C, row * C);
+    g.drawImage(img, col * C, row * C, C, C);
+    if (gg && img.glowTex) gg.drawImage(img.glowTex, col * C, row * C, C, C);
   };
   for (let i = 0; i < 8; i++) put(S.floor[i], i, 0);
   for (let i = 0; i < 4; i++) { put(genFace(555 + k + i * 31, pal, 1), i, 1); put(genFace(555 + k + i * 31, pal, 2), 4 + i, 1); }
   for (let i = 0; i < 3; i++) put(S.roof[i], i, 2);
+  // feines Korn über allem: macht die Oberflächen weniger glatt
+  const gid = g.getImageData(0, 0, W, H), gp = gid.data;
+  for (let i = 0; i < gp.length; i += 4) { const n = (Math.random() - 0.5) * 20; gp[i] += n; gp[i + 1] += n; gp[i + 2] += n; }
+  g.putImageData(gid, 0, 0);
   const mk = c => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; t.magFilter = THREE.LinearFilter; return t; };
-  return R3.atlas[theme.id] = { tex: mk(cv), glow: gcv ? mk(gcv) : null, W, H, C };
+  const nt = new THREE.CanvasTexture(makeNormalMap(cv, C, 2.2)); nt.generateMipmaps = false; nt.minFilter = THREE.LinearFilter; nt.magFilter = THREE.LinearFilter;
+  return R3.atlas[theme.id] = { tex: mk(cv), nrm: nt, glow: gcv ? mk(gcv) : null, W, H, C };
+}
+
+// Relief aus der Helligkeit der Textur (innerhalb jeder Zelle, damit nichts in die Nachbarzelle blutet)
+function makeNormalMap(cv, C, strength) {
+  const W = cv.width, H = cv.height, src = cv.getContext('2d').getImageData(0, 0, W, H).data;
+  const h = new Float32Array(W * H);
+  for (let i = 0; i < W * H; i++) h[i] = (0.299 * src[i * 4] + 0.587 * src[i * 4 + 1] + 0.114 * src[i * 4 + 2]) / 255;
+  const out = document.createElement('canvas'); out.width = W; out.height = H;
+  const og = out.getContext('2d'), img = og.createImageData(W, H), d = img.data;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const cx0 = Math.floor(x / C) * C, cy0 = Math.floor(y / C) * C;
+    const xl = Math.max(cx0, x - 1), xr = Math.min(cx0 + C - 1, x + 1), yu = Math.max(cy0, y - 1), yd = Math.min(cy0 + C - 1, y + 1);
+    const dx = h[y * W + xr] - h[y * W + xl], dy = h[yd * W + x] - h[yu * W + x];
+    let nx = -dx * strength, ny = dy * strength, nz = 1;
+    const l = Math.hypot(nx, ny, nz); nx /= l; ny /= l; nz /= l;
+    const o = (y * W + x) * 4;
+    d[o] = (nx * 0.5 + 0.5) * 255; d[o + 1] = (ny * 0.5 + 0.5) * 255; d[o + 2] = (nz * 0.5 + 0.5) * 255; d[o + 3] = 255;
+  }
+  og.putImageData(img, 0, 0);
+  return out;
+}
+
+function levelMaterial(A) {
+  if (R3.level_q === 'high') {
+    return new THREE.MeshStandardMaterial({ map: A.tex, normalMap: A.nrm, normalScale: new THREE.Vector2(1, 1), roughness: 0.8, metalness: 0.0, vertexColors: true });
+  }
+  return new THREE.MeshLambertMaterial({ map: A.tex, normalMap: A.nrm, normalScale: new THREE.Vector2(0.9, 0.9), vertexColors: true });
 }
 
 // ---------- Statisches Level ----------
@@ -245,6 +291,16 @@ function buildLevel() {
         const va = cr.v0 + t0 * (cr.v1 - cr.v0), vb = cr.v0 + t1 * (cr.v1 - cr.v0);
         const sh = y => 0.55 + 0.45 * Math.min(1, y / WALL);
         pushQuad(f.q(a, b), f.n, [[cr.u0, va], [cr.u1, va], [cr.u1, vb], [cr.u0, vb]], [sh(a), sh(a), sh(b), sh(b)], pos, nor, uv, col, idx);
+        if (f.n[2] === 1 && nh === 0 && hh === WALL && k === 0) {
+          // Sockel und Gesims geben den Wänden Tiefe
+          const z1 = pz + T, rc = rect(h % 3, 2), U = [[rc.u0, rc.v1], [rc.u0, rc.v0], [rc.u1, rc.v0], [rc.u1, rc.v1]];
+          const wq = (y0, y1, z) => [[px, y0, z], [px + T, y0, z], [px + T, y1, z], [px, y1, z]];
+          const uq = [[rc.u0, rc.v0], [rc.u1, rc.v0], [rc.u1, rc.v1], [rc.u0, rc.v1]];
+          pushQuad(wq(0, 9, z1 + 3), [0, 0, 1], uq, [0.7, 0.7, 0.9, 0.9], pos, nor, uv, col, idx);
+          pushQuad([[px, 9, z1], [px, 9, z1 + 3], [px + T, 9, z1 + 3], [px + T, 9, z1]], [0, 1, 0], U, [0.9, 0.9, 0.9, 0.9], pos, nor, uv, col, idx);
+          pushQuad(wq(WALL - 13, WALL, z1 + 5), [0, 0, 1], uq, [0.75, 0.75, 1, 1], pos, nor, uv, col, idx);
+          pushQuad([[px, WALL, z1], [px, WALL, z1 + 5], [px + T, WALL, z1 + 5], [px + T, WALL, z1]], [0, 1, 0], U, [0.95, 0.95, 0.95, 0.95], pos, nor, uv, col, idx);
+        }
         if (A.glow && f.n[2] === 1 && G.set.face[h % 4].glowTex) {
           pushQuad(f.q(a, b).map(p => [p[0], p[1], p[2] + 0.6]), null, [[cr.u0, va], [cr.u1, va], [cr.u1, vb], [cr.u0, vb]], null, gpos, null, guv, null, gidx);
         }
@@ -257,8 +313,9 @@ function buildLevel() {
   geom.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   geom.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   geom.setIndex(idx);
-  const mesh = new THREE.Mesh(geom, new THREE.MeshLambertMaterial({ map: A.tex, vertexColors: true }));
-  mesh.userData.own = true;
+  const mesh = new THREE.Mesh(geom, levelMaterial(A));
+  mesh.userData.own = true; mesh.castShadow = true; mesh.receiveShadow = true;
+  R3.levelMesh = mesh; R3.atlasCur = A;
   R3.level.add(mesh);
   if (A.glow && gpos.length) {
     const gg = new THREE.BufferGeometry();
@@ -273,7 +330,8 @@ function buildLevel() {
   // Umgebung
   const amb = hexOf(th.ambient);
   R3.amb.color.setHex(amb); R3.amb.intensity = 1.0;
-  R3.scene.fog.color.setHex(0x050408);
+  const fogc = { crypt: 0x0c0916, cave: 0x07141d, lava: 0x1e0b07 }[th.id] || 0x050408;
+  R3.scene.fog.color.setHex(fogc); R3.renderer.setClearColor(fogc, 1);
 
   // Wand-Lichtquellen
   for (const t of G.torches) buildWallLight(t, th);
@@ -443,6 +501,7 @@ function placeRig(owner, rig, x, z, faceAng, scale, dt) {
   owner.fa += d * Math.min(1, dt * 14);
   g.rotation.y = -owner.fa;
   rig.shadow.scale.set(rig.baseR * 2.8, rig.baseR * 2.8, 1);
+  rig.shadow.visible = true;
 }
 function rigGlows(owner, rig, scale, extraAlpha) {
   const c = Math.cos(owner.fa), s = Math.sin(owner.fa), gs = rig.glowScale || 1, g = rig.group;
@@ -453,6 +512,11 @@ function rigGlows(owner, rig, scale, extraAlpha) {
   };
   for (const gl of rig.glows) emit(gl);
   if (rig.extraGlows) { const out = []; rig.extraGlows(owner, out); for (const gl of out) emit(gl); }
+}
+function setRigShadow(rig, on) {
+  if (rig.shOn === on) return;
+  rig.shOn = on;
+  for (const m of rig.meshes) m.castShadow = on;
 }
 function setRigState(rig, state) {
   if (rig.state === state) return;
@@ -473,6 +537,7 @@ function syncEnemies(dt, view) {
     }
     o.seen = R3.frame;
     const rig = o.rig, s = e.r / e.def.r, st = stOf(e);
+    setRigShadow(rig, R3.level_q === 'high' && Math.abs(e.x - P.x) < 480 && Math.abs(e.y - P.y) < 400);
     if (rig.anim) rig.anim(e, st);
     placeRig(e, rig, e.x, e.y, e.ang || 0, s, dt);
     setRigState(rig, e.flash > 0 ? 'flash' : (e.slow > 0 && e.stun > 0.3) ? 'ice' : 'norm');
@@ -489,6 +554,7 @@ function syncPlayer(dt) {
   let o = R3.player;
   if (!o) { const rig = buildRig('player'); rig.baseR = 11; o = R3.player = { group: rig.group, rig }; R3.dyn.add(rig.group); }
   const rig = o.rig;
+  setRigShadow(rig, R3.level_q === 'high');
   if (rig.anim) rig.anim(P, { mv: P.moving, w: Math.sin(P.walk) * (P.moving ? 0.75 : 0.05), bob: P.moving ? Math.abs(Math.sin(P.walk)) * 1.6 : 0, lunge: 0, walk: P.walk });
   placeRig(P, rig, P.x, P.y, P.face, 1, dt);
   rigGlows(P, rig, 1, 1);
@@ -757,10 +823,18 @@ function render3d() {
   R3.glow.n = 0; R3.solid.n = 0;
 
   // Kamera
-  const dist = 360 / G.zoom, pitch = 0.95;
+  const dist = 360 / (G.zoom * (G.camZoom || 1)), pitch = G.camTilt || 0.95;
+  // leichter Vorlauf in Laufrichtung
+  const mv = G.state === 'play' && !G.paused ? Input.moveVec() : { x: 0, y: 0 };
+  R3.lx = (R3.lx || 0) + (mv.x * 50 - (R3.lx || 0)) * Math.min(1, dtReal * 2.5);
+  R3.lz = (R3.lz || 0) + (mv.y * 40 - (R3.lz || 0)) * Math.min(1, dtReal * 2.5);
+  const cx = G.cam.x + R3.lx, cz = G.cam.y + R3.lz;
   const sx = (G.shake ? rnd(-G.shake, G.shake) : 0) + G.kx, sz = (G.shake ? rnd(-G.shake, G.shake) : 0) + G.ky;
-  R3.cam.position.set(G.cam.x + sx, dist * Math.sin(pitch) + 6, G.cam.y + dist * Math.cos(pitch) + sz);
-  R3.cam.lookAt(G.cam.x + sx, 14, G.cam.y + sz);
+  R3.cam.position.set(cx + sx, dist * Math.sin(pitch) + 6, cz + dist * Math.cos(pitch) + sz);
+  R3.cam.lookAt(cx + sx, 14, cz + sz);
+  // Mond-Licht folgt dem Spieler (auf Texel gerastert, damit Schatten nicht flimmern)
+  R3.sun.target.position.set(Math.round(P.x), 0, Math.round(P.y));
+  R3.sun.position.set(Math.round(P.x) - 330, 760, Math.round(P.y) + 420);
   R3.cam.updateMatrixWorld();
 
   const hw = G.vw / G.zoom / 2 + 260, hh = G.vh / G.zoom / 2 + 360;
@@ -782,6 +856,13 @@ function render3d() {
     }
   }
   if (R3.glowMat) R3.glowMat.opacity = 0.55 + 0.25 * Math.sin(G.time * 1.7);
+  if (th.wall !== 'crystal') for (const t of G.torches) {
+    if (!view(t.x, t.y, 40)) continue;
+    for (let k = 0; k < 4; k++) {
+      const u = (G.time * 0.7 + k * 0.25 + t.ph) % 1, z0 = t.y + TILE / 2;
+      pushGlow(t.x + Math.sin(k * 7 + t.ph + G.time * 2) * 7 * u, 72 + u * 55, z0 + 6 + Math.cos(k * 5 + t.ph) * 4 * u, 7 * (1 - u), th.lightCol, 0.9 * (1 - u));
+    }
+  }
   // Schwebeteilchen
   const am = th.amb;
   for (const p of G.amb) {

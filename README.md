@@ -31,7 +31,7 @@ python3 -m http.server 8000
 - Legendäre Items mit Spezialkräften (Lebensraub, Brand, Explosion, Dornen, Mana/Tempo bei Kill, Frost-Aura)
 - Champion-Gegner, Heiltränke, Level-Ups, Autosave (localStorage)
 - Synthetisierter Sound (WebAudio, Hall, 3D-Positionierung) und Kampf-Feedback: Trefferpause, Betäubung, Rückstoß, Kamerawackeln, Herzschlag bei wenig Leben (🔊-Button schaltet stumm)
-- **3D-Grafik** (Three.js, in `lib/` mitgeliefert): perspektivische Kamera, 3D-Wände und -Figuren aus Low-Poly-Formen, dynamisches Licht mit Fackeln, Glüh-Effekte, Partikel. Im Pause-Menü lässt sich auf 2D umschalten und die Qualität wählen (Auto passt sich der Leistung des Geräts an)
+- **3D-Grafik** (Three.js, in `lib/` mitgeliefert): perspektivische Kamera, 3D-Wände und -Figuren aus Low-Poly-Formen, dynamisches Licht mit Fackeln, Glüh-Effekte, Partikel. Realistischere Optik durch Relief (Normal-Maps), weiche Schatten (Qualität „Hoch“), Filmfarben, Wandgesimse und Fackelfunken. Die Kamera lässt sich im Pause-Menü (Zoom, Neigung) und mit dem Mausrad einstellen. Im Pause-Menü lässt sich auf 2D umschalten und die Qualität wählen (Auto passt sich der Leistung des Geräts an)
 - Prozedurale Grafik ohne Bilddateien: Stein-Texturen, dynamisches Licht (Fackeln, Feuerball, Blitz), animierte Figuren, Blut- und Knochenspuren
 
 ## Code-Struktur
