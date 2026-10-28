@@ -17,7 +17,8 @@ Die automatischen Entwicklungsläufe (siehe `AUTOMATION.md`) arbeiten diese List
 - [ ] **Mehr Gegner-Varianten** pro Welt und seltene „Jäger“-Champions mit Eigenschaften.
 
 ## Grafik & Sound
-- [ ] **Feinere 3D-Modelle** für Magier und Bosse (mehr Details, bessere Proportionen, Animationen).
+- [~] **Feinere 3D-Modelle:** Magier und Skelette/Schützen sind neu modelliert (mit Detailstufen). Offen: Schlächter, Imp, Hund, Golem, Spinnen, Kultist, Dämon und alle Bosse in gleicher Qualität.
+- [ ] **Echte Foto-Texturen und Modelle (CC0)** einbinden (z. B. ambientCG, Poly Haven, Quaternius). Die Sitzungen erreichen diese Seiten aktuell nicht; die Dateien müssten im Repo liegen oder die Netzwerkfreigabe müsste erweitert werden. Das Materialsystem (`js/procgen.js`, `levelMat` in `js/render3d.js`) ist darauf vorbereitet: Texturen-Sätze aus Albedo, Normalen, ORM, Emission.
 - [ ] **Modell-Pool** für Gegner (Wiederverwenden statt neu bauen), um Ruckler beim Betreten großer Räume zu vermeiden.
 - [ ] **Musik:** generierte Hintergrundmusik pro Welt und Bossmusik (WebAudio, ohne Dateien), mit Lautstärke-Regler für Musik und Effekte.
 - [ ] **Wasser/Lava-Reflexionen**, Nebelschwaden, Lichtstrahlen (günstig, nur bei Qualität Hoch/Mittel).

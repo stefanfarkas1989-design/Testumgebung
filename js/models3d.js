@@ -10,27 +10,37 @@ function detailTex() {
   const c = document.createElement('canvas'); c.width = c.height = 64;
   const g = c.getContext('2d'), R = mulberry(4242);
   for (let y = 0; y < 64; y += 2) for (let x = 0; x < 64; x += 2) {
-    const v = 190 + R() * 65 | 0;
+    const v = 214 + R() * 41 | 0;
     g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, y, 2, 2);
   }
-  g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 1;
-  for (let i = 0; i < 14; i++) { const x = R() * 64, y = R() * 64; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (R() - 0.5) * 22, y + (R() - 0.5) * 22); g.stroke(); }
+  g.strokeStyle = 'rgba(0,0,0,.14)'; g.lineWidth = 1;
+  for (let i = 0; i < 9; i++) { const x = R() * 64, y = R() * 64; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (R() - 0.5) * 22, y + (R() - 0.5) * 22); g.stroke(); }
   const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; t.repeat.set(5, 5);
   return M3.detail = t;
 }
-function lam(color, emissive, ei) {
-  const k = color + '|' + (emissive || 0) + '|' + (ei || 0);
+function lam(color, emissive, ei, rough, metal) {
+  const k = color + '|' + (emissive || 0) + '|' + (ei || 0) + '|' + (rough === undefined ? '' : rough) + '|' + (metal || '') + '|' + (M3.pbr ? 1 : 0);
   if (M3.mats[k]) return M3.mats[k];
   const d = detailTex();
-  return M3.mats[k] = new THREE.MeshLambertMaterial({ color, emissive: emissive || 0, emissiveIntensity: ei || 1, map: d, bumpMap: d, bumpScale: 1.6 });
+  if (M3.pbr) {
+    return M3.mats[k] = new THREE.MeshStandardMaterial({
+      color, emissive: emissive || 0, emissiveIntensity: ei || 1, map: d, bumpMap: d, bumpScale: 0.55,
+      roughness: rough === undefined ? 0.72 : rough, metalness: metal || 0, envMap: M3.env || null, envMapIntensity: 0.9,
+    });
+  }
+  return M3.mats[k] = new THREE.MeshLambertMaterial({ color, emissive: emissive || 0, emissiveIntensity: ei || 1, map: d, bumpMap: d, bumpScale: 0.9 });
 }
+// Metall (Klingen, Rüstung, Gold): glänzt im PBR-Modus, sonst normales Material
+const met = (color, rough, emissive, ei) => lam(color, emissive, ei, rough === undefined ? 0.38 : rough, 0.92);
 function bas(color) {
   const k = 'b' + color;
   return M3.mats[k] || (M3.mats[k] = new THREE.MeshBasicMaterial({ color }));
 }
 function geo(key, make) { return M3.geos[key] || (M3.geos[key] = make()); }
-const UNIT_SPH = () => geo('sph', () => new THREE.SphereGeometry(1, 10, 8));
+const UNIT_SPH = () => geo('sph', () => new THREE.SphereGeometry(1, 18, 14));
+const SPH_MID = () => geo('sphMid', () => new THREE.SphereGeometry(1, 12, 9));
+const SPH_LO = () => geo('sphLo', () => new THREE.SphereGeometry(1, 8, 6));
 
 function addMesh(parent, g, m, x, y, z) {
   const me = new THREE.Mesh(g, m);
@@ -40,11 +50,41 @@ function addMesh(parent, g, m, x, y, z) {
   return me;
 }
 function bx(p, w, h, d, m, x, y, z) { return addMesh(p, geo(`b${w},${h},${d}`, () => new THREE.BoxGeometry(w, h, d)), m, x, y, z); }
-function sp(p, r, m, x, y, z, sx, sy, sz) { const me = addMesh(p, UNIT_SPH(), m, x, y, z); me.scale.set(r * (sx || 1), r * (sy || 1), r * (sz || 1)); return me; }
+function sp(p, r, m, x, y, z, sx, sy, sz) { const big = r * Math.max(sx || 1, sy || 1, sz || 1); const me = addMesh(p, big < 1.9 ? SPH_LO() : big < 4.2 ? SPH_MID() : UNIT_SPH(), m, x, y, z); me.scale.set(r * (sx || 1), r * (sy || 1), r * (sz || 1)); return me; }
 function cy(p, rt, rb, h, m, x, y, z, seg) { return addMesh(p, geo(`c${rt},${rb},${h},${seg || 8}`, () => new THREE.CylinderGeometry(rt, rb, h, seg || 8)), m, x, y, z); }
 function cn(p, r, h, m, x, y, z, seg) { return addMesh(p, geo(`k${r},${h},${seg || 6}`, () => new THREE.ConeGeometry(r, h, seg || 6)), m, x, y, z); }
 function pv(p, x, y, z) { const g = new THREE.Group(); g.position.set(x || 0, y || 0, z || 0); p.add(g); return g; }
 function glowAt(x, y, z, size, color, alpha) { M3.cur.glows.push({ x, y, z, size, color, a: alpha === undefined ? 1 : alpha }); }
+
+
+// Zusätzliche Bausteine für feinere Modelle
+function lathe(p, pts, seg, m, x, y, z, fold, H) {
+  const g = geo('lathe' + JSON.stringify(pts) + seg + (fold || 0), () => {
+    const gg = new THREE.LatheGeometry(pts.map(q => new THREE.Vector2(q[0], q[1])), seg);
+    if (fold) {
+      const pos = gg.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const px = pos.getX(i), py = pos.getY(i), pz = pos.getZ(i), a = Math.atan2(pz, px);
+        const k = 1 + fold * Math.sin(a * 7 + py * 0.12) * Math.max(0, 1 - py / (H || 22));
+        pos.setX(i, px * k); pos.setZ(i, pz * k);
+      }
+      gg.computeVertexNormals();
+    }
+    return gg;
+  });
+  return addMesh(p, g, m, x, y, z);
+}
+function cap(p, r, len, m, x, y, z, seg) {
+  return addMesh(p, geo(`cap${r},${len},${seg || 10}`, () => new THREE.CapsuleGeometry(r, len, 6, seg || 10)), m, x, y, z);
+}
+function rib(p, m, y, rx, rz, a0) {
+  const g = geo(`rib${y},${rx},${rz}`, () => {
+    const pts = [], A = Math.PI * a0;
+    for (let a = -A; a <= A + 0.001; a += A / 7) pts.push(new THREE.Vector3(rx * Math.cos(a) - 2.2, -(1 - Math.abs(a) / A) * 1.1, rz * Math.sin(a)));
+    return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 20, 0.5, 5, false);
+  });
+  return addMesh(p, g, m, 0, y, 0);
+}
 
 function newRig() {
   const g = new THREE.Group();
@@ -69,7 +109,77 @@ function stOf(e) {
 }
 
 // ---------- Humanoide: Skelett / Schütze ----------
-function rigSkeleton(bow) {
+function rigSkeletonHi(bow) {
+  const r = newRig(), g = r.group;
+  const bone = lam(bow ? 0xc9d3ac : 0xd8d0b4, 0, 0, 0.6), boneD = lam(bow ? 0xa9b48c : 0xb3aa8c, 0, 0, 0.7), dark = lam(0x0b090b, 0, 0, 0.95);
+  const leather = lam(0x4a3524, 0, 0, 0.88), iron = met(0x5c5a56, 0.55);
+  const leg = side => {
+    const hip = pv(g, 0, 14.8, side * 3.3);
+    cap(hip, 1.35, 4.6, side > 0 ? bone : boneD, 0, -3.7, 0); sp(hip, 1.7, bone, 0, -7.4, 0.1);
+    const knee = pv(hip, 0, -7.4, 0);
+    cap(knee, 1.05, 4.4, bone, 0, -3.6, 0); bx(knee, 5.4, 1.3, 2.5, boneD, 1.5, -7.1, 0);
+    return { hip, knee };
+  };
+  const L = leg(-1), R = leg(1);
+  r.legL = L.hip; r.legR = R.hip; r.kneeL = L.knee; r.kneeR = R.knee;
+  r.torso = pv(g, 0, 15.5, 0);
+  sp(r.torso, 2.7, boneD, 0, 0.4, -3.3, 0.9, 0.85, 1.05); sp(r.torso, 2.7, boneD, 0, 0.4, 3.3, 0.9, 0.85, 1.05); bx(r.torso, 2.2, 2, 3.2, boneD, -1.2, 0.6, 0);
+  for (let i = 0; i < 9; i++) sp(r.torso, 1.25 - i * 0.02, boneD, -2.2, 2 + i * 1.12, 0, 0.9, 0.8, 0.9);
+  for (let i = 0; i < 6; i++) rib(r.torso, bone, 5.0 + i * 1.3, 4.2 - Math.abs(i - 2.2) * 0.22, 4.8 - Math.abs(i - 2.2) * 0.25, 0.78);
+  bx(r.torso, 0.9, 6, 1.3, bone, 1.7, 7.5, 0);
+  cap(r.torso, 0.7, 7.2, boneD, -0.5, 11.2, 0).rotation.x = Math.PI / 2;
+  bx(r.torso, 3.4, 0.5, 8.4, leather, 0.4, 0.2, 0).rotation.z = 0.05;
+  bx(r.torso, 0.6, 5, 4.4, leather, 3.2, -3.5, 0).rotation.z = 0.06;      // zerfetzter Lendenschurz
+  const arm = side => {
+    const sh = pv(r.torso, 0, 10.6, side * 6.1);
+    sp(sh, 1.5, boneD, 0, 0, 0); cap(sh, 1.05, 3.8, bone, 0, -3.2, 0); sp(sh, 1.25, bone, 0, -6.2, 0);
+    const el = pv(sh, 0, -6.2, 0); cap(el, 0.9, 3.4, boneD, 0, -2.9, 0);
+    const hand = pv(el, 0, -6, 0); bx(hand, 1.4, 2.4, 1.6, bone, 0, -0.6, 0);
+    return { sh, el, hand };
+  };
+  const AL = arm(-1), AR = arm(1);
+  r.armL = AL.sh; r.armR = AR.sh; r.elbowR = AR.el;
+  sp(r.torso, 2.6, iron, 0, 11.3, 6.3, 1.2, 0.6, 1.3);                   // rostige Schulterplatte
+  r.head = pv(r.torso, 0, 13.6, 0);
+  sp(r.head, 4.5, bone, 0.3, 2, 0, 1.05, 1.1, 0.97);
+  sp(r.head, 1.5, bone, 3, -0.7, 2.9); sp(r.head, 1.5, bone, 3, -0.7, -2.9);
+  bx(r.head, 1.4, 1, 6.6, boneD, 3.9, 3.4, 0);
+  const ec = bow ? 0x78ff5a : 0xff5028;
+  for (const z of [-1.9, 1.9]) { sp(r.head, 1.6, dark, 3.7, 1.3, z, 0.8, 1, 1); sp(r.head, 0.7, bas(ec), 3.9, 1.3, z); }
+  cn(r.head, 0.8, 1.7, dark, 4.5, -0.4, 0, 3).rotation.z = -Math.PI / 2;
+  bx(r.head, 2.6, 1.5, 4.6, bone, 2.9, -1.5, 0);
+  for (let i = -3; i <= 3; i++) bx(r.head, 0.5, 1.0, 0.7, bone, 4.1, -2.5, i * 0.6);
+  r.jaw = pv(r.head, 0.8, -2.0, 0);
+  bx(r.jaw, 3.8, 1.5, 4.2, boneD, 1.4, -0.8, 0);
+  for (let i = -3; i <= 3; i++) bx(r.jaw, 0.5, 0.9, 0.7, bone, 3.0, 0.2, i * 0.55);
+  const col = bow ? '120,255,90' : '255,80,40';
+  glowAt(4.2, 31, -1.9, 10, col); glowAt(4.2, 31, 1.9, 10, col);
+  if (bow) {
+    const arc = addMesh(AR.hand, geo('bowTorus', () => new THREE.TorusGeometry(9, 0.8, 5, 14, Math.PI)), lam(0x7a5530, 0, 0, 0.7), 2, 0, 0);
+    arc.rotation.z = -Math.PI / 2;
+    bx(AR.hand, 0.25, 18, 0.25, lam(0xdddddd), -6.8, 0, 0);
+    cy(r.torso, 1.5, 1.5, 11, leather, -4.2, 7, -4.4, 8).rotation.z = 0.3;
+    for (let i = 0; i < 3; i++) cn(r.torso, 0.5, 3, bone, -6.2 + i * 0.3, 12.5 + i * 0.2, -4.4 + i * 0.5, 4);
+  } else {
+    bx(AR.hand, 1.3, 1.3, 5.2, leather, 0, -1.5, 0);
+    bx(AR.hand, 15, 1.8, 0.5, met(0x8c9096, 0.5), 8.8, -1.5, 0);
+    bx(AR.hand, 3, 0.4, 0.55, met(0x6a6e72, 0.6), 9.5, -1.5, 0);
+  }
+  r.anim = (e, s) => {
+    const sw = s.w;
+    r.legL.rotation.z = sw; r.legR.rotation.z = -sw;
+    r.kneeL.rotation.z = -Math.max(0, sw) * 0.9; r.kneeR.rotation.z = -Math.max(0, -sw) * 0.9;
+    r.armL.rotation.z = -sw * 0.8;
+    r.armR.rotation.z = bow ? 1.45 : (sw * 0.8 + (s.lunge ? 0.5 + 1.9 * s.lunge : 0.5));
+    r.elbowR.rotation.z = bow ? -0.15 : (-0.35 - s.lunge * 0.7);
+    r.torso.position.y = 15.5 + s.bob; r.torso.rotation.z = s.mv ? sw * 0.05 : 0;
+    r.jaw.rotation.z = -(0.1 + (s.lunge ? 0.5 * s.lunge : 0) + (s.mv ? 0 : 0.04 * Math.sin(G.time * 3 + e.seed)));
+    r.head.rotation.y = Math.sin(G.time * 1.3 + e.seed) * 0.12;
+  };
+  return finishRig(r);
+}
+
+function rigSkeletonLow(bow) {
   const r = newRig(), g = r.group;
   const bone = lam(bow ? 0xcbd6ad : 0xd9d1b6), bone2 = lam(0xa29a80), rib = lam(0x6e6650), dark = lam(0x140e10);
   r.legL = pv(g, 0, 14, -3.5); r.legR = pv(g, 0, 14, 3.5);
@@ -105,6 +215,8 @@ function rigSkeleton(bow) {
   };
   return finishRig(r);
 }
+
+function rigSkeleton(bow, hi) { return hi ? rigSkeletonHi(bow) : rigSkeletonLow(bow); }
 
 function rigImp() {
   const r = newRig(), g = r.group;
@@ -257,7 +369,7 @@ function rigCultist() {
 function rigBrute(variant) {
   const r = newRig(), g = r.group;
   const demon = variant === 'demon';
-  const skin = lam(demon ? 0xa8301a : 0x8a5a48), dk = lam(demon ? 0x5a1810 : 0x3a2820), arm = lam(0x4d4d58);
+  const skin = lam(demon ? 0xa8301a : 0x8a5a48), dk = lam(demon ? 0x5a1810 : 0x3a2820), arm = met(0x4d4d58, 0.5);
   r.legL = pv(g, 0, 14, -5); r.legR = pv(g, 0, 14, 5);
   bx(r.legL, 7, 14, 7, dk, 0, -7, 0); bx(r.legR, 7, 14, 7, dk, 0, -7, 0);
   r.torso = pv(g, 0, 14, 0);
@@ -286,7 +398,7 @@ function rigBrute(variant) {
     const club = pv(r.armR, 0, -15, 0);
     cy(club, 2, 2.6, 24, lam(0x5a3c22), 12, 0, 0, 6).rotation.z = Math.PI / 2;
     bx(club, 8, 9, 9, lam(0x6a4a2a), 25, 0, 0);
-    cn(club, 1.8, 4, lam(0x9aa0a8), 25, 6, 0, 4); cn(club, 1.8, 4, lam(0x9aa0a8), 25, -6, 0, 4).rotation.z = Math.PI;
+    cn(club, 1.8, 4, met(0x9aa0a8, 0.34), 25, 6, 0, 4); cn(club, 1.8, 4, met(0x9aa0a8, 0.34), 25, -6, 0, 4).rotation.z = Math.PI;
   }
   r.anim = (e, s) => {
     r.legL.rotation.z = s.w * 0.9; r.legR.rotation.z = -s.w * 0.9;
@@ -300,7 +412,7 @@ function rigBrute(variant) {
 
 function rigBoneLord() {
   const r = newRig(), g = r.group;
-  const bone = lam(0xd8cfe0), bone2 = lam(0x9d90ab), cape = lam(0x3a1a52), pur = lam(0xbe5aff, 0x9a3adf, 1), gold = lam(0xffd84a, 0x886600, 0.6);
+  const bone = lam(0xd8cfe0), bone2 = lam(0x9d90ab), cape = lam(0x3a1a52), pur = lam(0xbe5aff, 0x9a3adf, 1), gold = met(0xffd84a, 0.3, 0x553300, 0.4);
   r.legL = pv(g, 0, 26, -7); r.legR = pv(g, 0, 26, 7);
   cy(r.legL, 3.4, 2.6, 26, bone2, 0, -13, 0, 6); cy(r.legR, 3.4, 2.6, 26, bone, 0, -13, 0, 6);
   r.torso = pv(g, 0, 26, 0);
@@ -319,7 +431,7 @@ function rigBoneLord() {
   r.armL = pv(r.torso, 0, 26, -16); r.armR = pv(r.torso, 0, 26, 16);
   cy(r.armL, 2.6, 2.2, 22, bone2, 0, -11, 0, 6); cy(r.armR, 2.6, 2.2, 22, bone, 0, -11, 0, 6);
   const hand = pv(r.armR, 0, -22, 0);
-  bx(hand, 46, 4, 1.6, lam(0xb8b0d8, 0x6a50c0, 0.6), 26, 0, 0); bx(hand, 3, 3, 12, lam(0xc8a040), 3, 0, 0);
+  bx(hand, 46, 4, 1.6, met(0xb8b0d8, 0.3, 0x6a50c0, 0.6), 26, 0, 0); bx(hand, 3, 3, 12, met(0xc8a040, 0.35), 3, 0, 0);
   glowAt(30, 4, 0, 40, '190,90,255', 0.8);
   r.anim = (e, s) => {
     r.legL.rotation.z = s.w * 0.7; r.legR.rotation.z = -s.w * 0.7;
@@ -350,7 +462,7 @@ function rigQueen() {
 
 function rigLavaLord() {
   const r = newRig(), g = r.group;
-  const dk = lam(0x2e1a1c), pl = lam(0x4e2a2c), mg = lam(0xff9a3a, 0xff7a20, 1);
+  const dk = lam(0x2e1a1c), pl = met(0x4e2a2c, 0.5), mg = lam(0xff9a3a, 0xff7a20, 1);
   r.legL = pv(g, 0, 28, -8); r.legR = pv(g, 0, 28, 8);
   bx(r.legL, 10, 28, 10, dk, 0, -14, 0); bx(r.legR, 10, 28, 10, dk, 0, -14, 0);
   r.torso = pv(g, 0, 28, 0);
@@ -369,7 +481,7 @@ function rigLavaLord() {
   r.armL = pv(r.torso, 0, 30, -22); r.armR = pv(r.torso, 0, 30, 22);
   cy(r.armL, 3.4, 3, 24, dk, 0, -12, 0, 6); cy(r.armR, 3.4, 3, 24, dk, 0, -12, 0, 6);
   const hand = pv(r.armR, 0, -24, 0);
-  bx(hand, 58, 5, 2, lam(0xe8a060, 0xff7a20, 0.9), 32, 0, 0); bx(hand, 3, 3, 14, lam(0x2a2a2a), 4, 0, 0);
+  bx(hand, 58, 5, 2, met(0xe8a060, 0.35, 0xff7a20, 0.9), 32, 0, 0); bx(hand, 3, 3, 14, met(0x2a2a2a, 0.4), 4, 0, 0);
   glowAt(36, 4, 0, 48, '255,120,40', 0.9);
   r.anim = (e, s) => {
     r.legL.rotation.z = s.w * 0.7; r.legR.rotation.z = -s.w * 0.7;
@@ -410,39 +522,61 @@ function rigSilence() {
 
 function rigPlayer() {
   const r = newRig(), g = r.group;
-  const robe = lam(0x3a50c0), hood = lam(0x2d3a8c), trim = lam(0xe8c060), dark = lam(0x0b0a14), skin = lam(0x2a1a10);
+  const cloth = lam(0x3a50c0, 0, 0, 0.88), clothD = lam(0x25318a, 0, 0, 0.9), trim = met(0xe8c060, 0.3), skin = lam(0xc89878, 0, 0, 0.7), dark = lam(0x07060c, 0, 0, 0.95);
+  const leather = lam(0x4a3220, 0, 0, 0.8), wood = lam(0x6e4824, 0, 0, 0.62);
   r.torso = pv(g, 0, 0, 0);
-  cy(r.torso, 4.4, 9, 24, robe, 0, 12, 0, 10); cy(r.torso, 9.2, 9.2, 1.3, trim, 0, 1.2, 0, 10);
-  cy(r.torso, 7.4, 7.4, 2, lam(0xc9a14a), 0, 13, 0, 10);
-  const cape = bx(r.torso, 1.2, 24, 14, hood, -5, 13, 0); cape.rotation.z = 0.12;
-  r.head = pv(r.torso, 0, 26, 0);
-  sp(r.head, 7.4, hood, 0, 0, 0); cn(r.head, 5, 9, hood, -2, 7, 0, 7).rotation.z = 0.5;
-  sp(r.head, 4.8, dark, 3, -0.3, 0);
-  sp(r.head, 0.9, bas(0xbff4ff), 6.8, 0, -1.9); sp(r.head, 0.9, bas(0xbff4ff), 6.8, 0, 1.9);
-  glowAt(7, 26, -1.9, 10, '120,220,255'); glowAt(7, 26, 1.9, 10, '120,220,255');
-  r.armL = pv(r.torso, 0, 21, -6); cy(r.armL, 2, 1.7, 11, robe, 0, -5.5, 0, 6);
-  r.armR = pv(r.torso, 0, 21, 6); cy(r.armR, 2, 1.7, 11, robe, 0, -5.5, 0, 6);
-  r.staff = pv(r.armR, 0, -11, 0);
-  cy(r.staff, 0.9, 1.0, 34, lam(0x7a4e26), 0, 8, 0, 5);
-  sp(r.staff, 2.8, bas(0xff9a3a), 0, 26, 0);
+  // Robe: Rotationskörper mit Falten, schmal in der Taille, ausgestellter Saum
+  lathe(r.torso, [[9.8, 0], [9.9, 1.2], [9.1, 5], [7.7, 10], [6.2, 15], [5.7, 18.5], [6.6, 21.5], [7.4, 23.2], [6.6, 24.6], [3.6, 25.6]], 28, cloth, 0, 0, 0, 0.05, 22);
+  lathe(r.torso, [[9.9, 0.4], [10.1, 0.9], [9.9, 1.4]], 28, trim, 0, 0, 0, 0.05, 22);              // goldene Saumkante
+  lathe(r.torso, [[9.5, 18.6], [9.9, 20.8], [9.0, 23.6], [5.2, 25.4]], 24, clothD, 0, 0, 0, 0, 22);   // Schultermantel
+  lathe(r.torso, [[6.5, 11.4], [7.3, 11.4], [7.3, 13.2], [6.5, 13.2]], 20, leather, 0, 0, 0);        // Gürtel
+  bx(r.torso, 1.3, 2.2, 2.4, trim, 7.4, 12.3, 0);
+  bx(r.torso, 1.2, 9.5, 3.2, clothD, 7.2, 6.8, 2.6).rotation.z = 0.06;                                  // Schärpe
+  bx(r.torso, 3.2, 3.6, 2.8, leather, 3.2, 11.2, 6.2);                                                  // Beutel
+  const cape = bx(r.torso, 0.9, 19, 13, clothD, -6.2, 13, 0); cape.rotation.z = 0.1;
+  for (const z of [-3, 3]) sp(r.torso, 2.2, lam(0x20160e, 0, 0, 0.9), 2.6, 1.2, z, 1.3, 0.55, 0.85);   // Stiefelspitzen
+  r.head = pv(r.torso, 0, 27.4, 0);
+  sp(r.head, 5.5, clothD, -0.2, 0.6, 0, 1.05, 1.08, 0.98);
+  cn(r.head, 4.2, 7.5, clothD, -3.6, 4.4, 0, 12).rotation.z = 0.95;                                    // Kapuzenspitze
+  sp(r.head, 3.5, dark, 2.6, -0.1, 0, 0.8, 1.02, 0.95);                                                  // Gesichtsschatten
+  sp(r.head, 1.9, skin, 4.4, -1.1, 0, 0.8, 1.05, 0.8);                                                   // Gesicht
+  sp(r.head, 0.5, skin, 6.0, -1.1, 0);                                                                   // Nase
+  for (const z of [-1.5, 1.5]) sp(r.head, 0.55, bas(0xbff4ff), 5.5, 0.1, z);
+  glowAt(5.6, 27.5, -1.5, 9, '120,220,255'); glowAt(5.6, 27.5, 1.5, 9, '120,220,255');
+  const arm = side => {
+    const sh = pv(r.torso, 0, 22, side * 6.6);
+    cap(sh, 2.0, 4.4, cloth, 0, -3.6, 0);
+    const el = pv(sh, 0, -6.4, 0);
+    cy(el, 2.0, 2.9, 6.2, cloth, 0, -2.6, 0, 12); cy(el, 3.0, 3.0, 1.1, trim, 0, -5.5, 0, 12);
+    sp(el, 1.7, skin, 0, -6.8, 0);
+    return { sh, el };
+  };
+  const AL = arm(-1), AR = arm(1);
+  r.armL = AL.sh; r.armR = AR.sh;
+  r.staff = pv(AR.el, 0, -6.8, 0);
+  cy(r.staff, 0.85, 1.0, 35, wood, 0, 8, 0, 8);
+  for (const y of [-5, 4, 13, 22]) cy(r.staff, 1.25, 1.25, 0.9, trim, 0, y, 0, 8);
+  for (let i = 0; i < 3; i++) { const a = i * 2.094; cn(r.staff, 0.7, 6, trim, Math.cos(a) * 2, 27.5, Math.sin(a) * 2, 4).rotation.set(Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25); }
+  addMesh(r.staff, geo('octa', () => new THREE.OctahedronGeometry(1)), bas(0xff9a3a), 0, 28, 0).scale.set(2.3, 3.6, 2.3);
   r.anim = (e, s) => {
     r.torso.position.y = s.bob * 0.7 + (s.mv ? 0 : Math.sin(G.time * 2) * 0.4);
     r.torso.rotation.z = s.mv ? Math.sin(s.walk) * 0.05 : 0;
     const cast = P.castAnim > 0;
     r.armR.rotation.z = cast ? 1.7 : 1.1; r.armL.rotation.z = -s.w * 0.4;
     r.staff.rotation.z = cast ? 0.2 : -0.9;
+    r.head.rotation.y = Math.sin(G.time * 1.1) * 0.06;
   };
   r.extraGlows = (e, out) => {
     const cast = P.castAnim > 0;
-    out.push({ x: 6 + Math.cos(r.staff.rotation.z + Math.PI / 2 + r.armR.rotation.z) * 0, y: cast ? 36 : 28, z: 7, size: cast ? 44 : 28, color: '255,150,60', a: cast ? 1 : 0.8 });
+    out.push({ x: 6, y: cast ? 36 : 28, z: 7, size: cast ? 44 : 28, color: '255,150,60', a: cast ? 1 : 0.8 });
   };
   return finishRig(r);
 }
 
-function buildRig(type) {
+function buildRig(type, hi) {
   switch (type) {
-    case 'skeleton': return rigSkeleton(false);
-    case 'archer': return rigSkeleton(true);
+    case 'skeleton': return rigSkeleton(false, hi);
+    case 'archer': return rigSkeleton(true, hi);
     case 'imp': return rigImp();
     case 'brute': return rigBrute('brute');
     case 'demon': return rigBrute('demon');
