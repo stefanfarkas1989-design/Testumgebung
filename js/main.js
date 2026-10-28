@@ -1,4 +1,5 @@
 'use strict';
+initArt();
 window.addEventListener('resize', resize);
 resize();
 
