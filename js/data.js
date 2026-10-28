@@ -156,6 +156,7 @@ const ENEMIES = {
   hound:    { name: 'Höllenhund',         r: 12, hp: 40,  spd: 140, dmg: 9,  xp: 12, color: '#8a3a22', melee: true, range: 10, atkCd: 0.9, dash: true },
   cultist:  { name: 'Feuerkultist',       r: 13, hp: 38,  spd: 80,  dmg: 10, xp: 14, color: '#8a2a4a', ranged: true, keep: 240, atkCd: 2.4, projSpd: 240, shot: 'fan' },
   demon:    { name: 'Lavadämon',          r: 22, hp: 190, spd: 62,  dmg: 22, xp: 36, color: '#a8301a', melee: true, range: 22, atkCd: 2.2, slam: true, slamR: 80, leave: 'fire' },
+  schweigen: { name: 'Das Schweigen', r: 38, hp: 2800, spd: 75, dmg: 34, xp: 600, color: '#e8ecf8', melee: true, range: 24, atkCd: 1.3, boss: true, bossKind: 'silence' },
   lavalord: { name: 'Der Aschenfürst',    r: 36, hp: 1800, spd: 70, dmg: 30, xp: 280, color: '#4a2a2c', melee: true, range: 22, atkCd: 1.5, boss: true, bossKind: 'lava' },
 };
 
@@ -181,7 +182,29 @@ const THEMES = [
     pal: { floor: [64, 54, 58], moss: 'rgba(120,30,10,.2)', brick: [68, 50, 52], bricks: true, roof: [34, 26, 30], rim: 'rgba(255,140,90,.28)', glow: true },
     amb: { col: '255,150,60', vy: -50, n: 50, size: 1.6, a: 0.7 }, decor: { breakable: ['barrel', 'urn'], deco: ['vent', 'spike', 'bones', 'rubble'] } },
 ];
-const themeFor = f => THEMES[Math.floor((f - 1) / 2) % THEMES.length];
+// Echo-Varianten (ab Ebene 7): gleiche Welten, blass und verzerrt
+const grayPal = p => {
+  const m = a => a.map(v => Math.round(v * 0.55 + 90 * 0.45));
+  return Object.assign({}, p, { floor: m(p.floor), brick: m(p.brick), roof: m(p.roof), glow: false, moss: 'rgba(200,210,240,.12)' });
+};
+const ECHO = THEMES.map((t, i) => Object.assign({}, t, {
+  id: t.id + '_e', name: 'Echo-' + t.name.replace(/^Die /, ''), echo: true, ambient: '#4a5470', fog: 0x14181f, lightCol: '190,210,255',
+  pal: grayPal(t.pal), seedK: 4000 + i * 1000, amb: Object.assign({}, t.amb, { col: '220,230,255' }),
+}));
+// Ebene 9: Der Stille Thron (Endkampf)
+const THRONE = {
+  id: 'void', name: 'Der Stille Thron', ambient: '#7a8096', fog: 0x1a1c22, lightCol: '210,225,255', wall: 'crystal', pillar: 'column',
+  heavy: 'golem', boss: 'schweigen', echo: true, seedK: 9000,
+  roster: { skeleton: 20, spider: 14, hound: 14, cultist: 12, bat: 16, golem: 8, demon: 8 },
+  pal: { floor: [150, 152, 162], moss: 'rgba(255,255,255,.08)', brick: [120, 122, 136], bricks: true, roof: [80, 82, 94], rim: 'rgba(230,235,255,.35)' },
+  amb: { col: '255,255,255', vy: -6, n: 50, size: 1.6, a: 0.45 }, decor: { breakable: ['urn', 'geode'], deco: ['bones', 'crystal', 'rubble'] },
+};
+function themeFor(f) {
+  if (f === 9) return THRONE;
+  if (f >= 10) return ECHO[Math.floor((f - 10) / 2) % ECHO.length];
+  if (f >= 7) return ECHO[f - 7];
+  return THEMES[Math.floor((f - 1) / 2)];
+}
 
 // ---------- Legendäre Kräfte ----------
 const POWERS = [

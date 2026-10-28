@@ -101,6 +101,9 @@ const Input = {
     if (G.state !== 'play' || G.paused) return;
     G.camZoom = clamp(G.camZoom * (e.deltaY < 0 ? 1.08 : 0.926), 0.6, 1.7); camSave(); camSync();
   }, { passive: true });
+  $('cClose').onclick = () => UI.showPanel(null);
+  document.querySelectorAll('#cTabs button').forEach(b => { b.onclick = () => UI.renderChronik(b.dataset.c); });
+  $('pChron').onclick = () => { UI.setPause(false); UI.showPanel('chronik'); };
   $('pGfx').onclick = () => { setGfx(G.gfx === '3d' ? '2d' : '3d'); };
   $('pQual').onclick = () => cycleQuality();
   $('pMenu').onclick = () => { saveGame(); UI.setPause(false); UI.showTitle(); };
@@ -126,6 +129,7 @@ const Input = {
     if (e.repeat) return;
     if (k === 'i' || k === 'tab') { UI.showPanel('inv'); return; }
     if (k === 'k') { UI.showPanel('skills'); return; }
+    if (k === 'c') { UI.showPanel('chronik'); return; }
     if (k === 'escape') { UI.togglePause(); return; }
     if (k === 'p') { UI.togglePause(); return; }
     Input.keys[k] = true;

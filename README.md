@@ -22,6 +22,8 @@ python3 -m http.server 8000
 
 ## Inhalt
 
+- **Geschichte** (siehe `STORY.md`): Prolog mit Namenseingabe, Briefe der Odalie, Boss-Dialoge, Todes-Sätze, Chronik (Taste `C`) mit Bestiarium und Relikten, Namenssplitter als Sammelmechanik, Echo-Ebenen ab Ebene 7, Endkampf gegen „Das Schweigen“ auf Ebene 9, drei Enden und danach der Echo-Modus
+
 - Zufällige Dungeons, pro Ebene ein Boss, danach Treppe zur nächsten Ebene. Alle 2 Ebenen wechselt das Thema: Gruft (Knochenfürst), Kristallhöhle (Spinnenkönigin), Lavakluft (Aschenfürst)
 - Magier mit 4 Skills (freigeschaltet bei Level 1 / 2 / 3 / 5)
 - Skill-Baum (Taste `K` / 📜-Button): pro Level 1 Punkt, pro Skill 5 Knoten mit Modifikatoren (z. B. Feuerball teilt sich, Nova friert ein, Blitz mit Donnerschlag, Teleport mit Phasenschock) plus Passiv-Baum, Respec kostenlos

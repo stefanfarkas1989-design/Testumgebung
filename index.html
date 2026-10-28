@@ -86,8 +86,31 @@
       <button id="pSound" class="sec">🔊 Ton: an</button>
       <button id="pGfx" class="sec">Grafik: 3D</button>
       <button id="pQual" class="sec">Qualität: Auto</button>
+      <button id="pChron" class="sec">📖 Chronik</button>
       <button id="pMenu" class="sec">Speichern &amp; Hauptmenü</button>
     </div>
+  </div>
+</div>
+
+<div id="sayBox" class="hidden"><b id="sayWho"></b><span id="sayText"></span></div>
+
+<div id="storyOverlay" class="hidden">
+  <div class="sbox">
+    <div id="sWho"></div>
+    <div id="sText"></div>
+    <div id="sInput" class="hidden"><input id="sName" maxlength="16" placeholder="Funke" autocomplete="off"></div>
+    <div id="sChoices" class="hidden"></div>
+    <button id="sNext">Weiter ▸</button>
+  </div>
+</div>
+
+<div id="chronikPanel" class="hidden">
+  <div class="pbox chron">
+    <header><h2>Chronik</h2><div class="hbtns"><button id="cClose">✕</button></div></header>
+    <div class="ctabs" id="cTabs">
+      <button data-c="story" class="on">Geschichte</button><button data-c="letters">Briefe</button><button data-c="names">Namen</button><button data-c="bestiary">Bestiarium</button><button data-c="relics">Relikte</button>
+    </div>
+    <div id="cBody"></div>
   </div>
 </div>
 
@@ -102,6 +125,7 @@
 
 <script src="lib/three.min.js"></script>
 <script src="js/data.js"></script>
+<script src="js/story.js"></script>
 <script src="js/dungeon.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/art.js"></script>

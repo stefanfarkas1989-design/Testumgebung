@@ -38,7 +38,8 @@ const UI = {
     UI.setSpan('orbMana', `${Math.floor(P.mana)}/${P.maxMana}`);
     $('orbMana').firstElementChild.style.height = (100 * P.mana / P.maxMana) + '%';
     $('xp').firstElementChild.style.width = (100 * P.xp / xpNeed(P.lvl)) + '%';
-    UI.set('floorLabel', 'text', `${G.theme.name} · Ebene ${G.floor} · Level ${P.lvl}`);
+    const nn = Story.S().names.length;
+    UI.set('floorLabel', 'text', `${G.theme.name} · Ebene ${G.floor}\nLevel ${P.lvl} · Namen ${nn >= NAMES_NEEDED ? nn + ' ✓' : nn + '/' + NAMES_NEEDED}`);
     const pa = pointsAvail();
     if (UI.last.pa !== pa) { UI.last.pa = pa; $('btnSkills').dataset.n = pa > 0 ? pa : ''; }
 
@@ -93,6 +94,116 @@ const UI = {
     dot(P.x, P.y, '#6fe08a', 3);
   },
 
+  // ---------- Erzählung ----------
+  sayQ: [], sayBusy: false,
+  say(who, text, color, dur) {
+    if (!text) return;
+    UI.sayQ.push({ who, text, color: color || '#e6e0f5', dur: dur || 5500 });
+    if (!UI.sayBusy) UI.sayNext();
+  },
+  sayNext() {
+    const q = UI.sayQ.shift(), box = $('sayBox');
+    if (!q) { UI.sayBusy = false; box.classList.add('hidden'); return; }
+    UI.sayBusy = true;
+    $('sayWho').textContent = q.who ? q.who : '';
+    $('sayWho').style.color = q.color; $('sayWho').style.display = q.who ? 'block' : 'none';
+    $('sayText').textContent = q.text;
+    box.classList.remove('hidden');
+    clearTimeout(UI.sayT);
+    UI.sayT = setTimeout(UI.sayNext, q.dur);
+  },
+
+  // Textseiten im Vollbild (Prolog, Briefe, Ende). pages: [{who, color, text, big, small, input, letter}]
+  sequence(pages, done) {
+    const ov = $('storyOverlay');
+    G.modal = true; G.paused = true; Input.releaseAll();
+    ov.classList.remove('hidden'); ov.classList.remove('letter');
+    $('sChoices').classList.add('hidden'); $('sNext').classList.remove('hidden');
+    let i = 0, timer = null, full = '', typing = false;
+    const finishTyping = () => { clearInterval(timer); typing = false; $('sText').textContent = full; };
+    const show = () => {
+      const p = pages[i];
+      ov.classList.toggle('letter', !!p.letter);
+      $('sWho').textContent = p.letter ? p.letter.title : (p.who || '');
+      $('sWho').style.color = p.color || '#e8b36a';
+      $('sText').className = (p.big ? 'big ' : '') + (p.small ? 'small ' : '');
+      $('sInput').classList.toggle('hidden', !p.input);
+      full = p.letter ? p.letter.text : p.text;
+      $('sText').textContent = '';
+      $('sNext').textContent = i === pages.length - 1 ? (p.letter ? 'Schließen' : p.input ? 'Los' : 'Weiter ▸') : 'Weiter ▸';
+      typing = true; let n = 0;
+      timer = setInterval(() => { n += 2; $('sText').textContent = full.slice(0, n); if (n >= full.length) finishTyping(); }, 26);
+      if (p.input) setTimeout(() => $('sName').focus(), 50);
+    };
+    const next = () => {
+      if (typing) { finishTyping(); return; }
+      const p = pages[i];
+      if (p.input) UI.pendingName = $('sName').value.trim();
+      i++;
+      if (i >= pages.length) {
+        ov.classList.add('hidden'); G.modal = false; G.paused = false;
+        Sfx.play('ui');
+        if (done) done();
+        return;
+      }
+      show();
+    };
+    $('sNext').onclick = next;
+    ov.onclick = e => { if (e.target === ov || e.target.id === 'sText') next(); };
+    show();
+  },
+  showLetter(l) { UI.sequence([{ letter: l }], null); Sfx.play('pickupMagic'); },
+
+  // Entscheidung (Ende)
+  choice(prompt, opts) {
+    const ov = $('storyOverlay'), box = $('sChoices');
+    G.modal = true; G.paused = true;
+    ov.classList.remove('hidden', 'letter');
+    $('sWho').textContent = ''; $('sText').className = ''; $('sText').textContent = prompt;
+    $('sInput').classList.add('hidden'); $('sNext').classList.add('hidden');
+    box.classList.remove('hidden'); box.innerHTML = '';
+    for (const o of opts) {
+      const b = document.createElement('button');
+      b.innerHTML = `<b>${o.label}</b><small>${o.hint || ''}</small>`;
+      if (o.enabled === false) b.disabled = true;
+      b.onclick = () => { ov.classList.add('hidden'); box.classList.add('hidden'); G.modal = false; G.paused = false; o.go(); };
+      box.appendChild(b);
+    }
+  },
+
+  beginNewGame() {
+    UI.enterFullscreen();
+    $('overlay').classList.add('hidden');
+    G.modal = true;
+    const pages = PROLOG.map(t => ({ text: t })).concat([{ input: true, text: 'Du hast keinen Namen.\nWie willst du genannt werden?' }]);
+    UI.sequence(pages, () => { newGame(); });
+  },
+
+  // ---------- Chronik ----------
+  renderChronik(tab) {
+    UI.cTab = tab;
+    document.querySelectorAll('#cTabs button').forEach(b => b.classList.toggle('on', b.dataset.c === tab));
+    const S = Story.S(), body = $('cBody');
+    let h = '';
+    if (tab === 'story') {
+      h += `<p class="cp">${LORE_TEXT.geschichte}</p>`;
+      const lines = Object.keys(BOSS_LINES).filter(k => S.bosses[k]);
+      if (lines.length) h += '<h3>Letzte Worte</h3>' + lines.map(k => `<div class="cq"><b>${BOSS_LINES[k].death[0]}</b>„${BOSS_LINES[k].death[1]}“</div>`).join('');
+      if (S.ending) h += `<h3>Dein Ende</h3><p class="cp">${['', 'Du wurdest das neue Schloss des Siegels.', 'Du gabst dem Schweigen den Funken. Valdrun steht wieder, und niemand lebt darin.', 'Du hast die Namen genannt. Es regnet über Valdrun.'][S.ending]}</p>`;
+    } else if (tab === 'letters') {
+      h += S.letters.length ? S.letters.slice().sort((a, b) => a - b).map(id => { const l = LETTERS.find(x => x.id === id); return `<div class="cletter"><b>${l.title}</b><p>${l.text.replace(/\n/g, '<br>')}</p></div>`; }).join('') : '<p class="muted">Noch keine Briefe gefunden.</p>';
+    } else if (tab === 'names') {
+      const n = S.names.length;
+      h += `<div class="cbar"><div style="width:${Math.min(100, 100 * n / NAMES_NEEDED)}%"></div></div><p class="muted">${n} von ${NAMES_NEEDED} Namen. Zerbrich Urnen, Geoden und Fässer und besiege die Fürsten. Mit ${NAMES_NEEDED} Namen ist am Ende ein besonderer Weg offen.</p>`;
+      h += S.names.length ? '<ul class="cnames">' + S.names.slice().reverse().map(x => `<li>${x}</li>`).join('') + '</ul>' : '';
+    } else if (tab === 'bestiary') {
+      h += Object.keys(BESTIARY).map(k => S.seen[k] ? `<div class="cbest"><b>${BESTIARY[k][0]}</b><p>${BESTIARY[k][1]}</p></div>` : '<div class="cbest dim"><b>???</b><p>Noch nicht begegnet.</p></div>').join('');
+    } else if (tab === 'relics') {
+      h += Object.keys(RELIC_LORE).map(k => S.relics[k] ? `<div class="cbest relic"><b>${k}</b><p>${RELIC_LORE[k]}</p></div>` : '<div class="cbest dim"><b>???</b><p>Ein Relikt der Glutwacht, noch nicht gefunden.</p></div>').join('');
+    }
+    body.innerHTML = h;
+  },
+
   // ---------- Overlay ----------
   showTitle() {
     G.state = 'title';
@@ -104,11 +215,11 @@ const UI = {
       b.textContent = label; if (cls) b.className = cls; b.onclick = fn; box.appendChild(b);
     };
     if (hasSave()) add('Weiter', () => { UI.enterFullscreen(); if (loadGame()) UI.hideOverlay(); });
-    add(hasSave() ? 'Neues Spiel' : 'Spiel starten', () => { UI.enterFullscreen(); newGame(); UI.hideOverlay(); }, hasSave() ? 'sec' : '');
+    add(hasSave() ? 'Neues Spiel' : 'Spiel starten', () => { UI.beginNewGame(); }, hasSave() ? 'sec' : '');
     $('overlay').classList.remove('hidden');
   },
   showDeath() {
-    $('oText').textContent = 'Du bist gefallen.';
+    $('oText').textContent = 'Du bist gefallen.\n' + Story.deathLine();
     const box = $('oButtons');
     box.innerHTML = '';
     const b = document.createElement('button');
@@ -144,7 +255,7 @@ const UI = {
 
   // ---------- Pause ----------
   setPause(on) {
-    if (G.state !== 'play') return;
+    if (G.state !== 'play' || (on && G.modal)) return;
     if (on) {
       if (UI.camSync) UI.camSync();
       UI.showPanel(null);
@@ -159,6 +270,7 @@ const UI = {
     }
   },
   togglePause() {
+    if (G.modal) return;
     if (G.pausedMenu) UI.setPause(false);
     else if (G.paused) UI.showPanel(null);
     else UI.setPause(true);
@@ -166,16 +278,18 @@ const UI = {
 
   // which: 'inv' | 'skills' | null (alles schließen)
   showPanel(which) {
-    if (G.state !== 'play' || G.pausedMenu) return;
-    const cur = !$('panel').classList.contains('hidden') ? 'inv' : !$('skillPanel').classList.contains('hidden') ? 'skills' : null;
+    if (G.state !== 'play' || G.pausedMenu || G.modal) return;
+    const ids = { inv: 'panel', skills: 'skillPanel', chronik: 'chronikPanel' };
+    let cur = null;
+    for (const k in ids) if (!$(ids[k]).classList.contains('hidden')) cur = k;
     const next = which === cur ? null : which;
-    $('panel').classList.toggle('hidden', next !== 'inv');
-    $('skillPanel').classList.toggle('hidden', next !== 'skills');
+    for (const k in ids) $(ids[k]).classList.toggle('hidden', k !== next);
     G.paused = !!next;
     Sfx.play('ui');
     if (next) Input.releaseAll();
     if (next === 'inv') { UI.sel = null; UI.confirmDrop = false; UI.setTab('eq'); UI.renderPanel(); }
     if (next === 'skills') UI.renderSkills();
+    if (next === 'chronik') UI.renderChronik(UI.cTab || 'story');
   },
   togglePanel() { UI.showPanel('inv'); },
 
@@ -269,6 +383,7 @@ const UI = {
     if (imp) h += `<div class="impl">${imp}</div>`;
     if (it.affixes.length) h += '<ul>' + it.affixes.map(a => `<li>${affixLine(a)}</li>`).join('') + '</ul>';
     if (it.power && POWER_BY_ID[it.power]) h += `<div class="pow">★ ${POWER_BY_ID[it.power].label}</div>`;
+    if (it.rarity === 'legendary' && RELIC_LORE[it.name]) h += `<div class="lore">„${RELIC_LORE[it.name]}“</div>`;
     return h + '</div>';
   },
 

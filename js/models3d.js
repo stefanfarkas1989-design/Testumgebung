@@ -381,6 +381,33 @@ function rigLavaLord() {
   return finishRig(r);
 }
 
+function rigSilence() {
+  const r = newRig(), g = r.group;
+  const w = lam(0xe4e8f4, 0x8890b0, 0.55), d = lam(0x16171e), sh = lam(0xcfd6f0, 0xaab4e8, 1);
+  r.torso = pv(g, 0, 0, 0);
+  cy(r.torso, 6, 19, 74, w, 0, 37, 0, 14);
+  r.head = pv(r.torso, 0, 84, 0);
+  sp(r.head, 11, w, 0, 0, 0, 0.9, 1.2, 0.9); bx(r.head, 0.8, 16, 2.4, d, 9.4, 0, 0);
+  glowAt(10, 84, 0, 46, '230,235,255');
+  r.armL = pv(r.torso, 0, 66, -14); r.armR = pv(r.torso, 0, 66, 14);
+  cy(r.armL, 3, 2, 36, w, 0, -18, 0, 6); cy(r.armR, 3, 2, 36, w, 0, -18, 0, 6);
+  glowAt(0, 52, 0, 140, '200,210,255', 0.5);
+  r.shards = [];
+  for (let i = 0; i < 8; i++) { const s = addMesh(r.torso, geo('octa', () => new THREE.OctahedronGeometry(1)), sh, 0, 0, 0); s.scale.set(3, 7, 3); r.shards.push(s); }
+  r.anim = (e, s) => {
+    const t = G.time;
+    r.torso.position.y = 5 + Math.sin(t * 1.6) * 3;
+    r.armL.rotation.z = -0.5 + Math.sin(t * 1.3) * 0.2 - (e.wind > 0 ? 1.2 : 0);
+    r.armR.rotation.z = 0.5 + Math.sin(t * 1.3 + 1) * 0.2 + (s.lunge ? 1.6 * s.lunge : 0);
+    for (let i = 0; i < r.shards.length; i++) {
+      const a = t * 1.1 + i * 0.785;
+      r.shards[i].position.set(Math.cos(a) * 36, 40 + Math.sin(t * 2 + i) * 14, Math.sin(a) * 36);
+      r.shards[i].rotation.y = a;
+    }
+  };
+  return finishRig(r);
+}
+
 function rigPlayer() {
   const r = newRig(), g = r.group;
   const robe = lam(0x3a50c0), hood = lam(0x2d3a8c), trim = lam(0xe8c060), dark = lam(0x0b0a14), skin = lam(0x2a1a10);
@@ -427,6 +454,7 @@ function buildRig(type) {
     case 'boss': return rigBoneLord();
     case 'queen': return rigQueen();
     case 'lavalord': return rigLavaLord();
+    case 'schweigen': return rigSilence();
     case 'player': return rigPlayer();
   }
   return rigSkeleton(false);

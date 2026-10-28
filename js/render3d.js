@@ -164,7 +164,7 @@ function cycleQuality() {
 // ---------- Texturen-Atlas pro Thema ----------
 function buildAtlas(theme) {
   if (R3.atlas[theme.id]) return R3.atlas[theme.id];
-  const S = getSet(theme), pal = theme.pal, k = THEMES.indexOf(theme) * 1000;
+  const S = getSet(theme), pal = theme.pal, k = theme.seedK !== undefined ? theme.seedK : THEMES.indexOf(theme) * 1000;
   const C = 96, W = C * 8, H = C * 3;
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d');
@@ -330,7 +330,7 @@ function buildLevel() {
   // Umgebung
   const amb = hexOf(th.ambient);
   R3.amb.color.setHex(amb); R3.amb.intensity = 1.0;
-  const fogc = { crypt: 0x0c0916, cave: 0x07141d, lava: 0x1e0b07 }[th.id] || 0x050408;
+  const fogc = th.fog !== undefined ? th.fog : ({ crypt: 0x0c0916, cave: 0x07141d, lava: 0x1e0b07 }[th.id] || 0x050408);
   R3.scene.fog.color.setHex(fogc); R3.renderer.setClearColor(fogc, 1);
 
   // Wand-Lichtquellen
@@ -523,7 +523,7 @@ function setRigState(rig, state) {
   rig.state = state;
   for (const m of rig.meshes) m.material = state === 'flash' ? M3.flashMat : state === 'ice' ? M3.iceMat : m.userData.m0;
 }
-const HEIGHT_K = { spider: 1.9, queen: 1.6, hound: 2.0, bat: 3.4, cultist: 3.0 };
+const HEIGHT_K = { schweigen: 1.6, spider: 1.9, queen: 1.6, hound: 2.0, bat: 3.4, cultist: 3.0 };
 
 function syncEnemies(dt, view) {
   const maps = R3.maps.rigs;
@@ -544,6 +544,7 @@ function syncEnemies(dt, view) {
     rigGlows(e, rig, s, 1);
     if (e.elite) pushGlow(e.x, 3, e.y, e.r * 3.2, '255,200,60', 0.5);
     if (e.burnT > 0) pushGlow(e.x, e.r * 1.1, e.y, e.r * 2.4, '255,120,30', 0.7);
+    if (G.theme.echo && !e.boss) pushGlow(e.x, e.r * 1.3, e.y, e.r * 3.2, '200,215,255', 0.28);
   }
   for (const [e, o] of maps) {
     if (o.seen !== R3.frame) { R3.dyn.remove(o.group); maps.delete(e); }

@@ -126,7 +126,7 @@ ART.sets = {};
 function getSet(theme) {
   let S = ART.sets[theme.id];
   if (S) return S;
-  const k = THEMES.indexOf(theme) * 1000;
+  const k = theme.seedK !== undefined ? theme.seedK : THEMES.indexOf(theme) * 1000;
   S = ART.sets[theme.id] = { floor: [], face: [], roof: [] };
   for (let i = 0; i < 8; i++) S.floor.push(genFloor(101 + k + i * 17, theme.pal));
   for (let i = 0; i < 4; i++) S.face.push(genFace(555 + k + i * 31, theme.pal));
@@ -288,6 +288,7 @@ function drawEnemy(e) {
     case 'imp': impBody(e, lunge, gl, F); break;
     case 'brute': bruteBody(e, lunge, gl, F); break;
     case 'boss': bossBody(e, lunge, gl, F); break;
+    case 'schweigen': bossBody(e, lunge, gl, F); break;
     case 'bat': batBody(e, lunge, gl, F); break;
     case 'spider': spiderBody(e, lunge, gl, F); break;
     case 'golem': golemBody(e, lunge, gl, F); break;

@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 
 const G = {
   state: 'title',      // title | play | dead
-  paused: false, pausedMenu: false, gfx: '2d', quality: 'auto', dt: 0.016, camZoom: 1, camTilt: 0.95,
+  paused: false, pausedMenu: false, modal: false, gfx: '2d', quality: 'auto', dt: 0.016, camZoom: 1, camTilt: 0.95,
   floor: 1,
   map: null, rooms: [], startRoom: null, bossRoom: null,
   explored: new Uint8Array(MW * MH),
@@ -17,7 +17,7 @@ const G = {
 
 const P = {
   x: 0, y: 0, r: 11, face: 0, hp: 100, mana: 60, lvl: 1, xp: 0, potions: 3, potCd: 0,
-  cd: [0, 0, 0, 0], inv: [], eq: {}, gear: {}, castAnim: 0, walk: 0, fl: 1, moving: false, kx: 0, ky: 0, ranks: {}, fx: {}, drT: 0, drV: 0, hasteT: 0, hasteV: 0, invulnT: 0, echoT: 0, fireCount: 0, pw: {}, slowT: 0,
+  cd: [0, 0, 0, 0], inv: [], eq: {}, gear: {}, castAnim: 0, walk: 0, fl: 1, moving: false, kx: 0, ky: 0, ranks: {}, fx: {}, drT: 0, drV: 0, hasteT: 0, hasteV: 0, invulnT: 0, echoT: 0, fireCount: 0, pw: {}, slowT: 0, story: null,
 };
 const INV_MAX = 24;
 
@@ -66,6 +66,7 @@ const skillCd = sk => sk.cd * (1 - P.cdr / 100);
 // ---------- Spielstart / Speichern ----------
 function newGame() {
   P.lvl = 1; P.xp = 0; P.potions = 3; P.inv = []; P.eq = {}; P.ranks = {};
+  P.story = Story.fresh(); P.story.name = UI.pendingName || '';
   const staff = makeItem('weapon', 1, 'normal');
   staff.name = 'Lehrlingsstab';
   P.eq.weapon = staff;
@@ -76,7 +77,7 @@ function newGame() {
 }
 function saveGame() {
   try {
-    localStorage.setItem('aschenfall-save', JSON.stringify({ lvl: P.lvl, xp: P.xp, potions: P.potions, inv: P.inv, eq: P.eq, ranks: P.ranks, floor: G.floor }));
+    localStorage.setItem('aschenfall-save', JSON.stringify({ lvl: P.lvl, xp: P.xp, potions: P.potions, inv: P.inv, eq: P.eq, ranks: P.ranks, story: P.story, floor: G.floor }));
   } catch (e) { /* Speicher evtl. gesperrt */ }
 }
 function hasSave() {
@@ -85,7 +86,7 @@ function hasSave() {
 function loadGame() {
   try {
     const s = JSON.parse(localStorage.getItem('aschenfall-save'));
-    P.lvl = s.lvl; P.xp = s.xp; P.potions = s.potions; P.inv = s.inv; P.eq = s.eq; P.ranks = s.ranks || {}; G.floor = s.floor;
+    P.lvl = s.lvl; P.xp = s.xp; P.potions = s.potions; P.inv = s.inv; P.eq = s.eq; P.ranks = s.ranks || {}; P.story = s.story || Story.fresh(); G.floor = s.floor;
     recalc(); P.hp = P.maxHp; P.mana = P.maxMana;
     startFloor();
     return true;
@@ -113,6 +114,7 @@ function startFloor() {
   spawnEnemies();
   G.state = 'play';
   if (typeof UI !== 'undefined') UI.toast(`${G.theme.name} · Ebene ${G.floor}`, '#e8b36a');
+  Story.onFloor(G.floor);
 }
 
 function spawnEnemies() {
@@ -150,6 +152,8 @@ function spawnEnemy(type, x, y, elite) {
     stun: 0, wind: 0, dashT: 0, dashCd: rnd(0, 2), dashHit: false, burnT: 0, burnTick: 0, burnDps: 0, trailT: 0, t1: 3, t2: 5, t3: 9, aff: null, seed: Math.random() * 100, fl: Math.random() < 0.5 ? 1 : -1, walk: 0, moving: false,
   };
   e.hp = e.maxHp;
+  if (G.theme.echo && !d.boss) { e.name = 'Echo: ' + d.name; e.maxHp *= 1.25; e.hp = e.maxHp; }
+  if (G.theme.echo && d.boss && ECHO_BOSS_NAME[type]) e.name = ECHO_BOSS_NAME[type];
   if (elite) {
     e.aff = pick(ELITE_AFFIXES);
     e.name = `Champion ${d.name} · ${e.aff.label}`;
@@ -261,11 +265,14 @@ function hurtPlayer(amt, fx, fy) {
 }
 function wake(e) {
   e.state = 'chase';
+  Story.seen(e.type);
+  if (e.boss && !e.introDone) { e.introDone = true; if (!G.theme.echo || e.type === 'schweigen') Story.bossIntro(e); }
   for (const o of G.enemies) if (o.state === 'idle' && !o.dead && Math.hypot(o.x - e.x, o.y - e.y) < 170) o.state = 'chase';
 }
 
 function killEnemy(e) {
   e.dead = true;
+  Story.seen(e.type);
   const bony = e.type === 'skeleton' || e.type === 'archer' || e.boss;
   burst(e.x, e.y, bony ? '#d9d1b6' : '#8a1620', e.boss ? 40 : 14, 170, 0.7, 3.5, false);
   if (e.boss) burst(e.x, e.y, '#c04bff', 30, 220, 0.8, 4);
@@ -291,10 +298,15 @@ function killEnemy(e) {
   for (const it of rollDrops(src, ilvl)) dropItem(e.x, e.y, it);
   if (Math.random() < (e.boss ? 1 : e.elite ? 0.4 : 0.07)) G.drops.push({ x: e.x + rnd(-16, 16), y: e.y + rnd(-16, 16), potion: true, t: 0 });
   if (e.boss) {
-    G.stairs = { x: e.x, y: e.y };
     G.shake = 8;
-    UI.toast(`${e.name} ist gefallen! Eine Treppe erscheint.`, '#e8b36a');
-    Sfx.play('stairs');
+    if (e.def.bossKind === 'silence') {
+      Story.finale();
+    } else {
+      G.stairs = { x: e.x, y: e.y };
+      UI.toast(`${e.name} ist gefallen! Eine Treppe erscheint.`, '#e8b36a');
+      Sfx.play('stairs');
+      if (!G.theme.echo) Story.bossDeath(e);
+    }
   }
 }
 function dropItem(x, y, item) {
@@ -546,6 +558,7 @@ function update(dt) {
       } else if (P.inv.length < INV_MAX) {
         P.inv.push(d.item); d.got = true;
         const R = RARITY[d.item.rarity];
+        if (d.item.rarity === 'legendary') Story.relic(d.item.name);
         Sfx.play({ normal: 'pickup', magic: 'pickupMagic', rare: 'pickupRare', legendary: 'pickupLegend' }[d.item.rarity]);
         UI.toast(`${d.item.name}`, R.color);
         saveGame();
@@ -726,6 +739,22 @@ function bossAI(e, dt) {
       UI.toast('Giftwolken!', '#9ae860');
     }
     if (e.t3 <= 0) { e.t3 = 12; summon(e, 'bat', 4); UI.toast('Die Königin ruft ihre Brut!', '#e6c6ff'); }
+  } else if (kind === 'silence') {
+    if (e.t1 <= 0) {
+      e.t1 = 5 * k; Sfx.play('bossBurst', e); G.shake = Math.max(G.shake, 4);
+      const n = enraged ? 10 : 7, off = Math.random() * 6.28;
+      for (let i = 0; i < n; i++) {
+        const a = off + (i / n) * 6.283;
+        addStrike(P.x + Math.cos(a) * 150, P.y + Math.sin(a) * 150, 55, 1.0 + i * 0.07, e.dmg * 0.55, null);
+      }
+      addStrike(P.x, P.y, 60, 1.2, e.dmg * 0.6, null);
+      UI.toast('Die Stille schlägt zu!', '#e8ecf8');
+    }
+    if (e.t2 <= 0) {
+      e.t2 = 6.5 * k; Sfx.play('fanfire', e);
+      for (let i = -3; i <= 3; i++) G.projs.push({ x: e.x, y: e.y, vx: Math.cos(toP + i * 0.2) * 260, vy: Math.sin(toP + i * 0.2) * 260, r: 8, dmg: e.dmg * 0.5, friend: false, life: 2.6, color: '#e8ecf8', glow: '220,230,255' });
+    }
+    if (e.t3 <= 0) { e.t3 = 13; summon(e, pick(['skeleton', 'spider', 'hound', 'cultist', 'bat']), 3); UI.toast('Echos erheben sich.', '#cfc8e6'); }
   } else if (kind === 'lava') {
     if (e.t1 <= 0) {
       e.t1 = 5 * k; Sfx.play('bossBurst', e); G.shake = Math.max(G.shake, 5);
@@ -825,6 +854,7 @@ function breakProp(p) {
   const col = p.kind === 'geode' ? '#b89cff' : p.kind === 'urn' ? '#8a5a3a' : '#7a5a34';
   burst(p.x, p.y - 4, col, 12, 160, 0.6, 3.5, false);
   Sfx.play('break', p);
+  Story.maybeName(p.kind);
   const ilvl = Math.max(1, G.floor * 2 + Math.floor(P.lvl / 2));
   if (Math.random() < 0.3) dropItem(p.x, p.y, makeItem(pick(Object.keys(SLOTS)), ilvl, weighted(DROP_TABLES.normal)));
   if (Math.random() < 0.15) G.drops.push({ x: p.x, y: p.y, potion: true, t: 0 });
