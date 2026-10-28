@@ -25,10 +25,12 @@ python3 -m http.server 8000
 - Magier mit 4 Skills (freigeschaltet bei Level 1 / 2 / 3 / 5)
 - Loot mit Seltenheiten (Normal, Magisch, Selten, Legendär), zufälligen Affixen und 6 Ausrüstungsplätzen
 - Champion-Gegner, Heiltränke, Level-Ups, Autosave (localStorage)
+- Synthetisierter Sound (WebAudio, Hall, 3D-Positionierung) und Kampf-Feedback: Trefferpause, Betäubung, Rückstoß, Kamerawackeln, Herzschlag bei wenig Leben (🔊-Button schaltet stumm)
 - Prozedurale Grafik ohne Bilddateien: Stein-Texturen, dynamisches Licht (Fackeln, Feuerball, Blitz), animierte Figuren, Blut- und Knochenspuren
 
 ## Code-Struktur
 
+- `js/audio.js` – Sounds und Ambiente
 - `js/data.js` – Items, Affixe, Drops, Skills, Gegner-Definitionen
 - `js/dungeon.js` – Dungeon-Generator und Wegfindung (BFS)
 - `js/game.js` – Spiellogik, Kampf, KI

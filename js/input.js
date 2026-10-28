@@ -88,6 +88,11 @@ const Input = {
   $('btnInv').addEventListener('pointerdown', e => { e.preventDefault(); UI.togglePanel(); });
   $('pClose').onclick = () => UI.togglePanel();
   $('btnJunk').onclick = () => UI.junk();
+  $('btnSnd').addEventListener('pointerdown', e => { e.preventDefault(); Sfx.init(); Sfx.setMuted(!Sfx.muted); });
+  // Browser erlauben Audio erst nach der ersten Eingabe
+  const unlock = () => Sfx.init();
+  window.addEventListener('pointerdown', unlock);
+  window.addEventListener('keydown', unlock);
 
   // Tastatur
   window.addEventListener('keydown', e => {

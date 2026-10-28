@@ -118,8 +118,11 @@ const UI = {
   },
 
   // ---------- Inventar ----------
+  updateSndButton() { $('btnSnd').textContent = Sfx.muted ? '🔇' : '🔊'; },
+
   togglePanel() {
     if (G.state !== 'play') return;
+    Sfx.play('ui');
     const open = $('panel').classList.contains('hidden');
     $('panel').classList.toggle('hidden', !open);
     G.paused = open;

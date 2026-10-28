@@ -18,7 +18,7 @@ function render() {
   if (!G.map || !ART.ready) return;
 
   G.glows.length = 0;
-  const sx = G.shake ? rnd(-G.shake, G.shake) : 0, sy = G.shake ? rnd(-G.shake, G.shake) : 0;
+  const sx = (G.shake ? rnd(-G.shake, G.shake) : 0) + G.kx, sy = (G.shake ? rnd(-G.shake, G.shake) : 0) + G.ky;
   const sc = zoom * dpr, tx0 = (vw / 2 - G.cam.x * zoom + sx) * dpr, ty0 = (vh / 2 - G.cam.y * zoom + sy) * dpr;
   ctx.setTransform(sc, 0, 0, sc, tx0, ty0);
 
@@ -111,7 +111,8 @@ function render() {
   for (const f of G.fx) {
     const k = 1 - f.t / f.max;
     if (f.type === 'ring') light(f.x, f.y, f.r * 1.3, f.color === '#c04bff' ? '190,90,255' : '140,200,255', 0.8 * k);
-    else for (const q of f.pts.slice(1)) light(q.x, q.y, 120, '140,200,255', 0.9 * k);
+    else if (f.type === 'bolt') for (const q of f.pts.slice(1)) light(q.x, q.y, 120, '140,200,255', 0.9 * k);
+    else if (f.type === 'flash') light(f.x, f.y, f.r * 2.2, '255,220,160', 0.6 * k);
   }
   if (P.castAnim > 0) light(P.x, P.y, 220, '255,170,80', 0.5);
   lctx.globalCompositeOperation = 'source-over'; lctx.globalAlpha = 1;
@@ -160,6 +161,8 @@ function render() {
       const gr = ctx.createRadialGradient(f.x, f.y, r * 0.3, f.x, f.y, r);
       gr.addColorStop(0, 'rgba(140,200,255,0)'); gr.addColorStop(1, 'rgba(140,200,255,.35)');
       ctx.globalAlpha = 1 - k; ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, 6.283); ctx.fill();
+    } else if (f.type === 'flash') {
+      glow(f.x, f.y, f.r, '255,255,200', 1 - k);
     } else if (f.type === 'bolt') {
       ctx.globalAlpha = 1 - k; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       for (const pass of [[9, 'rgba(90,150,255,.5)'], [3.5, '#e8f4ff']]) {
@@ -243,5 +246,11 @@ function render() {
   const vg = ctx.createRadialGradient(W / 2, H / 2, rad * 0.45, W / 2, H / 2, rad);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.6)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  if (P.hp < P.maxHp * 0.3 && G.state === 'play') {
+    const pr = 0.12 + 0.1 * Math.sin(G.time * 7);
+    const lg = ctx.createRadialGradient(W / 2, H / 2, rad * 0.3, W / 2, H / 2, rad);
+    lg.addColorStop(0, 'rgba(160,0,0,0)'); lg.addColorStop(1, `rgba(160,0,0,${pr * 3})`);
+    ctx.fillStyle = lg; ctx.fillRect(0, 0, W, H);
+  }
   if (G.hurtFlash > 0) { ctx.fillStyle = `rgba(200,0,0,${G.hurtFlash * 0.6})`; ctx.fillRect(0, 0, W, H); }
 }

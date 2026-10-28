@@ -171,3 +171,4 @@ canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
 .pbox { background: linear-gradient(#1a1622, #110e17); border-color: #6b5a3c; }
 .itm { background: linear-gradient(#14111b, #0b0910); }
 #xp > div { background: linear-gradient(90deg, #a87a1e, #f0c84a); }
+#btnSnd { top: 58px; }

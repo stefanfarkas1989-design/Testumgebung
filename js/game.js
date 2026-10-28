@@ -12,12 +12,12 @@ const G = {
   enemies: [], projs: [], fx: [], texts: [], drops: [], parts: [], glows: [], decals: [], torches: [],
   stairs: null, boss: null,
   cam: { x: 0, y: 0 }, zoom: 1, vw: 800, vh: 600, dpr: 1,
-  shake: 0, hurtFlash: 0, time: 0, exploreT: 0,
+  shake: 0, hurtFlash: 0, time: 0, exploreT: 0, hitstop: 0, kx: 0, ky: 0, heartT: 0,
 };
 
 const P = {
   x: 0, y: 0, r: 11, face: 0, hp: 100, mana: 60, lvl: 1, xp: 0, potions: 3, potCd: 0,
-  cd: [0, 0, 0, 0], inv: [], eq: {}, gear: {}, castAnim: 0, walk: 0, fl: 1, moving: false,
+  cd: [0, 0, 0, 0], inv: [], eq: {}, gear: {}, castAnim: 0, walk: 0, fl: 1, moving: false, kx: 0, ky: 0,
 };
 const INV_MAX = 24;
 
@@ -120,7 +120,7 @@ function spawnEnemy(type, x, y, elite) {
     spd: d.spd * (elite ? 1.1 : 1), xp: d.xp * (1 + 0.1 * (f - 1)) * (elite ? 3 : 1),
     color: d.color, state: 'idle', cd: rnd(0, 1), slow: 0, kx: 0, ky: 0, flash: 0, lunge: 0,
     elite: !!elite, boss: !!d.boss, aggro: 360, burstT: 4, summonT: 8, dead: false, ang: 0,
-    seed: Math.random() * 100, fl: Math.random() < 0.5 ? 1 : -1, walk: 0, moving: false,
+    stun: 0, seed: Math.random() * 100, fl: Math.random() < 0.5 ? 1 : -1, walk: 0, moving: false,
   };
   e.hp = e.maxHp;
   if (elite) e.name = 'Champion ' + e.name;
@@ -192,6 +192,10 @@ function damageEnemy(e, amt, o) {
   if (o.player && Math.random() * 100 < P.crit) { crit = true; amt *= P.critDmg / 100; }
   amt = Math.max(1, Math.round(amt));
   e.hp -= amt; e.flash = 0.1;
+  if (!e.boss) e.stun = e.elite ? 0.07 : 0.14;
+  G.fx.push({ type: 'flash', x: e.x, y: e.y, t: 0, max: 0.12, r: crit ? 64 : 40 });
+  Sfx.play(crit ? 'crit' : 'hit', e);
+  if (crit) hitstop(0.05);
   if (e.state === 'idle') wake(e);
   floatText(e.x, e.y - e.r - 6, amt, crit ? '#ffe14a' : '#fff', crit);
   if (o.kb) {
@@ -203,14 +207,21 @@ function damageEnemy(e, amt, o) {
   if (crit) G.shake = Math.max(G.shake, 2);
   if (e.hp <= 0) killEnemy(e);
 }
-function hurtPlayer(amt) {
+function hitstop(s) { G.hitstop = Math.max(G.hitstop, s); }
+function hurtPlayer(amt, fx, fy) {
   if (G.state !== 'play') return;
   const red = P.armor / (P.armor + 60 + 8 * G.floor);
   amt = Math.max(1, Math.round(amt * (1 - red)));
   P.hp -= amt;
-  G.hurtFlash = 0.25; G.shake = Math.max(G.shake, 3);
+  G.hurtFlash = 0.25; G.shake = Math.max(G.shake, clamp(2 + 14 * amt / P.maxHp, 2, 9));
+  if (amt > P.maxHp * 0.12) hitstop(0.06);
+  if (fx !== undefined) {
+    const a = Math.atan2(P.y - fy, P.x - fx);
+    P.kx += Math.cos(a) * 170; P.ky += Math.sin(a) * 170;
+  }
   floatText(P.x, P.y - 20, '-' + amt, '#ff5a5a', false);
-  if (P.hp <= 0) { P.hp = 0; G.state = 'dead'; UI.showDeath(); }
+  Sfx.play('hurt');
+  if (P.hp <= 0) { P.hp = 0; G.state = 'dead'; Sfx.play('playerDie'); UI.showDeath(); }
 }
 function wake(e) {
   e.state = 'chase';
@@ -223,6 +234,8 @@ function killEnemy(e) {
   burst(e.x, e.y, bony ? '#d9d1b6' : '#8a1620', e.boss ? 40 : 14, 170, 0.7, 3.5, false);
   if (e.boss) burst(e.x, e.y, '#c04bff', 30, 220, 0.8, 4);
   addDecals(e, bony);
+  Sfx.play(e.boss ? 'bossDie' : 'death', e);
+  hitstop(e.boss ? 0.3 : e.elite ? 0.09 : 0.03);
   gainXp(e.xp);
   const src = e.boss ? 'boss' : e.elite ? 'elite' : 'normal';
   const ilvl = Math.max(1, G.floor * 2 + Math.floor(P.lvl / 2));
@@ -232,6 +245,7 @@ function killEnemy(e) {
     G.stairs = { x: e.x, y: e.y };
     G.shake = 8;
     UI.toast('Der Knochenfürst ist gefallen! Eine Treppe erscheint.', '#e8b36a');
+    Sfx.play('stairs');
   }
 }
 function dropItem(x, y, item) {
@@ -247,6 +261,7 @@ function gainXp(n) {
     recalc(); P.hp = P.maxHp; P.mana = P.maxMana;
     floatText(P.x, P.y - 30, 'LEVEL ' + P.lvl, '#ffd84a', true);
     burst(P.x, P.y, '#ffd84a', 30, 200, 0.8, 4);
+    Sfx.play('levelup');
     const ns = SKILLS.find(s => s.unlock === P.lvl);
     UI.toast(`Level ${P.lvl}!` + (ns ? ` Neuer Skill: ${ns.name}` : ''), '#ffd84a');
     saveGame();
@@ -334,6 +349,8 @@ function castSkill(i) {
   }
   if (!ok) return false;
   P.mana -= sk.mana;
+  Sfx.play(sk.id);
+  G.kx -= Math.cos(a) * (sk.id === 'fire' ? 2.5 : 4); G.ky -= Math.sin(a) * (sk.id === 'fire' ? 2.5 : 4);
   P.cd[i] = skillCd(sk);
   P.face = a; P.castAnim = 0.15;
   return true;
@@ -341,6 +358,7 @@ function castSkill(i) {
 function usePotion() {
   if (G.state !== 'play' || G.paused || P.potions <= 0 || P.potCd > 0 || P.hp >= P.maxHp) return;
   P.potions--; P.potCd = 1.0;
+  Sfx.play('potion');
   const heal = Math.round(P.maxHp * 0.6);
   P.hp = Math.min(P.maxHp, P.hp + heal);
   floatText(P.x, P.y - 24, '+' + heal, '#6fe08a', false);
@@ -375,6 +393,18 @@ function update(dt) {
 
   // Spieler
   const spd = 170 * (1 + P.move / 100);
+  if (P.kx || P.ky) {
+    moveEnt(P, P.kx * dt, P.ky * dt);
+    const f = Math.pow(0.003, dt);
+    P.kx *= f; P.ky *= f;
+    if (Math.abs(P.kx) < 4) P.kx = 0;
+    if (Math.abs(P.ky) < 4) P.ky = 0;
+  }
+  if (P.hp < P.maxHp * 0.3) {
+    G.heartT -= dt;
+    if (G.heartT <= 0) { G.heartT = 0.85; Sfx.play('heart'); }
+  }
+  const kd = Math.exp(-14 * dt); G.kx *= kd; G.ky *= kd;
   P.moving = !!(mv.x || mv.y);
   if (P.moving) {
     P.walk += spd * dt * 0.09;
@@ -415,10 +445,11 @@ function update(dt) {
     d.t += dt;
     if (Math.hypot(d.x - P.x, d.y - P.y) < 38) {
       if (d.potion) {
-        if (P.potions < 6) { P.potions++; d.got = true; floatText(P.x, P.y - 24, '+Trank', '#e0343c', false); }
+        if (P.potions < 6) { P.potions++; d.got = true; Sfx.play('pickup'); floatText(P.x, P.y - 24, '+Trank', '#e0343c', false); }
       } else if (P.inv.length < INV_MAX) {
         P.inv.push(d.item); d.got = true;
         const R = RARITY[d.item.rarity];
+        Sfx.play({ normal: 'pickup', magic: 'pickupMagic', rare: 'pickupRare', legendary: 'pickupLegend' }[d.item.rarity]);
         UI.toast(`${d.item.name}`, R.color);
         saveGame();
       } else if (!d.warned) { d.warned = true; UI.toast('Rucksack voll!', '#ff6a6a'); }
@@ -428,6 +459,7 @@ function update(dt) {
 
   if (G.stairs && Math.hypot(G.stairs.x - P.x, G.stairs.y - P.y) < 34) {
     G.floor++; saveGame(); startFloor();
+    Sfx.play('descend');
     return;
   }
 
@@ -462,6 +494,7 @@ function updateEnemyAI(e, dt) {
     if (Math.abs(e.kx) < 4) e.kx = 0;
     if (Math.abs(e.ky) < 4) e.ky = 0;
   }
+  if (e.stun > 0) { e.stun -= dt; return; }
   const d = Math.hypot(P.x - e.x, P.y - e.y);
   if (e.state === 'idle') {
     if (d < e.aggro && (d < 170 || hasLOS(e.x, e.y, P.x, P.y))) wake(e);
@@ -482,6 +515,7 @@ function updateEnemyAI(e, dt) {
     }
     if (d < 460 && e.cd <= 0 && hasLOS(e.x, e.y, P.x, P.y)) {
       e.cd = def.atkCd * (e.slow > 0 ? 1.5 : 1);
+      Sfx.play('arrow', e);
       G.projs.push({ x: e.x, y: e.y, vx: Math.cos(toP) * def.projSpd, vy: Math.sin(toP) * def.projSpd, r: 6, dmg: e.dmg, friend: false, life: 2, color: '#d8d0a0' });
     }
   } else {
@@ -491,7 +525,9 @@ function updateEnemyAI(e, dt) {
     } else if (e.cd <= 0) {
       e.cd = def.atkCd * (e.slow > 0 ? 1.5 : 1);
       e.lunge = 0.15;
-      hurtPlayer(e.dmg);
+      Sfx.play('swing', e);
+      hurtPlayer(e.dmg, e.x, e.y);
+      if (e.boss) G.shake = Math.max(G.shake, 6);
     }
   }
 
@@ -500,6 +536,7 @@ function updateEnemyAI(e, dt) {
     const enraged = e.hp < e.maxHp * 0.5;
     if (e.burstT <= 0) {
       e.burstT = enraged ? 3 : 4.5;
+      Sfx.play('bossBurst', e); G.shake = Math.max(G.shake, 5);
       const n = enraged ? 20 : 14, off = Math.random() * 6.28;
       for (let i = 0; i < n; i++) {
         const a = off + (i / n) * 6.283;
@@ -533,13 +570,13 @@ function updateProjs(dt) {
       for (const e of G.enemies) {
         if (e.dead) continue;
         if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r) {
-          damageEnemy(e, p.dmg, { player: true, kb: 120, fx: p.x - p.vx, fy: p.y - p.vy });
+          damageEnemy(e, p.dmg, { player: true, kb: 210, fx: p.x - p.vx, fy: p.y - p.vy });
           explode(p, e); p.life = 0;
           break;
         }
       }
     } else if (G.state === 'play' && Math.hypot(P.x - p.x, P.y - p.y) < P.r + p.r) {
-      hurtPlayer(p.dmg); p.life = 0;
+      hurtPlayer(p.dmg, p.x - p.vx * 0.05, p.y - p.vy * 0.05); p.life = 0;
     }
     if (Math.random() < 0.6) G.parts.push({ x: p.x, y: p.y, vx: rnd(-20, 20), vy: rnd(-20, 20), life: 0.25, max: 0.25, color: p.color, size: 3 });
   }
@@ -548,6 +585,8 @@ function updateProjs(dt) {
 function explode(p, direct) {
   burst(p.x, p.y, '#ffb347', 10, 140, 0.4, 3);
   if (!p.fire) return;
+  Sfx.play('fireHit', p);
+  G.fx.push({ type: 'flash', x: p.x, y: p.y, t: 0, max: 0.18, r: 70 });
   for (const e of G.enemies) {
     if (e.dead || e === direct) continue;
     if (Math.hypot(e.x - p.x, e.y - p.y) < 60 + e.r) damageEnemy(e, p.dmg * 0.5, { player: true, kb: 80, fx: p.x, fy: p.y });
