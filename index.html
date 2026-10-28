@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0a10">
+<title>Aschenfall</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="input"></div>
+<div id="joy"><div id="joyKnob"></div></div>
+
+<div id="hud">
+  <div id="floorLabel"></div>
+  <canvas id="minimap" width="128" height="128"></canvas>
+  <div id="bossbar"><div class="bn"></div><div class="bf"><div></div></div></div>
+  <div id="toasts"></div>
+
+  <div id="orbLife" class="orb life"><div class="fill"></div><span></span></div>
+  <div id="orbMana" class="orb mana"><div class="fill"></div><span></span></div>
+  <div id="xp"><div></div><span></span></div>
+
+  <button class="sk main" id="sk0" data-i="0"><span class="ic">🔥</span><span class="cdov"></span><span class="key">1</span></button>
+  <button class="sk s1" id="sk1" data-i="1"><span class="ic">❄️</span><span class="cdov"></span><span class="key">2</span></button>
+  <button class="sk s2" id="sk2" data-i="2"><span class="ic">⚡</span><span class="cdov"></span><span class="key">3</span></button>
+  <button class="sk s3" id="sk3" data-i="3"><span class="ic">🌀</span><span class="cdov"></span><span class="key">4</span></button>
+  <button class="sk pot" id="btnPot"><span class="ic">🧪</span><span class="cdov"></span><span class="key">Q</span><span class="cnt"></span></button>
+  <button class="round" id="btnInv">🎒</button>
+</div>
+
+<div id="panel" class="hidden">
+  <div class="pbox">
+    <header><h2>Charakter</h2><button id="pClose">✕</button></header>
+    <div class="pcols">
+      <section class="colL">
+        <h3>Ausrüstung</h3><div id="eqGrid"></div>
+        <h3>Werte</h3><div id="statList"></div>
+      </section>
+      <section class="colM">
+        <h3>Rucksack <small id="invCount"></small></h3>
+        <div id="invGrid"></div>
+        <button id="btnJunk" class="wide">Normale Items wegwerfen</button>
+      </section>
+      <section class="colR"><h3>Details</h3><div id="detail"><p class="muted">Tippe ein Item an.</p></div></section>
+    </div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div class="obox">
+    <h1>ASCHENFALL</h1>
+    <p class="muted" id="oText">Steige hinab. Besiege den Boss. Sammle Beute.</p>
+    <div id="oButtons"></div>
+    <p class="muted small" id="oHelp">PC: WASD laufen · Maus zielen · Linksklick Feuerball · 1–4 Skills · Q Trank · I Inventar<br>Handy: links wischen zum Laufen · rechts Skill-Buttons</p>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/dungeon.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/input.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
