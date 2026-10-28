@@ -39,7 +39,9 @@ const UI = {
     $('orbMana').firstElementChild.style.height = (100 * P.mana / P.maxMana) + '%';
     $('xp').firstElementChild.style.width = (100 * P.xp / xpNeed(P.lvl)) + '%';
     const nn = Story.S().names.length;
-    UI.set('floorLabel', 'text', `${G.theme.name} · Ebene ${G.floor}\nLevel ${P.lvl} · Namen ${nn >= NAMES_NEEDED ? nn + ' ✓' : nn + '/' + NAMES_NEEDED}`);
+    UI.set('floorLabel', 'text', `${G.theme.name} · Ebene ${G.floor}\nLevel ${P.lvl} · 🪙 ${P.gold}\nNamen ${nn >= NAMES_NEEDED ? nn + ' ✓' : nn + '/' + NAMES_NEEDED}`);
+    const showChest = !!G.nearChest && !G.paused && G.state === 'play';
+    if (UI.last.chest !== showChest) { UI.last.chest = showChest; $('interactBtn').classList.toggle('hidden', !showChest); }
     const pa = pointsAvail();
     if (UI.last.pa !== pa) { UI.last.pa = pa; $('btnSkills').dataset.n = pa > 0 ? pa : ''; }
 
@@ -251,6 +253,8 @@ const UI = {
   updateSndButton() {
     $('btnSnd').textContent = Sfx.muted ? '🔇' : '🔊';
     $('pSound').textContent = Sfx.muted ? '🔇 Ton: aus' : '🔊 Ton: an';
+    $('pVib').textContent = Haptic.on ? '📳 Vibration: an' : '📴 Vibration: aus';
+    $('pVib').style.display = Haptic.can ? '' : 'none';
   },
 
   // ---------- Pause ----------
@@ -277,13 +281,14 @@ const UI = {
   },
 
   // which: 'inv' | 'skills' | null (alles schließen)
-  showPanel(which) {
+  showPanel(which, opts) {
     if (G.state !== 'play' || G.pausedMenu || G.modal) return;
     const ids = { inv: 'panel', skills: 'skillPanel', chronik: 'chronikPanel' };
     let cur = null;
     for (const k in ids) if (!$(ids[k]).classList.contains('hidden')) cur = k;
     const next = which === cur ? null : which;
     for (const k in ids) $(ids[k]).classList.toggle('hidden', k !== next);
+    UI.shopMode = next === 'inv' && !!(opts && opts.shop);
     G.paused = !!next;
     Sfx.play('ui');
     if (next) Input.releaseAll();
@@ -292,6 +297,11 @@ const UI = {
     if (next === 'chronik') UI.renderChronik(UI.cTab || 'story');
   },
   togglePanel() { UI.showPanel('inv'); },
+  openShop() {
+    if (!G.nearChest || G.paused) return;
+    UI.showPanel('inv', { shop: true });
+    Story.tip('chest', 'Die Funkenkiste: Odalie schickt, was sie kann. Verkaufe Items, kaufe Tränke und würfle Werte neu.', 7000);
+  },
 
   renderSkills() {
     $('skillPts').textContent = pointsAvail();
@@ -405,7 +415,7 @@ const UI = {
         if (where === 'inv') { equipFromInv(key); Sfx.play('pickupMagic'); UI.sel = null; }
         else if (unequip(key)) UI.sel = null; else UI.toast('Rucksack voll!', '#ff6a6a');
       } else UI.sel = { where, key };
-      UI.confirmDrop = false;
+      UI.confirmDrop = false; UI.confirmSell = false;
       UI.renderPanel();
     };
     return d;
@@ -424,7 +434,9 @@ const UI = {
     for (let i = 0; i < INV_MAX; i++) inv.appendChild(UI.cell(P.inv[i], i, 'inv'));
     const cnt = `(${P.inv.length}/${INV_MAX})`;
     $('invCount').textContent = cnt; $('invCount2').textContent = cnt;
-    $('lvlInfo').textContent = `· Level ${P.lvl} · ${Math.floor(P.xp)}/${xpNeed(P.lvl)} EP`;
+    $('invTitle').textContent = UI.shopMode ? 'Funkenkiste' : 'Inventar';
+    $('statHead').textContent = UI.shopMode ? 'Händler' : 'Werte';
+    $('lvlInfo').textContent = UI.shopMode ? `· 🪙 ${P.gold} Gold` : `· Level ${P.lvl} · ${Math.floor(P.xp)}/${xpNeed(P.lvl)} EP`;
 
     const stats = [
       ['Leben', P.maxHp], ['Mana', P.maxMana],
@@ -435,6 +447,13 @@ const UI = {
       ['Regeneration', P.regen.toFixed(1) + ' Leben · ' + P.manaRegen.toFixed(1) + ' Mana /s'],
     ];
     $('statList').innerHTML = stats.map(s => `<div><span>${s[0]}</span><b>${s[1]}</b></div>`).join('');
+    if (UI.shopMode) {
+      $('statList').innerHTML = `<button class="shopbtn" id="bPotion">Glutessenz kaufen (${P.potions}/6)<b>${potionPrice()} 🪙</b></button>
+        <button class="shopbtn" id="bItem">Zufälliges Item<b>${itemPrice()} 🪙</b></button>
+        <p class="muted small">Tippe ein Item an, um es zu verkaufen oder einen Wert neu zu würfeln.</p>`;
+      $('bPotion').onclick = () => { if (buyPotion()) UI.renderPanel(); };
+      $('bItem').onclick = () => { if (buyItem()) UI.renderPanel(); };
+    }
 
     // Details (Sheet)
     const det = $('detail'), sheet = $('sheet'), s = UI.sel;
@@ -447,8 +466,24 @@ const UI = {
     h += s.where === 'inv' ? '<button id="bEquip" class="primary">Anlegen</button>' : '<button id="bUnequip" class="primary">Ablegen</button>';
     if (s.where === 'inv') h += `<button id="bDrop" class="${UI.confirmDrop ? 'danger' : ''}">${UI.confirmDrop ? 'Wirklich?' : 'Wegwerfen'}</button>`;
     h += '</div>';
+    if (UI.shopMode) {
+      h += '<div class="btnrow shop">';
+      if (s.where === 'inv') h += `<button id="bSell" class="${UI.confirmSell ? 'danger' : ''}">${UI.confirmSell ? 'Wirklich?' : 'Verkaufen +' + sellValue(it) + ' 🪙'}</button>`;
+      if (it.affixes.length) h += `<button id="bReroll">Verzaubern −${rerollCost(it)} 🪙</button>`;
+      h += '</div>';
+    }
     det.innerHTML = h;
     const on = (id, fn) => { const b = $(id); if (b) b.onclick = fn; };
+    on('bSell', () => {
+      if ((it.rarity === 'rare' || it.rarity === 'legendary') && !UI.confirmSell) { UI.confirmSell = true; UI.renderPanel(); return; }
+      P.gold += sellValue(it); P.inv.splice(s.key, 1); UI.sel = null; UI.confirmSell = false; saveGame(); Sfx.play('coin'); UI.renderPanel();
+    });
+    on('bReroll', () => {
+      const cost = rerollCost(it);
+      if (P.gold < cost) { UI.toast('Nicht genug Gold.', '#ff6a6a'); return; }
+      if (!rerollAffix(it)) { UI.toast('Dieses Item lässt sich nicht verändern.', '#ff9a6a'); return; }
+      P.gold -= cost; if (s.where === 'eq') recalc(); saveGame(); Sfx.play('pickupMagic'); UI.renderPanel();
+    });
     on('bEquip', () => { equipFromInv(s.key); Sfx.play('pickupMagic'); UI.sel = null; UI.renderPanel(); });
     on('bUnequip', () => { if (unequip(s.key)) UI.sel = null; else UI.toast('Rucksack voll!', '#ff6a6a'); UI.renderPanel(); });
     on('bDrop', () => {

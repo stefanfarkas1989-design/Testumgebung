@@ -108,6 +108,14 @@ const Story = {
   fresh() { return { name: '', letters: [], names: [], seen: {}, relics: {}, bosses: {}, floorsSeen: {}, ending: 0, intro: false }; },
   S() { return P.story || (P.story = Story.fresh()); },
 
+  // Einmalige Hinweise für Einsteiger
+  tip(id, text, dur) {
+    const S = Story.S();
+    S.tips = S.tips || {};
+    if (S.tips[id]) return;
+    S.tips[id] = 1;
+    UI.say('Tipp', text, '#9ad0ff', dur || 6500);
+  },
   deathLine() { return pick(DEATH_LINES); },
   playerName() { return Story.S().name || 'Funke'; },
 

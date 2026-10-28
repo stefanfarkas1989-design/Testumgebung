@@ -104,6 +104,8 @@ const Input = {
   $('cClose').onclick = () => UI.showPanel(null);
   document.querySelectorAll('#cTabs button').forEach(b => { b.onclick = () => UI.renderChronik(b.dataset.c); });
   $('pChron').onclick = () => { UI.setPause(false); UI.showPanel('chronik'); };
+  $('interactBtn').addEventListener('pointerdown', e => { e.preventDefault(); UI.openShop(); });
+  $('pVib').onclick = () => { Haptic.on = !Haptic.on; try { localStorage.setItem('aschenfall-vib', Haptic.on ? '1' : '0'); } catch (err) { /* egal */ } UI.updateSndButton(); Haptic.buzz(30); };
   $('pGfx').onclick = () => { setGfx(G.gfx === '3d' ? '2d' : '3d'); };
   $('pQual').onclick = () => cycleQuality();
   $('pMenu').onclick = () => { saveGame(); UI.setPause(false); UI.showTitle(); };
@@ -130,6 +132,7 @@ const Input = {
     if (k === 'i' || k === 'tab') { UI.showPanel('inv'); return; }
     if (k === 'k') { UI.showPanel('skills'); return; }
     if (k === 'c') { UI.showPanel('chronik'); return; }
+    if (k === 'e') { UI.openShop(); return; }
     if (k === 'escape') { UI.togglePause(); return; }
     if (k === 'p') { UI.togglePause(); return; }
     Input.keys[k] = true;

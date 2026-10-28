@@ -22,6 +22,9 @@ python3 -m http.server 8000
 
 ## Inhalt
 
+- **Gold & Händler:** Gold fällt von Gegnern und Fässern. Die **Funkenkiste** im Startraum jeder Ebene (Taste `E` / Button) verkauft Tränke und Items, kauft Items auf und würfelt Werte neu
+- Vibration auf dem Handy (abschaltbar), Einsteiger-Tipps
+
 - **Geschichte** (siehe `STORY.md`): Prolog mit Namenseingabe, Briefe der Odalie, Boss-Dialoge, Todes-Sätze, Chronik (Taste `C`) mit Bestiarium und Relikten, Namenssplitter als Sammelmechanik, Echo-Ebenen ab Ebene 7, Endkampf gegen „Das Schweigen“ auf Ebene 9, drei Enden und danach der Echo-Modus
 
 - Zufällige Dungeons, pro Ebene ein Boss, danach Treppe zur nächsten Ebene. Alle 2 Ebenen wechselt das Thema: Gruft (Knochenfürst), Kristallhöhle (Spinnenkönigin), Lavakluft (Aschenfürst)

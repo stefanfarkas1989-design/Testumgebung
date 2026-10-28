@@ -148,6 +148,15 @@ Sfx.R = {
   spit()    { N({ dur: .15, vol: .15, f0: 900, f1: 300, q: 2 }); T({ f0: 420, f1: 180, dur: .14, vol: .1, type: 'triangle' }); },
   fanfire() { N({ dur: .2, vol: .18, f0: 700, f1: 2400, q: 1 }); T({ f0: 260, f1: 520, dur: .18, type: 'sawtooth', vol: .07 }); },
   break()   { N({ dur: .22, vol: .26, f0: 1800, f1: 400, q: 0.8 }); for (let i = 0; i < 4; i++) T({ f0: 300 + Math.random() * 500, f1: 120, dur: .06, type: 'square', vol: .06, delay: i * .04 }); },
+  coin()    { T({ f0: 1568, dur: .09, vol: .1, type: 'triangle' }); T({ f0: 2093, dur: .16, vol: .09, type: 'triangle', delay: .06 }); },
   drip()    { T({ f0: 1500, f1: 800, dur: .09, vol: .06 }); T({ f0: 1500, f1: 800, dur: .12, vol: .03, delay: .12 }); },
   rumble()  { N({ dur: 2.2, vol: .12, type: 'lowpass', f0: 140, q: 0.5, atk: .6 }); },
 };
+
+// Vibration (Handy)
+const Haptic = {
+  on: true,
+  can: typeof navigator !== 'undefined' && !!navigator.vibrate,
+  buzz(ms) { if (this.on && this.can) { try { navigator.vibrate(ms); } catch (e) { /* egal */ } } },
+};
+try { Haptic.on = localStorage.getItem('aschenfall-vib') !== '0'; } catch (e) { /* egal */ }

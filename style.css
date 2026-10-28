@@ -365,3 +365,13 @@ canvas#hud2d { pointer-events: none; z-index: 0; }
 @media (max-width: 760px) { #sayBox { width: min(92vw, 560px); bottom: calc(env(safe-area-inset-bottom) + 100px); } }
 #floorLabel { white-space: pre-line; line-height: 1.35; max-width: 30vw; }
 #bossbar { width: min(38vw, 380px); }
+
+/* ---------- Händler / Gold ---------- */
+#interactBtn {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 94px); pointer-events: auto;
+  padding: 10px 18px; font: inherit; font-size: 15px; color: #fff; border-radius: 22px; background: linear-gradient(#8a6a22, #5a4214); border: 2px solid #e8b36a;
+  box-shadow: 0 0 16px rgba(232,179,106,.5); animation: pulse 1.4s infinite;
+}
+.shopbtn { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px; padding: 10px 12px !important; text-align: left; }
+.shopbtn b { color: #ffd84a; }
+.btnrow.shop { margin-top: 8px; }

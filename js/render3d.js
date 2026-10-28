@@ -338,6 +338,16 @@ function buildLevel() {
   // Dekor
   for (const p of G.props) R3.maps.props.set(p, { group: buildProp(p) });
   for (const o of R3.maps.props.values()) R3.dyn.add(o.group);
+  // Funkenkiste (Händler)
+  if (G.chest) {
+    const g = new THREE.Group(); g.position.set(G.chest.x, 0, G.chest.y);
+    M3.cur = { meshes: [], glows: [] };
+    bx(g, 30, 16, 20, lam(0x6a4a2a), 0, 8, 0); bx(g, 31, 6, 21, lam(0x8a6438), 0, 19, 0);
+    bx(g, 4, 20, 22, lam(0xe8b36a, 0xa07020, 0.7), -9, 11, 0); bx(g, 4, 20, 22, lam(0xe8b36a, 0xa07020, 0.7), 9, 11, 0);
+    bx(g, 5, 6, 3, lam(0xffe8a0, 0xffc040, 1), 0, 14, 11);
+    M3.cur = null;
+    R3.dyn.add(g); R3.chestMesh = g;
+  } else R3.chestMesh = null;
 }
 
 function buildWallLight(t, th) {
@@ -443,10 +453,11 @@ function updateLights(dt) {
     if ((e.boss || e.elite) && near(e.x, e.y, 500)) cands.push({ id: e, x: e.x, y: 40, z: e.y, col: e.boss ? 0xbe5aff : 0xffc83c, inten: 0.9, dist: e.boss ? 260 : 150, score: Math.hypot(e.x - px, e.y - pz) + 40 });
   }
   for (const d of G.drops) {
-    if (d.potion || !near(d.x, d.y, 400)) continue;
+    if (d.potion || d.coin || !near(d.x, d.y, 400)) continue;
     const r = d.item.rarity;
     if (r === 'legendary' || r === 'rare') cands.push({ id: d, x: d.x, y: 30, z: d.y, col: r === 'legendary' ? 0xff8c32 : 0xffd84a, inten: 1.0, dist: 150, score: Math.hypot(d.x - px, d.y - pz) + 100 });
   }
+  if (G.chest && near(G.chest.x, G.chest.y, 500)) cands.push({ id: 'chest', x: G.chest.x, y: 40, z: G.chest.y + 16, col: 0xffd078, inten: 1.0, dist: 200, score: Math.hypot(G.chest.x - px, G.chest.y - pz) + 60 });
   if (G.stairs) cands.push({ id: 'stairs', x: G.stairs.x, y: 40, z: G.stairs.y, col: 0xffc864, inten: 1.5, dist: 320, score: -100 });
   cands.sort((a, b) => a.score - b.score);
   const Q = Q_LEVELS[R3.level_q], n = Q.lights;
@@ -599,7 +610,10 @@ function syncDrops() {
     let o = maps.get(d);
     if (!o) {
       const g = new THREE.Group();
-      if (d.potion) {
+      if (d.coin) {
+        const c = new THREE.Mesh(geo('coin', () => new THREE.CylinderGeometry(5, 5, 1.6, 14)), lam(0xffd84a, 0xc89a10, 0.8));
+        c.rotation.x = Math.PI / 2.6; g.add(c);
+      } else if (d.potion) {
         g.add(new THREE.Mesh(UNIT_SPH(), lam(0xe0343c, 0x901020, 1))); g.children[0].scale.setScalar(6);
       } else {
         const c = RAR_COL[d.item.rarity];
@@ -617,7 +631,8 @@ function syncDrops() {
     g.position.set(d.x, 12 + Math.sin(d.t * 4) * 2, d.y);
     g.children[0].rotation.y = d.t * 2.4;
     if (g.children[1]) { g.children[1].position.y = 45 - g.position.y + 12; g.children[1].material.opacity = 0.3 + 0.12 * Math.sin(d.t * 5); }
-    if (d.potion) pushGlow(d.x, 14, d.y, 34, '255,80,40', 0.8);
+    if (d.coin) pushGlow(d.x, 12, d.y, 26, '255,210,90', 0.8);
+    else if (d.potion) pushGlow(d.x, 14, d.y, 34, '255,80,40', 0.8);
     else pushGlow(d.x, 14, d.y, d.item.rarity === 'normal' ? 20 : 44, RAR_RGB[d.item.rarity], d.item.rarity === 'normal' ? 0.4 : 0.8);
   }
   for (const [d, o] of maps) if (o.seen !== R3.frame) { R3.dyn.remove(o.group); maps.delete(d); }
@@ -794,7 +809,7 @@ function drawOverlay() {
   }
   // Beute-Namen
   for (const dr of G.drops) {
-    if (dr.potion) continue;
+    if (dr.potion || dr.coin) continue;
     const sp = project(dr.x, 26, dr.y);
     if (!sp || sp[0] < -80 || sp[0] > G.vw + 80 || sp[1] < -30 || sp[1] > G.vh + 30) continue;
     c.font = '12px system-ui'; c.lineWidth = 3; c.strokeStyle = '#000'; c.fillStyle = RARITY[dr.item.rarity].color;
@@ -871,6 +886,7 @@ function render3d() {
     pushGlow(p.x, 14 + ((p.ph * 17) % 60) + Math.sin(G.time + p.ph) * 4, p.y, 9 * am.size * p.s, am.col, am.a * (0.5 + 0.5 * Math.sin(G.time * 2 + p.ph)));
   }
 
+  if (G.chest && view(G.chest.x, G.chest.y, 60)) pushGlow(G.chest.x, 22, G.chest.y, 70 + 8 * Math.sin(G.time * 3), '255,210,120', G.nearChest ? 0.95 : 0.6);
   syncDecals();
   syncProps(view);
   syncEnemies(dtReal, view);

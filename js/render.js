@@ -65,6 +65,10 @@ function render2d() {
     }
   }
 
+  if (G.chest) {
+    rrect(G.chest.x - 14, G.chest.y - 12, 28, 20, 4, '#6a4a2a'); rrect(G.chest.x - 14, G.chest.y - 12, 28, 6, 3, '#8a6438');
+    rrect(G.chest.x - 3, G.chest.y - 8, 6, 8, 1, '#e8b36a');
+  }
   // Spuren am Boden
   for (const d of G.decals) {
     if (!inView(d.x, d.y, 60)) continue;
@@ -126,7 +130,8 @@ function render2d() {
     else if (e.type === 'imp') light(e.x, e.y, 60, '255,120,40', 0.35);
   }
   for (const d of G.drops) {
-    if (d.potion) light(d.x, d.y, 50, '255,80,40', 0.6);
+    if (d.coin) light(d.x, d.y, 36, '255,210,90', 0.5);
+    else if (d.potion) light(d.x, d.y, 50, '255,80,40', 0.6);
     else if (d.item.rarity === 'legendary') light(d.x, d.y, 110, '255,140,50', 0.9);
     else if (d.item.rarity === 'rare') light(d.x, d.y, 70, '255,216,74', 0.6);
     else if (d.item.rarity === 'magic') light(d.x, d.y, 50, '120,150,255', 0.5);
@@ -191,6 +196,7 @@ function render2d() {
   }
   if (G.stairs) glow(G.stairs.x, G.stairs.y, 48 + 6 * Math.sin(G.time * 4), '255,200,100', 0.8);
   for (const d of G.drops) {
+    if (d.coin) { glow(d.x, d.y, 16, '255,210,90', 0.9); continue; }
     if (d.potion) { glow(d.x, d.y, 22, '255,80,40', 0.9); continue; }
     const c = d.item.rarity === 'legendary' ? '255,140,50' : d.item.rarity === 'rare' ? '255,216,74' : d.item.rarity === 'magic' ? '120,150,255' : '255,255,255';
     glow(d.x, d.y, d.item.rarity === 'normal' ? 14 : 28, c, d.item.rarity === 'normal' ? 0.5 : 0.85);
@@ -277,6 +283,7 @@ function render2d() {
   ctx.textAlign = 'center';
   for (const d of G.drops) {
     const bob = Math.sin(d.t * 4) * 2;
+    if (d.coin) { ctx.font = '14px system-ui'; ctx.fillText('🪙', d.x, d.y + 5 + bob); continue; }
     if (d.potion) {
       ctx.font = '16px system-ui'; ctx.fillText('🧪', d.x, d.y + 5 + bob);
       continue;

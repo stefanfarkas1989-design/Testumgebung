@@ -17,7 +17,7 @@ const G = {
 
 const P = {
   x: 0, y: 0, r: 11, face: 0, hp: 100, mana: 60, lvl: 1, xp: 0, potions: 3, potCd: 0,
-  cd: [0, 0, 0, 0], inv: [], eq: {}, gear: {}, castAnim: 0, walk: 0, fl: 1, moving: false, kx: 0, ky: 0, ranks: {}, fx: {}, drT: 0, drV: 0, hasteT: 0, hasteV: 0, invulnT: 0, echoT: 0, fireCount: 0, pw: {}, slowT: 0, story: null,
+  cd: [0, 0, 0, 0], inv: [], eq: {}, gear: {}, castAnim: 0, walk: 0, fl: 1, moving: false, kx: 0, ky: 0, ranks: {}, fx: {}, drT: 0, drV: 0, hasteT: 0, hasteV: 0, invulnT: 0, echoT: 0, fireCount: 0, pw: {}, slowT: 0, story: null, gold: 0,
 };
 const INV_MAX = 24;
 
@@ -65,7 +65,7 @@ const skillCd = sk => sk.cd * (1 - P.cdr / 100);
 
 // ---------- Spielstart / Speichern ----------
 function newGame() {
-  P.lvl = 1; P.xp = 0; P.potions = 3; P.inv = []; P.eq = {}; P.ranks = {};
+  P.lvl = 1; P.xp = 0; P.potions = 3; P.inv = []; P.eq = {}; P.ranks = {}; P.gold = 0;
   P.story = Story.fresh(); P.story.name = UI.pendingName || '';
   const staff = makeItem('weapon', 1, 'normal');
   staff.name = 'Lehrlingsstab';
@@ -77,7 +77,7 @@ function newGame() {
 }
 function saveGame() {
   try {
-    localStorage.setItem('aschenfall-save', JSON.stringify({ lvl: P.lvl, xp: P.xp, potions: P.potions, inv: P.inv, eq: P.eq, ranks: P.ranks, story: P.story, floor: G.floor }));
+    localStorage.setItem('aschenfall-save', JSON.stringify({ lvl: P.lvl, xp: P.xp, potions: P.potions, inv: P.inv, eq: P.eq, ranks: P.ranks, story: P.story, gold: P.gold, floor: G.floor }));
   } catch (e) { /* Speicher evtl. gesperrt */ }
 }
 function hasSave() {
@@ -86,7 +86,7 @@ function hasSave() {
 function loadGame() {
   try {
     const s = JSON.parse(localStorage.getItem('aschenfall-save'));
-    P.lvl = s.lvl; P.xp = s.xp; P.potions = s.potions; P.inv = s.inv; P.eq = s.eq; P.ranks = s.ranks || {}; P.story = s.story || Story.fresh(); G.floor = s.floor;
+    P.lvl = s.lvl; P.xp = s.xp; P.potions = s.potions; P.inv = s.inv; P.eq = s.eq; P.ranks = s.ranks || {}; P.story = s.story || Story.fresh(); P.gold = s.gold || 0; G.floor = s.floor;
     recalc(); P.hp = P.maxHp; P.mana = P.maxMana;
     startFloor();
     return true;
@@ -115,6 +115,7 @@ function startFloor() {
   G.state = 'play';
   if (typeof UI !== 'undefined') UI.toast(`${G.theme.name} · Ebene ${G.floor}`, '#e8b36a');
   Story.onFloor(G.floor);
+  if (G.floor === 1) setTimeout(() => Story.tip('move', Input.mode === 'touch' ? 'Links wischen: laufen. Rechts: Feuerball (gedrückt halten). Items und Gold sammelst du im Vorbeigehen ein.' : 'WASD: laufen. Maus: zielen, Linksklick: Feuerball. Items und Gold sammelst du im Vorbeigehen ein.', 8000), 2500);
 }
 
 function spawnEnemies() {
@@ -234,7 +235,7 @@ function damageEnemy(e, amt, o) {
   if (!e.boss) e.stun = e.elite ? 0.07 : 0.14;
   G.fx.push({ type: 'flash', x: e.x, y: e.y, t: 0, max: 0.12, r: crit ? 64 : 40 });
   Sfx.play(crit ? 'crit' : 'hit', e);
-  if (crit) hitstop(0.05);
+  if (crit) { hitstop(0.05); Haptic.buzz(10); }
   if (e.state === 'idle') wake(e);
   floatText(e.x, e.y - e.r - 6, amt, crit ? '#ffe14a' : '#fff', crit);
   if (o.kb) {
@@ -261,6 +262,7 @@ function hurtPlayer(amt, fx, fy) {
   }
   floatText(P.x, P.y - 20, '-' + amt, '#ff5a5a', false);
   Sfx.play('hurt');
+  Haptic.buzz(amt > P.maxHp * 0.12 ? 45 : 14);
   if (P.hp <= 0) { P.hp = 0; G.state = 'dead'; Sfx.play('playerDie'); UI.showDeath(); }
 }
 function wake(e) {
@@ -297,6 +299,7 @@ function killEnemy(e) {
   const ilvl = Math.max(1, G.floor * 2 + Math.floor(P.lvl / 2));
   for (const it of rollDrops(src, ilvl)) dropItem(e.x, e.y, it);
   if (Math.random() < (e.boss ? 1 : e.elite ? 0.4 : 0.07)) G.drops.push({ x: e.x + rnd(-16, 16), y: e.y + rnd(-16, 16), potion: true, t: 0 });
+  if (e.boss || e.elite || Math.random() < 0.55) dropGold(e.x, e.y, Math.round(rint(2, 6) * (1 + G.floor * 0.6) * (e.boss ? 25 : e.elite ? 4 : 1) * (G.theme.echo ? 1.4 : 1)));
   if (e.boss) {
     G.shake = 8;
     if (e.def.bossKind === 'silence') {
@@ -323,6 +326,7 @@ function gainXp(n) {
     floatText(P.x, P.y - 30, 'LEVEL ' + P.lvl, '#ffd84a', true);
     burst(P.x, P.y, '#ffd84a', 30, 200, 0.8, 4);
     Sfx.play('levelup');
+    Story.tip('points', 'Du hast Fertigkeitspunkte! Öffne den Skill-Baum (📜 oder Taste K).', 7000);
     const ns = SKILLS.find(s => s.unlock === P.lvl);
     UI.toast(`Level ${P.lvl}! +1 Fertigkeitspunkt` + (ns ? ` · Neuer Skill: ${ns.name}` : ''), '#ffd84a');
     saveGame();
@@ -548,12 +552,16 @@ function update(dt) {
   updateProjs(dt);
   updateHazards(dt);
   updateAmbient(dt);
+  G.nearChest = !!(G.chest && Math.hypot(G.chest.x - P.x, G.chest.y - P.y) < 78);
 
   // Beute
   for (const d of G.drops) {
     d.t += dt;
-    if (Math.hypot(d.x - P.x, d.y - P.y) < 38) {
-      if (d.potion) {
+    if (Math.hypot(d.x - P.x, d.y - P.y) < (d.coin ? 52 : 38)) {
+      if (d.coin) {
+        P.gold += d.amount; d.got = true; Sfx.play('coin');
+        floatText(P.x, P.y - 24, '+' + d.amount + ' Gold', '#ffd84a', false);
+      } else if (d.potion) {
         if (P.potions < 6) { P.potions++; d.got = true; Sfx.play('pickup'); floatText(P.x, P.y - 24, '+Trank', '#e0343c', false); }
       } else if (P.inv.length < INV_MAX) {
         P.inv.push(d.item); d.got = true;
@@ -820,6 +828,7 @@ function reachCount() {
 }
 function placeProps() {
   G.props = []; G.deco.fill(0);
+  G.chest = null;
   const th = G.theme;
   let expect = reachCount();
   for (const r of G.rooms) {
@@ -846,7 +855,15 @@ function placeProps() {
       G.props.push(p);
     }
   }
+  // Funkenkiste von Odalie im Startraum
+  const r0 = G.startRoom;
+  for (const [dx, dy] of [[2, 0], [-2, 0], [0, 2], [0, -2], [2, 2]]) {
+    const tx = r0.cx + dx, ty = r0.cy + dy;
+    if (G.map[ty * MW + tx] && !G.deco[ty * MW + tx]) { G.chest = { x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }; break; }
+  }
+  if (G.chest) G.props = G.props.filter(p => Math.hypot(p.x - G.chest.x, p.y - G.chest.y) > 40);
 }
+
 function breakProp(p) {
   const i = G.props.indexOf(p);
   if (i < 0) return;
@@ -858,6 +875,7 @@ function breakProp(p) {
   const ilvl = Math.max(1, G.floor * 2 + Math.floor(P.lvl / 2));
   if (Math.random() < 0.3) dropItem(p.x, p.y, makeItem(pick(Object.keys(SLOTS)), ilvl, weighted(DROP_TABLES.normal)));
   if (Math.random() < 0.15) G.drops.push({ x: p.x, y: p.y, potion: true, t: 0 });
+  if (Math.random() < 0.35) dropGold(p.x, p.y, Math.round(rint(3, 9) * (1 + G.floor * 0.5)));
 }
 function breakPropsAt(x, y, r) {
   for (const p of G.props.slice()) if (p.hp > 0 && Math.hypot(p.x - x, p.y - y) < r + 10) breakProp(p);
@@ -970,3 +988,36 @@ function spendPoint(id) {
   return true;
 }
 function respec() { P.ranks = {}; recalc(); saveGame(); }
+
+// ---------- Gold, Händler ----------
+function dropGold(x, y, amount) {
+  if (amount > 0) G.drops.push({ x: x + rnd(-18, 18), y: y + rnd(-18, 18), coin: true, amount, t: 0 });
+}
+const sellValue = it => Math.max(1, Math.round(it.ilvl * 2.5 * { normal: 1, magic: 3, rare: 9, legendary: 30 }[it.rarity]));
+const rerollCost = it => Math.round(it.ilvl * 4 * ({ magic: 3, rare: 6, legendary: 12 }[it.rarity] || 3));
+const potionPrice = () => 35 + 6 * G.floor;
+const itemPrice = () => 90 + 25 * G.floor;
+function rerollAffix(it) {
+  if (!it.affixes.length) return false;
+  const used = new Set(it.affixes.map(a => a.id));
+  const pool = SLOT_POOL[it.slot].filter(id => !used.has(id));
+  if (!pool.length) return false;
+  it.affixes[rint(0, it.affixes.length - 1)] = rollAffix(pick(pool), it.ilvl, it.rarity);
+  return true;
+}
+function buyPotion() {
+  if (P.potions >= 6) { UI.toast('Du trägst schon alle Tränke.', '#ff9a6a'); return false; }
+  if (P.gold < potionPrice()) { UI.toast('Nicht genug Gold.', '#ff6a6a'); return false; }
+  P.gold -= potionPrice(); P.potions++; saveGame(); Sfx.play('coin'); return true;
+}
+function buyItem() {
+  if (P.inv.length >= INV_MAX) { UI.toast('Rucksack voll!', '#ff6a6a'); return false; }
+  if (P.gold < itemPrice()) { UI.toast('Nicht genug Gold.', '#ff6a6a'); return false; }
+  P.gold -= itemPrice();
+  const ilvl = Math.max(1, G.floor * 2 + Math.floor(P.lvl / 2));
+  const it = makeItem(pick(Object.keys(SLOTS)), ilvl, weighted({ magic: 66, rare: 31, legendary: 3 }));
+  P.inv.push(it); saveGame(); Sfx.play('coin');
+  UI.toast(`Erhalten: ${it.name}`, RARITY[it.rarity].color);
+  if (it.rarity === 'legendary') Story.relic(it.name);
+  return true;
+}
