@@ -143,7 +143,7 @@ function spawnEnemies() {
 
 function spawnEnemy(type, x, y, elite) {
   const d = ENEMIES[type], f = G.floor;
-  const hpMul = 1 + 0.3 * (f - 1), dmgMul = 1 + 0.18 * (f - 1);
+  const hpMul = (1 + BALANCE.hpPerFloor * (f - 1)) * (d.boss ? BALANCE.bossHp : 1), dmgMul = (1 + BALANCE.dmgPerFloor * (f - 1)) * (d.boss ? BALANCE.bossDmg : 1);
   const e = {
     type, def: d, x, y, r: d.r * (elite ? 1.2 : 1), name: d.name,
     maxHp: d.hp * hpMul * (elite ? 3.2 : 1), dmg: d.dmg * dmgMul * (elite ? 1.4 : 1),

@@ -39,11 +39,16 @@ python3 -m http.server 8000
 - **3D-Grafik** (Three.js, in `lib/` mitgeliefert): perspektivische Kamera, 3D-Wände und -Figuren aus Low-Poly-Formen, dynamisches Licht mit Fackeln, Glüh-Effekte, Partikel. Realistischere Optik durch Relief (Normal-Maps), weiche Schatten (Qualität „Hoch“), Filmfarben, Wandgesimse und Fackelfunken. Die Kamera lässt sich im Pause-Menü (Zoom, Neigung) und mit dem Mausrad einstellen. Im Pause-Menü lässt sich auf 2D umschalten und die Qualität wählen (Auto passt sich der Leistung des Geräts an)
 - Prozedurale Grafik ohne Bilddateien: Stein-Texturen, dynamisches Licht (Fackeln, Feuerball, Blitz), animierte Figuren, Blut- und Knochenspuren
 
+## Balance
+
+`node tests/balance-sim.js --table` simuliert pro Ebene 1–9 Spieler-DPS, Gegner- und Bosskampfdauer und die geschätzte Spielzeit (Ziel 1,5–2,5 h). Die Stellschrauben stehen in `BALANCE` (`js/data.js`).
+
 ## Code-Struktur
 
 - `js/audio.js` – Sounds und Ambiente
 - `js/data.js` – Items, Affixe, Drops, Skills, Gegner-Definitionen
 - `js/dungeon.js` – Dungeon-Generator und Wegfindung (BFS)
+- `tests/` – Browser-Tests (Playwright) und `balance-sim.js`
 - `js/game.js` – Spiellogik, Kampf, KI
 - `js/art.js` – Texturen, Licht-Sprites, gezeichnete Figuren
 - `js/render.js` – 2D-Renderer (Notlösung)
