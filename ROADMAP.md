@@ -3,7 +3,7 @@
 Die automatischen Entwicklungsläufe (siehe `AUTOMATION.md`) arbeiten diese Liste von oben nach unten ab: **ein Punkt pro Lauf, ein Pull Request pro Punkt.** Erledigtes wird mit `[x]` markiert, neue Ideen dürfen unten ergänzt werden.
 
 ## Spielgefühl & Balance
-- [ ] **Balance-Pass:** Simulationsskript (in `tests/`), das pro Ebene Schadensdurchsatz des Spielers und Gegnerschaden misst. Skalierung von Gegner-HP/-Schaden, Boss-Werten (besonders Ebene 9, Das Schweigen), Loot-Qualität und Gold-Preisen so anpassen, dass Ebene 1–9 in etwa 1,5–2,5 Stunden Spielzeit machbar sind und Tode selten, aber möglich sind.
+- [~] **Balance-Pass** – Teil 1 erledigt (Simulationsskript `tests/balance-sim.js`, Gegner-/Boss-Skalierung in `BALANCE`, `js/data.js`). Offen: Loot-Qualität und Gold-Preise (Händler) mit der Simulation abgleichen, Feintuning nach Handy-Rückmeldung (Ebene 9 / Das Schweigen).
 - [ ] **Schwierigkeitsgrade** (Normal / Schwer / Albtraum) mit besserem Loot, wählbar beim neuen Spiel.
 - [ ] **Todes-Zusammenfassung:** Nach dem Tod kurze Anzeige (Ebene, besiegte Gegner, gesammeltes Gold/Namen).
 - [ ] **Zielhilfe verbessern** (Touch): bevorzugt Gegner in Bewegungsrichtung, Elite/Boss priorisieren; optionale Anzeige des Ziels.

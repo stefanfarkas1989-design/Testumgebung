@@ -140,6 +140,14 @@ const SKILLS = [
   { id: 'blink', name: 'Teleport',    icon: '🌀', unlock: 5, mana: 15, cd: 4,   coef: 0,   base: 0 },
 ];
 
+// ---------- Balance (wird auch von tests/balance-sim.js gelesen) ----------
+const BALANCE = {
+  hpPerFloor: 0.38,     // Gegner-HP: +38 % pro Ebene
+  dmgPerFloor: 0.22,    // Gegner-Schaden: +22 % pro Ebene
+  bossHp: 2.0,          // Zusatzfaktor Boss-Leben
+  bossDmg: 1.35,        // Zusatzfaktor Boss-Schaden
+};
+
 // ---------- Gegner ----------
 const ENEMIES = {
   skeleton: { name: 'Skelett',            r: 14, hp: 36,  spd: 95,  dmg: 7,  xp: 8,  color: '#cfc7a8', melee: true, range: 12, atkCd: 1.0 },
