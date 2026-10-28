@@ -9,7 +9,7 @@ const G = {
   map: null, rooms: [], startRoom: null, bossRoom: null,
   explored: new Uint8Array(MW * MH),
   flow: new Int16Array(MW * MH), flowT: 0, flowTile: -1,
-  enemies: [], projs: [], fx: [], texts: [], drops: [], parts: [], glows: [], decals: [], torches: [],
+  enemies: [], projs: [], fx: [], texts: [], drops: [], parts: [], glows: [], decals: [], torches: [], props: [], hazards: [], amb: [], deco: new Uint8Array(MW * MH), theme: THEMES[0], set: null,
   stairs: null, boss: null,
   cam: { x: 0, y: 0 }, zoom: 1, vw: 800, vh: 600, dpr: 1,
   shake: 0, hurtFlash: 0, time: 0, exploreT: 0, hitstop: 0, kx: 0, ky: 0, heartT: 0,
@@ -17,7 +17,7 @@ const G = {
 
 const P = {
   x: 0, y: 0, r: 11, face: 0, hp: 100, mana: 60, lvl: 1, xp: 0, potions: 3, potCd: 0,
-  cd: [0, 0, 0, 0], inv: [], eq: {}, gear: {}, castAnim: 0, walk: 0, fl: 1, moving: false, kx: 0, ky: 0, ranks: {}, fx: {}, drT: 0, drV: 0, hasteT: 0, hasteV: 0, invulnT: 0, echoT: 0, fireCount: 0,
+  cd: [0, 0, 0, 0], inv: [], eq: {}, gear: {}, castAnim: 0, walk: 0, fl: 1, moving: false, kx: 0, ky: 0, ranks: {}, fx: {}, drT: 0, drV: 0, hasteT: 0, hasteV: 0, invulnT: 0, echoT: 0, fireCount: 0, pw: {}, slowT: 0,
 };
 const INV_MAX = 24;
 
@@ -50,6 +50,8 @@ function recalc() {
     blinkVoid: rk('blink_void') > 0, blinkEcho: rk('blink_cap') > 0,
     killHeal: 0.02 * rk('p_kill'),
   };
+  P.pw = {};
+  for (const k of EQ_KEYS) if (P.eq[k] && P.eq[k].power) P.pw[P.eq[k].power] = true;
   P.maxHp += 20 * rk('p_life');
   P.manaRegen += 1.5 * rk('p_mana');
   P.crit = Math.min(60, P.crit + 2 * rk('p_crit'));
@@ -92,38 +94,44 @@ function loadGame() {
 
 // ---------- Ebenen ----------
 function startFloor() {
+  G.theme = themeFor(G.floor); G.set = getSet(G.theme);
   const d = genDungeon();
   G.map = d.map; G.rooms = d.rooms; G.startRoom = d.start; G.bossRoom = d.boss;
   G.explored.fill(0);
   G.enemies = []; G.projs = []; G.fx = []; G.texts = []; G.drops = []; G.parts = []; G.decals = [];
   placeTorches();
   G.stairs = null; G.boss = null; G.flowTile = -1; G.flowT = 0;
+  G.hazards = []; G.props = []; G.deco.fill(0);
   P.x = (d.start.cx + 0.5) * TILE; P.y = (d.start.cy + 0.5) * TILE;
   P.potions = Math.max(P.potions, 3);
   P.cd = [0, 0, 0, 0]; P.potCd = 0;
   G.cam.x = P.x; G.cam.y = P.y;
+  placeProps();
+  initAmbient();
   spawnEnemies();
   G.state = 'play';
-  if (typeof UI !== 'undefined') UI.toast(`Ebene ${G.floor}`, '#e8b36a');
+  if (typeof UI !== 'undefined') UI.toast(`${G.theme.name} · Ebene ${G.floor}`, '#e8b36a');
 }
 
 function spawnEnemies() {
-  const f = G.floor;
-  const weights = { skeleton: 50, archer: 24 + f, imp: 14, brute: 6 + f * 2 };
+  const f = G.floor, th = G.theme;
+  const weights = Object.assign({}, th.roster);
+  weights[th.heavy] = (weights[th.heavy] || 0) + f * 2;
   for (const r of G.rooms) {
     if (r === G.startRoom) continue;
     if (r === G.bossRoom) {
-      const b = spawnEnemy('boss', (r.cx + 0.5) * TILE, (r.cy + 0.5) * TILE);
+      const b = spawnEnemy(th.boss, (r.cx + 0.5) * TILE, (r.cy + 0.5) * TILE);
       G.boss = b;
-      for (let i = 0; i < 2; i++) spawnEnemy('brute', (r.cx + (i ? 3 : -3) + 0.5) * TILE, (r.cy + 3.5) * TILE);
+      for (let i = 0; i < 2; i++) spawnEnemy(th.heavy, (r.cx + (i ? 3 : -3) + 0.5) * TILE, (r.cy + 3.5) * TILE);
       continue;
     }
     const n = rint(3, 5) + Math.floor(f / 3);
     for (let i = 0; i < n; i++) {
       const type = weighted(weights);
       const x = (r.x + rint(1, r.w - 2) + 0.5) * TILE, y = (r.y + rint(1, r.h - 2) + 0.5) * TILE;
-      if (type === 'imp') for (let k = 0; k < 3; k++) spawnEnemy('imp', x + rnd(-30, 30), y + rnd(-30, 30));
-      else spawnEnemy(type, x, y, Math.random() < 0.07);
+      if (G.deco[Math.floor(y / TILE) * MW + Math.floor(x / TILE)] || !G.map[Math.floor(y / TILE) * MW + Math.floor(x / TILE)]) continue;
+      if (type === 'imp' || type === 'bat') for (let k = 0; k < 3; k++) spawnEnemy(type, x + rnd(-30, 30), y + rnd(-30, 30));
+      else spawnEnemy(type, x, y, Math.random() < 0.07 + f * 0.005);
     }
   }
 }
@@ -137,10 +145,14 @@ function spawnEnemy(type, x, y, elite) {
     spd: d.spd * (elite ? 1.1 : 1), xp: d.xp * (1 + 0.1 * (f - 1)) * (elite ? 3 : 1),
     color: d.color, state: 'idle', cd: rnd(0, 1), slow: 0, kx: 0, ky: 0, flash: 0, lunge: 0,
     elite: !!elite, boss: !!d.boss, aggro: 360, burstT: 4, summonT: 8, dead: false, ang: 0,
-    stun: 0, seed: Math.random() * 100, fl: Math.random() < 0.5 ? 1 : -1, walk: 0, moving: false,
+    stun: 0, wind: 0, dashT: 0, dashCd: rnd(0, 2), dashHit: false, burnT: 0, burnTick: 0, burnDps: 0, trailT: 0, t1: 3, t2: 5, t3: 9, aff: null, seed: Math.random() * 100, fl: Math.random() < 0.5 ? 1 : -1, walk: 0, moving: false,
   };
   e.hp = e.maxHp;
-  if (elite) e.name = 'Champion ' + e.name;
+  if (elite) {
+    e.aff = pick(ELITE_AFFIXES);
+    e.name = `Champion ${d.name} · ${e.aff.label}`;
+    if (e.aff.id === 'fast') e.spd *= 1.4;
+  }
   G.enemies.push(e);
   return e;
 }
@@ -209,6 +221,10 @@ function damageEnemy(e, amt, o) {
   if (o.player && Math.random() * 100 < P.crit) { crit = true; amt *= P.critDmg / 100; }
   amt = Math.max(1, Math.round(amt));
   e.hp -= amt; e.flash = 0.1;
+  if (o.player) {
+    if (P.pw.lifesteal) P.hp = Math.min(P.maxHp, P.hp + amt * 0.04);
+    if (P.pw.burn && !e.dead && Math.random() < 0.2) { e.burnT = 3; e.burnDps = Math.max(e.burnDps, amt * 0.5); }
+  }
   if (!e.boss) e.stun = e.elite ? 0.07 : 0.14;
   G.fx.push({ type: 'flash', x: e.x, y: e.y, t: 0, max: 0.12, r: crit ? 64 : 40 });
   Sfx.play(crit ? 'crit' : 'hit', e);
@@ -252,6 +268,15 @@ function killEnemy(e) {
   burst(e.x, e.y, bony ? '#d9d1b6' : '#8a1620', e.boss ? 40 : 14, 170, 0.7, 3.5, false);
   if (e.boss) burst(e.x, e.y, '#c04bff', 30, 220, 0.8, 4);
   addDecals(e, bony);
+  if (e.aff && e.aff.id === 'boom') addStrike(e.x, e.y, 78, 0.8, e.dmg * 1.4);
+  if (P.pw.killmana) P.mana = Math.min(P.maxMana, P.mana + 8);
+  if (P.pw.killhaste) { P.hasteT = 2; P.hasteV = Math.max(P.hasteV, 0.25); }
+  if (P.pw.explode) {
+    G.fx.push({ type: 'flash', x: e.x, y: e.y, t: 0, max: 0.2, r: 80 });
+    burst(e.x, e.y, '#ff9a3a', 12, 200, 0.4, 3);
+    breakPropsAt(e.x, e.y, 80);
+    for (const o of G.enemies) if (!o.dead && o !== e && Math.hypot(o.x - e.x, o.y - e.y) < 80 + o.r) damageEnemy(o, e.maxHp * 0.3, { kb: 120, fx: e.x, fy: e.y });
+  }
   Sfx.play(e.boss ? 'bossDie' : 'death', e);
   hitstop(e.boss ? 0.3 : e.elite ? 0.09 : 0.03);
   gainXp(e.xp);
@@ -266,7 +291,7 @@ function killEnemy(e) {
   if (e.boss) {
     G.stairs = { x: e.x, y: e.y };
     G.shake = 8;
-    UI.toast('Der Knochenfürst ist gefallen! Eine Treppe erscheint.', '#e8b36a');
+    UI.toast(`${e.name} ist gefallen! Eine Treppe erscheint.`, '#e8b36a');
     Sfx.play('stairs');
   }
 }
@@ -315,6 +340,7 @@ function screenToWorld(mx, my) {
 function doNova(dmg, R) {
   G.fx.push({ type: 'ring', x: P.x, y: P.y, t: 0, max: 0.45, r: R, color: '#8fd8ff' });
   burst(P.x, P.y, '#bfeaff', 24, 220, 0.5, 3);
+  breakPropsAt(P.x, P.y, R);
   for (const e of G.enemies) {
     if (e.dead || Math.hypot(e.x - P.x, e.y - P.y) >= R + e.r) continue;
     damageEnemy(e, dmg, { player: true, kb: 260, fx: P.x, fy: P.y });
@@ -363,6 +389,7 @@ function castSkill(i) {
       for (let j = 0; j < F.boltChains && cur; j++) {
         hit.add(cur); pts.push({ x: cur.x, y: cur.y });
         const cx = cur.x, cy = cur.y;
+        breakPropsAt(cx, cy, 36);
         damageEnemy(cur, d, { player: true, kb: 60, fx: pts[pts.length - 2].x, fy: pts[pts.length - 2].y });
         if (!cur.dead && F.boltStun && !cur.boss && Math.random() < 0.25) cur.stun = Math.max(cur.stun, 0.5);
         if (F.boltMana) P.mana = Math.min(P.maxMana, P.mana + F.boltMana);
@@ -456,7 +483,8 @@ function update(dt) {
     P.echoT -= dt;
     if (P.echoT <= 0) { doNova(P.echoDmg, P.echoR); Sfx.play('nova'); }
   }
-  const spd = 170 * (1 + P.move / 100 + (P.hasteT > 0 ? P.hasteV : 0));
+  if (P.slowT > 0) P.slowT -= dt;
+  const spd = 170 * (1 + P.move / 100 + (P.hasteT > 0 ? P.hasteV : 0)) * (P.slowT > 0 ? 0.6 : 1);
   if (P.kx || P.ky) {
     moveEnt(P, P.kx * dt, P.ky * dt);
     const f = Math.pow(0.003, dt);
@@ -503,6 +531,8 @@ function update(dt) {
   G.enemies = G.enemies.filter(e => !e.dead);
 
   updateProjs(dt);
+  updateHazards(dt);
+  updateAmbient(dt);
 
   // Beute
   for (const d of G.drops) {
@@ -548,9 +578,36 @@ function updateEnemy(e, dt) {
   const mvd = Math.hypot(e.x - ox, e.y - oy);
   e.moving = mvd > 0.05; e.walk += mvd * 0.17;
 }
+function fireShot(e, a, kind) {
+  const def = e.def;
+  if (kind === 'spit') {
+    Sfx.play('spit', e);
+    G.projs.push({ x: e.x, y: e.y, vx: Math.cos(a) * def.projSpd, vy: Math.sin(a) * def.projSpd, r: 7, dmg: e.dmg, friend: false, life: 2.2, color: '#7ad84a', glow: '120,255,90', slow: true });
+  } else if (kind === 'fan') {
+    Sfx.play('fanfire', e);
+    for (const da of [-0.3, 0, 0.3]) G.projs.push({ x: e.x, y: e.y, vx: Math.cos(a + da) * def.projSpd, vy: Math.sin(a + da) * def.projSpd, r: 8, dmg: e.dmg, friend: false, life: 2.2, color: '#ff8a2a', glow: '255,140,50' });
+  } else {
+    Sfx.play('arrow', e);
+    G.projs.push({ x: e.x, y: e.y, vx: Math.cos(a) * def.projSpd, vy: Math.sin(a) * def.projSpd, r: 6, dmg: e.dmg, friend: false, life: 2, color: '#d8d0a0' });
+  }
+}
+
+function radialBurst(e, n, spd, color, glow, dmgMul) {
+  const off = Math.random() * 6.28;
+  for (let i = 0; i < n; i++) {
+    const a = off + (i / n) * 6.283;
+    G.projs.push({ x: e.x, y: e.y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, r: 8, dmg: e.dmg * dmgMul, friend: false, life: 3, color, glow });
+  }
+}
+
 function updateEnemyAI(e, dt) {
   e.flash = Math.max(0, e.flash - dt); e.slow = Math.max(0, e.slow - dt);
-  e.cd -= dt; e.lunge = Math.max(0, e.lunge - dt);
+  e.cd -= dt; e.lunge = Math.max(0, e.lunge - dt); e.dashCd -= dt;
+  if (e.burnT > 0) {
+    e.burnT -= dt; e.burnTick -= dt;
+    if (Math.random() < 0.4) G.parts.push({ x: e.x + rnd(-e.r, e.r) * 0.6, y: e.y - e.r * 0.4, vx: rnd(-10, 10), vy: rnd(-50, -20), life: 0.4, max: 0.4, color: '#ff9a3a', size: 3, add: true });
+    if (e.burnTick <= 0) { e.burnTick = 0.5; damageEnemy(e, e.burnDps * 0.5, {}); if (e.dead) return; }
+  }
   if (e.kx || e.ky) {
     moveEnt(e, e.kx * dt, e.ky * dt);
     const f = Math.pow(0.002, dt);
@@ -565,10 +622,28 @@ function updateEnemyAI(e, dt) {
     else return;
   } else if (d > 1000 && !e.boss) { e.state = 'idle'; return; }
 
-  const spd = e.spd * (e.slow > 0 ? 0.5 : 1) * dt;
+  const spd = e.spd * (e.slow > 0 ? 0.5 : 1) * (P.pw.chill && d < 150 ? 0.75 : 1) * dt;
   const def = e.def;
   const toP = Math.atan2(P.y - e.y, P.x - e.x);
   e.ang = toP;
+
+  // Brennende Champions hinterlassen Feuer
+  if (e.aff && e.aff.id === 'fire') {
+    e.trailT -= dt;
+    if (e.trailT <= 0 && e.moving) { e.trailT = 0.7; addZone(e.x, e.y, 26, 3, e.dmg * 0.3, 'fire', 0); }
+  }
+
+  if (e.wind > 0) { e.wind -= dt; return; }
+  if (e.dashT > 0) {
+    e.dashT -= dt;
+    moveEnt(e, Math.cos(e.dashAng) * 420 * dt, Math.sin(e.dashAng) * 420 * dt);
+    if (!e.dashHit && d < e.r + P.r + 6) { e.dashHit = true; hurtPlayer(e.dmg * 1.3, e.x, e.y); }
+    return;
+  }
+  if (def.dash && e.dashCd <= 0 && d > 110 && d < 300 && hasLOS(e.x, e.y, P.x, P.y)) {
+    e.dashT = 0.35; e.dashAng = toP; e.dashCd = 3.5; e.dashHit = false; Sfx.play('swing', e);
+    return;
+  }
 
   if (def.ranged) {
     if (d > def.keep + 25) {
@@ -579,41 +654,31 @@ function updateEnemyAI(e, dt) {
     }
     if (d < 460 && e.cd <= 0 && hasLOS(e.x, e.y, P.x, P.y)) {
       e.cd = def.atkCd * (e.slow > 0 ? 1.5 : 1);
-      Sfx.play('arrow', e);
-      G.projs.push({ x: e.x, y: e.y, vx: Math.cos(toP) * def.projSpd, vy: Math.sin(toP) * def.projSpd, r: 6, dmg: e.dmg, friend: false, life: 2, color: '#d8d0a0' });
+      fireShot(e, toP, def.shot || 'arrow');
     }
   } else {
-    if (d > e.r + P.r + def.range) {
-      const a = steerAngle(e, P.x, P.y);
+    const reach = e.r + P.r + def.range + (def.slam ? 18 : 0);
+    if (d > reach) {
+      let a = steerAngle(e, P.x, P.y);
+      if (def.erratic) a += Math.sin(G.time * 7 + e.seed) * 0.9;
       moveEnt(e, Math.cos(a) * spd, Math.sin(a) * spd);
     } else if (e.cd <= 0) {
       e.cd = def.atkCd * (e.slow > 0 ? 1.5 : 1);
-      e.lunge = 0.15;
-      Sfx.play('swing', e);
-      hurtPlayer(e.dmg, e.x, e.y);
-      if (e.boss) G.shake = Math.max(G.shake, 6);
+      if (def.slam) {
+        e.wind = 0.6;
+        addStrike(e.x, e.y, def.slamR * (e.r / def.r), 0.6, e.dmg, def.leave);
+        Sfx.play('swing', e);
+      } else {
+        e.lunge = 0.15;
+        Sfx.play('swing', e);
+        hurtPlayer(e.dmg, e.x, e.y);
+        if (e.boss) G.shake = Math.max(G.shake, 6);
+        if (P.pw.thorns && !e.dead) damageEnemy(e, e.dmg * 0.4, {});
+      }
     }
   }
 
-  if (e.boss) {
-    e.burstT -= dt; e.summonT -= dt;
-    const enraged = e.hp < e.maxHp * 0.5;
-    if (e.burstT <= 0) {
-      e.burstT = enraged ? 3 : 4.5;
-      Sfx.play('bossBurst', e); G.shake = Math.max(G.shake, 5);
-      const n = enraged ? 20 : 14, off = Math.random() * 6.28;
-      for (let i = 0; i < n; i++) {
-        const a = off + (i / n) * 6.283;
-        G.projs.push({ x: e.x, y: e.y, vx: Math.cos(a) * 230, vy: Math.sin(a) * 230, r: 8, dmg: e.dmg * 0.5, friend: false, life: 3, color: '#c04bff' });
-      }
-      G.fx.push({ type: 'ring', x: e.x, y: e.y, t: 0, max: 0.4, r: 80, color: '#c04bff' });
-    }
-    if (e.summonT <= 0) {
-      e.summonT = 12;
-      for (let i = 0; i < 3; i++) { const m = spawnEnemy('imp', e.x + rnd(-60, 60), e.y + rnd(-60, 60)); m.state = 'chase'; }
-      UI.toast('Der Knochenfürst ruft Wichte!', '#e6c6ff');
-    }
-  }
+  if (e.boss) bossAI(e, dt);
 
   // Abstand zu anderen Gegnern halten
   for (const o of G.enemies) {
@@ -626,11 +691,166 @@ function updateEnemyAI(e, dt) {
   }
 }
 
+function summon(e, type, n) {
+  for (let i = 0; i < n; i++) {
+    const m = spawnEnemy(type, e.x + rnd(-60, 60), e.y + rnd(-60, 60));
+    m.state = 'chase';
+    if (blockedAt(m.x, m.y, m.r)) { m.x = e.x; m.y = e.y; }
+  }
+}
+
+function bossAI(e, dt) {
+  const enraged = e.hp < e.maxHp * 0.5, k = enraged ? 0.7 : 1, kind = e.def.bossKind;
+  e.t1 -= dt; e.t2 -= dt; e.t3 -= dt;
+  const toP = Math.atan2(P.y - e.y, P.x - e.x);
+  if (kind === 'bone') {
+    if (e.t1 <= 0) {
+      e.t1 = 4.5 * k;
+      Sfx.play('bossBurst', e); G.shake = Math.max(G.shake, 5);
+      radialBurst(e, enraged ? 20 : 14, 230, '#c04bff', '190,90,255', 0.5);
+      G.fx.push({ type: 'ring', x: e.x, y: e.y, t: 0, max: 0.4, r: 80, color: '#c04bff' });
+    }
+    if (e.t3 <= 0) { e.t3 = 12; summon(e, 'imp', 3); UI.toast('Der Knochenfürst ruft Wichte!', '#e6c6ff'); }
+  } else if (kind === 'queen') {
+    if (e.t1 <= 0) {
+      e.t1 = 4 * k; Sfx.play('spit', e);
+      for (let i = -2; i <= 2; i++) G.projs.push({ x: e.x, y: e.y, vx: Math.cos(toP + i * 0.22) * 250, vy: Math.sin(toP + i * 0.22) * 250, r: 8, dmg: e.dmg * 0.5, friend: false, life: 2.4, color: '#7ad84a', glow: '120,255,90', slow: true });
+    }
+    if (e.t2 <= 0) {
+      e.t2 = 6 * k; Sfx.play('bossBurst', e);
+      addZone(P.x, P.y, 70, 6, e.dmg * 0.3, 'poison', 0.9);
+      for (let i = 0; i < 2; i++) addZone(P.x + rnd(-150, 150), P.y + rnd(-150, 150), 60, 6, e.dmg * 0.3, 'poison', 1.1);
+      UI.toast('Giftwolken!', '#9ae860');
+    }
+    if (e.t3 <= 0) { e.t3 = 12; summon(e, 'bat', 4); UI.toast('Die Königin ruft ihre Brut!', '#e6c6ff'); }
+  } else if (kind === 'lava') {
+    if (e.t1 <= 0) {
+      e.t1 = 5 * k; Sfx.play('bossBurst', e); G.shake = Math.max(G.shake, 5);
+      radialBurst(e, enraged ? 18 : 12, 220, '#ff8a2a', '255,140,50', 0.5);
+      G.fx.push({ type: 'ring', x: e.x, y: e.y, t: 0, max: 0.4, r: 80, color: '#c04bff' });
+    }
+    if (e.t2 <= 0) {
+      e.t2 = 6.5 * k;
+      addStrike(P.x, P.y, 62, 0.9, e.dmg * 0.7, 'fire');
+      for (let i = 0; i < 4; i++) addStrike(P.x + rnd(-240, 240), P.y + rnd(-240, 240), 62, 1.0 + i * 0.15, e.dmg * 0.7, 'fire');
+      UI.toast('Meteore!', '#ff9a3a');
+    }
+    if (e.t3 <= 0) { e.t3 = 14; summon(e, 'hound', 2); UI.toast('Der Aschenfürst ruft Höllenhunde!', '#ffb070'); }
+  }
+}
+
+// ---------- Gefahrenzonen ----------
+function addStrike(x, y, r, warn, dmg, leave) {
+  G.hazards.push({ x, y, r, kind: 'strike', warn, max: warn, dmg, leave: leave || null });
+}
+function addZone(x, y, r, life, dmg, type, warn) {
+  G.hazards.push({ x, y, r, kind: 'zone', type, warn: warn || 0, max: warn || 0.001, life, dmg, tick: 0.3 });
+}
+function resolveStrike(h) {
+  G.fx.push({ type: 'ring', x: h.x, y: h.y, t: 0, max: 0.4, r: h.r * 1.2, color: '#ff8a2a' });
+  G.fx.push({ type: 'flash', x: h.x, y: h.y, t: 0, max: 0.2, r: h.r });
+  burst(h.x, h.y, '#ffb347', 14, 200, 0.5, 3);
+  G.shake = Math.max(G.shake, 4);
+  Sfx.play('slam', h);
+  breakPropsAt(h.x, h.y, h.r);
+  if (G.state === 'play' && Math.hypot(P.x - h.x, P.y - h.y) < h.r + 4) hurtPlayer(h.dmg, h.x, h.y);
+  if (h.leave) addZone(h.x, h.y, h.r * 0.8, 4, h.dmg * 0.25, h.leave, 0);
+}
+function updateHazards(dt) {
+  for (const h of G.hazards) {
+    if (h.warn > 0) {
+      h.warn -= dt;
+      if (h.warn <= 0 && h.kind === 'strike') resolveStrike(h);
+      continue;
+    }
+    if (h.kind !== 'zone') continue;
+    h.life -= dt; h.tick -= dt;
+    if (Math.random() < dt * 14) {
+      const a = Math.random() * 6.283, rr = Math.sqrt(Math.random()) * h.r;
+      G.parts.push({ x: h.x + Math.cos(a) * rr, y: h.y + Math.sin(a) * rr * 0.8, vx: 0, vy: h.type === 'fire' ? -40 : -14, life: 0.6, max: 0.6, color: h.type === 'fire' ? '#ff9a3a' : '#8ff050', size: h.type === 'fire' ? 3 : 2.4, add: true });
+    }
+    if (h.tick <= 0) {
+      h.tick = 0.5;
+      if (G.state === 'play' && Math.hypot(P.x - h.x, P.y - h.y) < h.r) {
+        hurtPlayer(h.dmg);
+        if (h.type === 'poison') P.slowT = 0.8;
+      }
+    }
+  }
+  G.hazards = G.hazards.filter(h => h.kind === 'strike' ? h.warn > 0 : h.life > 0);
+}
+
+// ---------- Objekte (Dekor, Fässer, Säulen) ----------
+function reachCount() {
+  const d = bfs(G.map, G.startRoom.cx, G.startRoom.cy, 9999);
+  let n = 0; for (let i = 0; i < d.length; i++) if (d[i] >= 0) n++;
+  return n;
+}
+function placeProps() {
+  G.props = []; G.deco.fill(0);
+  const th = G.theme;
+  let expect = reachCount();
+  for (const r of G.rooms) {
+    if (r.w >= 9 && r.h >= 9 && Math.random() < 0.8) {
+      for (const [tx, ty] of [[r.x + 1, r.y + 1], [r.x + r.w - 2, r.y + 1], [r.x + 1, r.y + r.h - 2], [r.x + r.w - 2, r.y + r.h - 2]]) {
+        if (Math.random() > 0.75 || !G.map[ty * MW + tx]) continue;
+        const idx = ty * MW + tx;
+        G.map[idx] = 0;
+        if (reachCount() !== expect - 1) { G.map[idx] = 1; continue; }
+        expect--; G.deco[idx] = 1;
+        G.props.push({ kind: 'pillar', x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE + 6, hp: 0, seed: Math.random() * 10 });
+      }
+    }
+    const n = rint(4, 8);
+    for (let i = 0; i < n; i++) {
+      const tx = r.x + rint(1, r.w - 2), ty = r.y + rint(1, r.h - 2);
+      if (!G.map[ty * MW + tx]) continue;
+      if (r === G.startRoom && Math.hypot(tx - r.cx, ty - r.cy) < 3) continue;
+      const kind = Math.random() < 0.4 ? pick(th.decor.breakable) : pick(th.decor.deco);
+      const p = { kind, x: (tx + 0.5 + rnd(-0.25, 0.25)) * TILE, y: (ty + 0.5 + rnd(-0.25, 0.25)) * TILE, hp: PROP_BREAKABLE[kind] ? 1 : 0, seed: Math.random() * 10 };
+      if (kind === 'bones' || kind === 'rubble') {
+        p.bits = []; for (let k = 0; k < 4; k++) p.bits.push([rnd(-9, 9), rnd(-3, 5), rnd(0, 6.28)]);
+      }
+      G.props.push(p);
+    }
+  }
+}
+function breakProp(p) {
+  const i = G.props.indexOf(p);
+  if (i < 0) return;
+  G.props.splice(i, 1);
+  const col = p.kind === 'geode' ? '#b89cff' : p.kind === 'urn' ? '#8a5a3a' : '#7a5a34';
+  burst(p.x, p.y - 4, col, 12, 160, 0.6, 3.5, false);
+  Sfx.play('break', p);
+  const ilvl = Math.max(1, G.floor * 2 + Math.floor(P.lvl / 2));
+  if (Math.random() < 0.3) dropItem(p.x, p.y, makeItem(pick(Object.keys(SLOTS)), ilvl, weighted(DROP_TABLES.normal)));
+  if (Math.random() < 0.15) G.drops.push({ x: p.x, y: p.y, potion: true, t: 0 });
+}
+function breakPropsAt(x, y, r) {
+  for (const p of G.props.slice()) if (p.hp > 0 && Math.hypot(p.x - x, p.y - y) < r + 10) breakProp(p);
+}
+
+// ---------- Schwebeteilchen ----------
+function initAmbient() {
+  const a = G.theme.amb;
+  G.amb = [];
+  for (let i = 0; i < a.n; i++) G.amb.push({ x: P.x + rnd(-520, 520), y: P.y + rnd(-340, 340), ph: Math.random() * 6.28, s: rnd(0.6, 1.2) });
+}
+function updateAmbient(dt) {
+  const a = G.theme.amb;
+  for (const p of G.amb) {
+    p.x += Math.sin(G.time * 0.7 + p.ph) * 8 * dt; p.y += a.vy * p.s * dt;
+    if (p.x < P.x - 540) p.x += 1080; else if (p.x > P.x + 540) p.x -= 1080;
+    if (p.y < P.y - 360) p.y += 720; else if (p.y > P.y + 360) p.y -= 720;
+  }
+}
+
 function updateProjs(dt) {
   for (const p of G.projs) {
     p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
     if (solid(p.x, p.y)) { p.life = 0; if (p.fire) explode(p, null); continue; }
     if (p.friend) {
+      if (p.fire) breakPropsAt(p.x, p.y, p.r + 6);
       for (const e of G.enemies) {
         if (e.dead || (p.hit && p.hit.has(e))) continue;
         if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r) {
@@ -650,6 +870,7 @@ function updateProjs(dt) {
       }
     } else if (G.state === 'play' && Math.hypot(P.x - p.x, P.y - p.y) < P.r + p.r) {
       hurtPlayer(p.dmg, p.x - p.vx * 0.05, p.y - p.vy * 0.05); p.life = 0;
+      if (p.slow) P.slowT = 2;
     }
     if (Math.random() < 0.6) G.parts.push({ x: p.x, y: p.y, vx: rnd(-20, 20), vy: rnd(-20, 20), life: 0.25, max: 0.25, color: p.color, size: 3 });
   }

@@ -35,7 +35,7 @@ const UI = {
     UI.setSpan('orbMana', `${Math.floor(P.mana)}/${P.maxMana}`);
     $('orbMana').firstElementChild.style.height = (100 * P.mana / P.maxMana) + '%';
     $('xp').firstElementChild.style.width = (100 * P.xp / xpNeed(P.lvl)) + '%';
-    UI.set('floorLabel', 'text', `Ebene ${G.floor} · Level ${P.lvl}`);
+    UI.set('floorLabel', 'text', `${G.theme.name} · Ebene ${G.floor} · Level ${P.lvl}`);
     const pa = pointsAvail();
     if (UI.last.pa !== pa) { UI.last.pa = pa; $('btnSkills').dataset.n = pa > 0 ? pa : ''; }
 
@@ -171,6 +171,7 @@ const UI = {
     const imp = implicitLine(it);
     if (imp) h += `<div class="impl">${imp}</div>`;
     if (it.affixes.length) h += '<ul>' + it.affixes.map(a => `<li>${affixLine(a)}</li>`).join('') + '</ul>';
+    if (it.power && POWER_BY_ID[it.power]) h += `<div class="pow">★ ${POWER_BY_ID[it.power].label}</div>`;
     return h + '</div>';
   },
 

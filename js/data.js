@@ -94,7 +94,7 @@ function makeItem(slot, ilvl, rarity) {
   if (rarity === 'normal') it.name = it.base;
   else if (rarity === 'magic') it.name = `${it.base} der ${pick(MAGIC_SUFFIX)}`;
   else if (rarity === 'rare') it.name = pick(RARE_A) + pick(RARE_B);
-  else it.name = pick(LEGENDARY_NAMES[slot]);
+  else { it.name = pick(LEGENDARY_NAMES[slot]); it.power = pick(POWERS).id; }
   return it;
 }
 
@@ -146,8 +146,54 @@ const ENEMIES = {
   imp:      { name: 'Wicht',              r: 10, hp: 18,  spd: 150, dmg: 4,  xp: 5,  color: '#d6603a', melee: true, range: 8,  atkCd: 0.8 },
   archer:   { name: 'Skelett-Schütze',    r: 13, hp: 26,  spd: 80,  dmg: 7,  xp: 10, color: '#a7b58a', ranged: true, keep: 230, atkCd: 1.9, projSpd: 290 },
   brute:    { name: 'Schlächter',         r: 20, hp: 120, spd: 70,  dmg: 17, xp: 26, color: '#a05a4a', melee: true, range: 16, atkCd: 1.5 },
-  boss:     { name: 'Der Knochenfürst',   r: 34, hp: 1400, spd: 85, dmg: 28, xp: 220, color: '#7a3fb0', melee: true, range: 20, atkCd: 1.4, boss: true },
+  boss:     { name: 'Der Knochenfürst',   r: 34, hp: 1400, spd: 85, dmg: 28, xp: 220, color: '#7a3fb0', melee: true, range: 20, atkCd: 1.4, boss: true, bossKind: 'bone' },
+  // Höhle
+  bat:      { name: 'Höhlenfledermaus',   r: 9,  hp: 16,  spd: 175, dmg: 4,  xp: 5,  color: '#54406a', melee: true, range: 6, atkCd: 0.7, erratic: true },
+  spider:   { name: 'Giftspinne',         r: 12, hp: 34,  spd: 95,  dmg: 6,  xp: 11, color: '#2c3a2c', ranged: true, keep: 170, atkCd: 2.2, projSpd: 250, shot: 'spit' },
+  golem:    { name: 'Kristallgolem',      r: 22, hp: 260, spd: 52,  dmg: 24, xp: 38, color: '#6e6e78', melee: true, range: 22, atkCd: 2.4, slam: true, slamR: 85 },
+  queen:    { name: 'Die Spinnenkönigin', r: 36, hp: 1700, spd: 80, dmg: 24, xp: 260, color: '#2e2a38', melee: true, range: 22, atkCd: 1.3, boss: true, bossKind: 'queen' },
+  // Lavakluft
+  hound:    { name: 'Höllenhund',         r: 12, hp: 40,  spd: 140, dmg: 9,  xp: 12, color: '#8a3a22', melee: true, range: 10, atkCd: 0.9, dash: true },
+  cultist:  { name: 'Feuerkultist',       r: 13, hp: 38,  spd: 80,  dmg: 10, xp: 14, color: '#8a2a4a', ranged: true, keep: 240, atkCd: 2.4, projSpd: 240, shot: 'fan' },
+  demon:    { name: 'Lavadämon',          r: 22, hp: 190, spd: 62,  dmg: 22, xp: 36, color: '#a8301a', melee: true, range: 22, atkCd: 2.2, slam: true, slamR: 80, leave: 'fire' },
+  lavalord: { name: 'Der Aschenfürst',    r: 36, hp: 1800, spd: 70, dmg: 30, xp: 280, color: '#4a2a2c', melee: true, range: 22, atkCd: 1.5, boss: true, bossKind: 'lava' },
 };
+
+// Champion-Eigenschaften
+const ELITE_AFFIXES = [
+  { id: 'fast', label: 'Flink' },
+  { id: 'boom', label: 'Explosiv' },
+  { id: 'fire', label: 'Brennend' },
+];
+
+// ---------- Dungeon-Themen (wechseln alle 2 Ebenen) ----------
+const THEMES = [
+  { id: 'crypt', name: 'Die Gruft', ambient: '#403b5c', lightCol: '255,150,60', wall: 'torch', pillar: 'column', heavy: 'brute', boss: 'boss',
+    roster: { skeleton: 50, archer: 24, imp: 14, brute: 8 },
+    pal: { floor: [96, 90, 104], moss: 'rgba(40,70,40,.22)', brick: [94, 78, 76], bricks: true, roof: [46, 40, 54], rim: 'rgba(190,175,215,.28)' },
+    amb: { col: '255,230,200', vy: -4, n: 36, size: 1.4, a: 0.35 }, decor: { breakable: ['urn', 'barrel'], deco: ['bones', 'rubble', 'candle'] } },
+  { id: 'cave', name: 'Die Kristallhöhle', ambient: '#3a5a6e', lightCol: '110,220,255', wall: 'crystal', pillar: 'rock', heavy: 'golem', boss: 'queen',
+    roster: { bat: 34, spider: 30, golem: 12, skeleton: 10 },
+    pal: { floor: [86, 94, 102], moss: 'rgba(40,110,120,.28)', brick: [78, 84, 92], bricks: false, slabs: false, roof: [38, 36, 34], rim: 'rgba(150,210,220,.25)' },
+    amb: { col: '120,255,220', vy: -12, n: 44, size: 1.8, a: 0.5 }, decor: { breakable: ['geode', 'barrel'], deco: ['crystal', 'mushroom', 'rubble', 'bones'] } },
+  { id: 'lava', name: 'Die Lavakluft', ambient: '#4d2c28', lightCol: '255,110,40', wall: 'brazier', pillar: 'obsidian', heavy: 'demon', boss: 'lavalord',
+    roster: { hound: 30, cultist: 28, demon: 12, imp: 22 },
+    pal: { floor: [64, 54, 58], moss: 'rgba(120,30,10,.2)', brick: [68, 50, 52], bricks: true, roof: [34, 26, 30], rim: 'rgba(255,140,90,.28)', glow: true },
+    amb: { col: '255,150,60', vy: -50, n: 50, size: 1.6, a: 0.7 }, decor: { breakable: ['barrel', 'urn'], deco: ['vent', 'spike', 'bones', 'rubble'] } },
+];
+const themeFor = f => THEMES[Math.floor((f - 1) / 2) % THEMES.length];
+
+// ---------- Legendäre Kräfte ----------
+const POWERS = [
+  { id: 'lifesteal', label: 'Lebensraub: Du heilst 4% des verursachten Schadens' },
+  { id: 'burn',      label: 'Treffer entzünden Gegner mit 20% Chance (Brandschaden über 3 s)' },
+  { id: 'explode',   label: 'Getötete Gegner explodieren und verletzen Umstehende' },
+  { id: 'thorns',    label: 'Dornen: Nahkämpfer erleiden 40% ihres Schadens zurück' },
+  { id: 'killmana',  label: '+8 Mana pro getötetem Gegner' },
+  { id: 'killhaste', label: 'Getötete Gegner geben +25% Lauftempo für 2 s' },
+  { id: 'chill',     label: 'Gegner im Umkreis von 150 sind 25% langsamer' },
+];
+const POWER_BY_ID = {}; for (const p of POWERS) POWER_BY_ID[p.id] = p;
 
 // ---------- Skill-Baum ----------
 // need = Punkte, die in dieser Gruppe schon ausgegeben sein müssen

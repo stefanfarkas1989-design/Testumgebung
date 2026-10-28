@@ -7,7 +7,6 @@ function resizeLight() {
   LM.width = Math.ceil(canvas.width * LS); LM.height = Math.ceil(canvas.height * LS);
 }
 
-const AMBIENT = '#403b5c';
 
 function render() {
   const { dpr, zoom, vw, vh } = G;
@@ -30,28 +29,40 @@ function render() {
   const isF = (x, y) => x >= 0 && y >= 0 && x < MW && y < MH && G.map[y * MW + x] === 1;
   const T1 = TILE + 1;
 
+  const S = G.set, th = G.theme;
   // ---- Kacheln ----
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
-    const px = tx * TILE, py = ty * TILE, h = (tx * 73856093 ^ ty * 19349663) >>> 0;
-    if (G.map[ty * MW + tx]) {
-      ctx.drawImage(ART.floor[h % ART.floor.length], px, py, T1, T1);
+    const i = ty * MW + tx, px = tx * TILE, py = ty * TILE, h = (tx * 73856093 ^ ty * 19349663) >>> 0;
+    if (G.map[i] || G.deco[i]) {
+      ctx.drawImage(S.floor[h % S.floor.length], px, py, T1, T1);
       if (!isF(tx, ty - 1)) ctx.drawImage(ART.ao.N, px, py, T1, T1);
       if (!isF(tx - 1, ty)) ctx.drawImage(ART.ao.W, px, py, T1, T1);
       if (!isF(tx + 1, ty)) ctx.drawImage(ART.ao.E, px, py, T1, T1);
     } else if (isF(tx, ty + 1)) {
-      ctx.drawImage(ART.face[h % ART.face.length], px, py, T1, T1);
+      ctx.drawImage(S.face[h % S.face.length], px, py, T1, T1);
     } else {
-      ctx.drawImage(ART.roof[h % ART.roof.length], px, py, T1, T1);
-      if (isF(tx, ty - 1)) { ctx.fillStyle = 'rgba(190,175,215,.28)'; ctx.fillRect(px, py, T1, 3); }
+      ctx.drawImage(S.roof[h % S.roof.length], px, py, T1, T1);
+      if (isF(tx, ty - 1)) { ctx.fillStyle = th.pal.rim; ctx.fillRect(px, py, T1, 3); }
     }
   }
 
-  // Fackel-Halterungen
+  // Wand-Lichtquellen (Halterungen)
   for (const t of G.torches) {
     if (!inView(t.x, t.y, 40)) continue;
-    rrect(t.x - 2, t.y - 2, 4, 16, 1, '#2a2018');
-    rrect(t.x - 5, t.y - 4, 10, 4, 1, '#4a3a28');
-    rrect(t.x - 3, t.y - 8, 6, 6, 2, '#3a2c1c');
+    if (th.wall === 'crystal') {
+      poly('#3a8aa8', t.x - 9, t.y + 8, t.x - 6, t.y - 10, t.x - 1, t.y + 8);
+      poly('#6ad0ec', t.x - 2, t.y + 10, t.x + 2, t.y - 18, t.x + 8, t.y + 10);
+      poly('#9a70d8', t.x + 6, t.y + 9, t.x + 10, t.y - 6, t.x + 13, t.y + 9);
+      poly('rgba(255,255,255,.35)', t.x + 2, t.y - 18, t.x + 4, t.y - 6, t.x + 2, t.y + 6);
+    } else if (th.wall === 'brazier') {
+      rrect(t.x - 1.5, t.y + 2, 3, 14, 1, '#1c1418');
+      ell(t.x, t.y + 1, 11, 4.5, '#1c1418'); ell(t.x, t.y - 1, 9, 3, '#3a2a2a');
+      ctx.fillStyle = '#ff6a1e'; ctx.beginPath(); ctx.ellipse(t.x, t.y - 1, 7, 2.2, 0, 0, 6.283); ctx.fill();
+    } else {
+      rrect(t.x - 2, t.y - 2, 4, 16, 1, '#2a2018');
+      rrect(t.x - 5, t.y - 4, 10, 4, 1, '#4a3a28');
+      rrect(t.x - 3, t.y - 8, 6, 6, 2, '#3a2c1c');
+    }
   }
 
   // Spuren am Boden
@@ -75,14 +86,15 @@ function render() {
   // ---- Figuren (nach y sortiert) ----
   const ents = [];
   for (const e of G.enemies) if (inView(e.x, e.y, 80)) ents.push(e);
+  for (const p of G.props) if (inView(p.x, p.y, 70)) ents.push(p);
   ents.push(P);
   ents.sort((a, b) => a.y - b.y);
-  for (const e of ents) { if (e === P) drawPlayer(); else drawEnemy(e); }
+  for (const e of ents) { if (e === P) drawPlayer(); else if (e.kind) drawProp(e); else drawEnemy(e); }
 
   // ---- Lichtkarte ----
   lctx.setTransform(1, 0, 0, 1, 0, 0);
   lctx.globalCompositeOperation = 'source-over'; lctx.globalAlpha = 1;
-  lctx.fillStyle = AMBIENT; lctx.fillRect(0, 0, LM.width, LM.height);
+  lctx.fillStyle = th.ambient; lctx.fillRect(0, 0, LM.width, LM.height);
   lctx.setTransform(sc * LS, 0, 0, sc * LS, tx0 * LS, ty0 * LS);
   lctx.globalCompositeOperation = 'lighter';
   const light = (x, y, r, color, a) => {
@@ -91,10 +103,22 @@ function render() {
   };
   const flick = (ph, f) => 0.85 + 0.15 * Math.sin(G.time * 11 + ph) + 0.07 * Math.sin(G.time * 27 + ph * 2.3) * f;
   light(P.x, P.y, 420, '255,226,190', 1);
-  for (const t of G.torches) light(t.x, t.y + 14, 250, '255,150,60', 0.95 * flick(t.ph, 1));
+  for (const t of G.torches) {
+    if (th.wall === 'crystal') light(t.x, t.y + 10, 230, th.lightCol, 0.8 + 0.12 * Math.sin(G.time * 2 + t.ph));
+    else light(t.x, t.y + 14, th.wall === 'brazier' ? 270 : 250, th.lightCol, 0.95 * flick(t.ph, 1));
+  }
+  for (const p of G.props) {
+    const L = PROP_LIGHT[p.kind];
+    if (L) light(p.x, p.y - 8, L.r, L.c, L.a * (L.flick ? flick(p.seed, 1) : 1));
+  }
+  for (const h of G.hazards) {
+    const pois = h.type === 'poison';
+    if (h.warn > 0) light(h.x, h.y, h.r * 1.5, pois ? '120,255,90' : '255,80,40', 0.4 * (1 - h.warn / h.max));
+    else if (h.kind === 'zone') light(h.x, h.y, h.r * 2.4, pois ? '120,255,90' : '255,110,40', 0.7);
+  }
   for (const p of G.projs) {
     if (p.fire) light(p.x, p.y, 170 * (p.r / 8), '255,140,50', 0.95);
-    else if (p.color === '#c04bff') light(p.x, p.y, 100, '190,90,255', 0.8);
+    else if (p.glow) light(p.x, p.y, 100, p.glow, 0.8);
   }
   for (const e of G.enemies) {
     if (e.boss) light(e.x, e.y, 170, '190,90,255', 0.55);
@@ -110,7 +134,7 @@ function render() {
   if (G.stairs) light(G.stairs.x, G.stairs.y, 190, '255,200,100', 0.7 + 0.2 * Math.sin(G.time * 4));
   for (const f of G.fx) {
     const k = 1 - f.t / f.max;
-    if (f.type === 'ring') light(f.x, f.y, f.r * 1.3, f.color === '#c04bff' ? '190,90,255' : '140,200,255', 0.8 * k);
+    if (f.type === 'ring') light(f.x, f.y, f.r * 1.3, f.color === '#c04bff' ? '190,90,255' : f.color === '#ff8a2a' ? '255,150,60' : '140,200,255', 0.8 * k);
     else if (f.type === 'bolt') for (const q of f.pts.slice(1)) light(q.x, q.y, 120, '140,200,255', 0.9 * k);
     else if (f.type === 'flash') light(f.x, f.y, f.r * 2.2, '255,220,160', 0.6 * k);
   }
@@ -128,10 +152,41 @@ function render() {
   ctx.globalCompositeOperation = 'lighter';
   const glow = (x, y, r, color, a) => { ctx.globalAlpha = a; ctx.drawImage(glowSprite(color), x - r, y - r, 2 * r, 2 * r); };
   for (const g of G.glows) if (inView(g.x, g.y, g.r)) glow(g.x, g.y, g.r, g.c, g.a === undefined ? 1 : g.a);
-  for (const t of G.torches) if (inView(t.x, t.y, 60)) glow(t.x, t.y - 6, 46, '255,150,60', 0.7 * flick(t.ph, 1));
+  if (th.pal.glow) {
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
+      const i = ty * MW + tx, h = (tx * 73856093 ^ ty * 19349663) >>> 0;
+      const tex = (G.map[i] || G.deco[i]) ? S.floor[h % S.floor.length].glowTex : isF(tx, ty + 1) ? S.face[h % S.face.length].glowTex : null;
+      if (!tex) continue;
+      ctx.globalAlpha = 0.5 + 0.3 * Math.sin(G.time * 1.7 + tx * 0.7 + ty * 0.4);
+      ctx.drawImage(tex, tx * TILE, ty * TILE, T1, T1);
+    }
+  }
+  for (const t of G.torches) {
+    if (!inView(t.x, t.y, 60)) continue;
+    if (th.wall === 'crystal') glow(t.x + 2, t.y - 4, 50, th.lightCol, 0.6 + 0.2 * Math.sin(G.time * 2 + t.ph));
+    else glow(t.x, t.y - 6, th.wall === 'brazier' ? 60 : 46, th.lightCol, 0.7 * flick(t.ph, 1));
+  }
+  for (const h of G.hazards) {
+    if (!inView(h.x, h.y, h.r + 30)) continue;
+    const pois = h.type === 'poison', col = pois ? '120,255,90' : '255,110,40';
+    if (h.warn > 0) {
+      const k = 1 - h.warn / h.max, pulse = 0.65 + 0.35 * Math.sin(G.time * 16);
+      ctx.globalAlpha = 0.9 * pulse; ctx.strokeStyle = `rgb(${col})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, 6.283); ctx.stroke();
+      ctx.globalAlpha = 0.18 + 0.3 * k; ctx.fillStyle = `rgb(${col})`;
+      ctx.beginPath(); ctx.arc(h.x, h.y, Math.max(2, h.r * k), 0, 6.283); ctx.fill();
+    } else if (h.kind === 'zone') {
+      glow(h.x, h.y, h.r * 1.7, col, (0.5 + 0.15 * Math.sin(G.time * 6 + h.x)) * Math.min(1, h.life));
+    }
+  }
+  const am = th.amb;
+  for (const p of G.amb) {
+    if (!inView(p.x, p.y, 10)) continue;
+    glow(p.x, p.y, 5 * am.size * p.s, am.col, am.a * (0.5 + 0.5 * Math.sin(G.time * 2 + p.ph)));
+  }
   for (const p of G.projs) {
     if (p.fire) { const k = p.r / 8; glow(p.x, p.y, 30 * k, '255,140,50', 0.95); glow(p.x, p.y, 14 * k, '255,255,200', 0.9); }
-    else if (p.color === '#c04bff') { glow(p.x, p.y, 24, '190,90,255', 0.95); glow(p.x, p.y, 10, '255,255,200', 0.8); }
+    else if (p.glow) { glow(p.x, p.y, 24, p.glow, 0.95); glow(p.x, p.y, 10, '255,255,200', 0.8); }
     else glow(p.x, p.y, 12, '255,255,200', 0.5);
   }
   if (G.stairs) glow(G.stairs.x, G.stairs.y, 48 + 6 * Math.sin(G.time * 4), '255,200,100', 0.8);
@@ -159,7 +214,8 @@ function render() {
       ctx.globalAlpha = 1 - k; ctx.strokeStyle = f.color; ctx.lineWidth = 8 * (1 - k) + 2;
       ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, 6.283); ctx.stroke();
       const gr = ctx.createRadialGradient(f.x, f.y, r * 0.3, f.x, f.y, r);
-      gr.addColorStop(0, 'rgba(140,200,255,0)'); gr.addColorStop(1, 'rgba(140,200,255,.35)');
+      const rc = f.color === '#ff8a2a' ? '255,140,50' : f.color === '#c04bff' ? '190,90,255' : '140,200,255';
+      gr.addColorStop(0, `rgba(${rc},0)`); gr.addColorStop(1, `rgba(${rc},.35)`);
       ctx.globalAlpha = 1 - k; ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, 6.283); ctx.fill();
     } else if (f.type === 'flash') {
       glow(f.x, f.y, f.r, '255,255,200', 1 - k);
@@ -197,8 +253,8 @@ function render() {
 
   // Fackel-Flammen, Projektil-Kerne, Beute-Symbole (selbstleuchtend)
   for (const t of G.torches) {
-    if (!inView(t.x, t.y, 40)) continue;
-    const fl = Math.sin(G.time * 14 + t.ph), h = 11 + fl * 2.5 + Math.sin(G.time * 31 + t.ph) * 1.5;
+    if (!inView(t.x, t.y, 40) || th.wall === 'crystal') continue;
+    const fl = Math.sin(G.time * 14 + t.ph), h = (th.wall === 'brazier' ? 17 : 11) + fl * 2.5 + Math.sin(G.time * 31 + t.ph) * 1.5;
     ctx.fillStyle = '#ff8a1e';
     ctx.beginPath(); ctx.moveTo(t.x - 4.5, t.y - 7); ctx.quadraticCurveTo(t.x - 5 + fl, t.y - 7 - h * 0.6, t.x + fl * 1.5, t.y - 7 - h);
     ctx.quadraticCurveTo(t.x + 5 + fl, t.y - 7 - h * 0.6, t.x + 4.5, t.y - 7); ctx.closePath(); ctx.fill();
@@ -208,7 +264,7 @@ function render() {
   }
   for (const p of G.projs) {
     if (p.fire) { ctx.fillStyle = '#fff0b0'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.56, 0, 6.283); ctx.fill(); }
-    else if (p.color === '#c04bff') { ctx.fillStyle = '#f0d8ff'; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, 6.283); ctx.fill(); }
+    else if (p.glow) { ctx.fillStyle = '#f4ffe8'; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, 6.283); ctx.fill(); }
     else {
       const l = Math.hypot(p.vx, p.vy);
       ln(p.x - p.vx / l * 14, p.y - p.vy / l * 14, p.x, p.y, 2, '#e8e0c0');
