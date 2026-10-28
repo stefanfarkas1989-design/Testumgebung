@@ -93,7 +93,7 @@ function render() {
   light(P.x, P.y, 420, '255,226,190', 1);
   for (const t of G.torches) light(t.x, t.y + 14, 250, '255,150,60', 0.95 * flick(t.ph, 1));
   for (const p of G.projs) {
-    if (p.fire) light(p.x, p.y, 170, '255,140,50', 0.95);
+    if (p.fire) light(p.x, p.y, 170 * (p.r / 8), '255,140,50', 0.95);
     else if (p.color === '#c04bff') light(p.x, p.y, 100, '190,90,255', 0.8);
   }
   for (const e of G.enemies) {
@@ -130,7 +130,7 @@ function render() {
   for (const g of G.glows) if (inView(g.x, g.y, g.r)) glow(g.x, g.y, g.r, g.c, g.a === undefined ? 1 : g.a);
   for (const t of G.torches) if (inView(t.x, t.y, 60)) glow(t.x, t.y - 6, 46, '255,150,60', 0.7 * flick(t.ph, 1));
   for (const p of G.projs) {
-    if (p.fire) { glow(p.x, p.y, 30, '255,140,50', 0.95); glow(p.x, p.y, 14, '255,255,200', 0.9); }
+    if (p.fire) { const k = p.r / 8; glow(p.x, p.y, 30 * k, '255,140,50', 0.95); glow(p.x, p.y, 14 * k, '255,255,200', 0.9); }
     else if (p.color === '#c04bff') { glow(p.x, p.y, 24, '190,90,255', 0.95); glow(p.x, p.y, 10, '255,255,200', 0.8); }
     else glow(p.x, p.y, 12, '255,255,200', 0.5);
   }
@@ -207,7 +207,7 @@ function render() {
     ctx.quadraticCurveTo(t.x + 2.5, t.y - 7 - h * 0.45, t.x + 2.5, t.y - 7); ctx.closePath(); ctx.fill();
   }
   for (const p of G.projs) {
-    if (p.fire) { ctx.fillStyle = '#fff0b0'; ctx.beginPath(); ctx.arc(p.x, p.y, 4.5, 0, 6.283); ctx.fill(); }
+    if (p.fire) { ctx.fillStyle = '#fff0b0'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.56, 0, 6.283); ctx.fill(); }
     else if (p.color === '#c04bff') { ctx.fillStyle = '#f0d8ff'; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, 6.283); ctx.fill(); }
     else {
       const l = Math.hypot(p.vx, p.vy);

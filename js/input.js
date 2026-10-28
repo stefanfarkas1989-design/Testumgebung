@@ -86,7 +86,10 @@ const Input = {
   });
   $('btnPot').addEventListener('pointerdown', e => { e.preventDefault(); usePotion(); });
   $('btnInv').addEventListener('pointerdown', e => { e.preventDefault(); UI.togglePanel(); });
-  $('pClose').onclick = () => UI.togglePanel();
+  $('pClose').onclick = () => UI.showPanel(null);
+  $('sClose').onclick = () => UI.showPanel(null);
+  $('sReset').onclick = () => { respec(); UI.renderSkills(); };
+  $('btnSkills').addEventListener('pointerdown', e => { e.preventDefault(); UI.showPanel('skills'); });
   $('btnJunk').onclick = () => UI.junk();
   $('btnSnd').addEventListener('pointerdown', e => { e.preventDefault(); Sfx.init(); Sfx.setMuted(!Sfx.muted); });
   // Browser erlauben Audio erst nach der ersten Eingabe
@@ -99,8 +102,9 @@ const Input = {
     const k = e.key.toLowerCase();
     if (k === 'tab') e.preventDefault();
     if (e.repeat) return;
-    if (k === 'i' || k === 'tab') { UI.togglePanel(); return; }
-    if (k === 'escape' && !$('panel').classList.contains('hidden')) { UI.togglePanel(); return; }
+    if (k === 'i' || k === 'tab') { UI.showPanel('inv'); return; }
+    if (k === 'k') { UI.showPanel('skills'); return; }
+    if (k === 'escape' && G.paused) { UI.showPanel(null); return; }
     Input.keys[k] = true;
     if (k >= '1' && k <= '4') { Input.held[+k - 1] = true; }
     if (k === 'q') usePotion();

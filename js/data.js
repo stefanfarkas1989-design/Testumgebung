@@ -148,3 +148,45 @@ const ENEMIES = {
   brute:    { name: 'Schlächter',         r: 20, hp: 120, spd: 70,  dmg: 17, xp: 26, color: '#a05a4a', melee: true, range: 16, atkCd: 1.5 },
   boss:     { name: 'Der Knochenfürst',   r: 34, hp: 1400, spd: 85, dmg: 28, xp: 220, color: '#7a3fb0', melee: true, range: 20, atkCd: 1.4, boss: true },
 };
+
+// ---------- Skill-Baum ----------
+// need = Punkte, die in dieser Gruppe schon ausgegeben sein müssen
+const TREE_GROUPS = [
+  { id: 'fire',  name: 'Feuerball',   icon: '🔥', skill: 0 },
+  { id: 'nova',  name: 'Frostnova',   icon: '❄️', skill: 1 },
+  { id: 'bolt',  name: 'Kettenblitz', icon: '⚡', skill: 2 },
+  { id: 'blink', name: 'Teleport',    icon: '🌀', skill: 3 },
+  { id: 'pass',  name: 'Passiv',      icon: '✨', skill: -1 },
+];
+const TREE = [
+  { id: 'fire_dmg',    group: 'fire', need: 0, max: 5, name: 'Glühende Hitze',    text: r => `+${10 * r}% Feuerball-Schaden` },
+  { id: 'fire_splash', group: 'fire', need: 0, max: 3, name: 'Explosive Glut',    text: r => `Explosionsradius +${20 * r}%, Flächenschaden ${50 + 10 * r}%` },
+  { id: 'fire_pierce', group: 'fire', need: 3, max: 1, name: 'Durchschlag',       text: () => 'Feuerbälle durchschlagen einen Gegner' },
+  { id: 'fire_split',  group: 'fire', need: 5, max: 1, name: 'Teilung',           text: () => 'Beim Treffer teilt sich der Feuerball in 2 kleinere (50% Schaden)' },
+  { id: 'fire_cap',    group: 'fire', need: 8, max: 1, name: 'Inferno',           text: () => 'Jeder 5. Feuerball ist ein Inferno: 300% Schaden, riesige Explosion' },
+
+  { id: 'nova_dmg',     group: 'nova', need: 0, max: 5, name: 'Eisiger Hauch',     text: r => `+${10 * r}% Frostnova-Schaden` },
+  { id: 'nova_radius',  group: 'nova', need: 0, max: 3, name: 'Weite Kälte',       text: r => `+${15 * r}% Radius` },
+  { id: 'nova_freeze',  group: 'nova', need: 3, max: 1, name: 'Tiefenfrost',       text: () => '35% Chance, Gegner 1,6 s einzufrieren (nicht Bosse)' },
+  { id: 'nova_barrier', group: 'nova', need: 5, max: 3, name: 'Frostbarriere',     text: r => `Nach der Nova: ${15 * r}% weniger Schaden für 4 s` },
+  { id: 'nova_cap',     group: 'nova', need: 8, max: 1, name: 'Absoluter Nullpunkt', text: () => 'Die Nova wiederholt sich nach 0,45 s (60% Schaden, größerer Radius)' },
+
+  { id: 'bolt_dmg',   group: 'bolt', need: 0, max: 5, name: 'Statische Ladung',  text: r => `+${10 * r}% Blitz-Schaden` },
+  { id: 'bolt_chain', group: 'bolt', need: 0, max: 3, name: 'Kettenreaktion',    text: r => `+${r} Ziele (insgesamt ${5 + r})` },
+  { id: 'bolt_stun',  group: 'bolt', need: 3, max: 1, name: 'Schockwelle',       text: () => '25% Chance, getroffene Gegner 0,5 s zu betäuben' },
+  { id: 'bolt_mana',  group: 'bolt', need: 5, max: 3, name: 'Mana-Leitung',      text: r => `+${2 * r} Mana pro getroffenem Gegner` },
+  { id: 'bolt_cap',   group: 'bolt', need: 8, max: 1, name: 'Donnerschlag',      text: () => 'Jeder Treffer entlädt sich im Umkreis (50% Schaden)' },
+
+  { id: 'blink_cdr',   group: 'blink', need: 0, max: 3, name: 'Gewandtheit',      text: r => `Abklingzeit -${12 * r}%` },
+  { id: 'blink_haste', group: 'blink', need: 0, max: 3, name: 'Schattenschritt',  text: r => `+${15 * r}% Lauftempo für 3 s nach dem Teleport` },
+  { id: 'blink_shock', group: 'blink', need: 3, max: 1, name: 'Phasenschock',     text: () => 'Schaden an Gegnern am Start- und Zielpunkt' },
+  { id: 'blink_void',  group: 'blink', need: 5, max: 1, name: 'Leerenhülle',      text: () => '0,6 s unverwundbar nach dem Teleport' },
+  { id: 'blink_cap',   group: 'blink', need: 8, max: 1, name: 'Arkanes Echo',     text: () => 'Teleport verkürzt alle anderen Abklingzeiten um 1 s' },
+
+  { id: 'p_dmg',   group: 'pass', need: 0, max: 5, name: 'Arkane Macht',     text: r => `+${4 * r}% Zauberschaden` },
+  { id: 'p_life',  group: 'pass', need: 0, max: 5, name: 'Zähigkeit',        text: r => `+${20 * r} Leben` },
+  { id: 'p_mana',  group: 'pass', need: 0, max: 5, name: 'Manafluss',        text: r => `+${(1.5 * r).toFixed(1)} Mana pro Sek.` },
+  { id: 'p_crit',  group: 'pass', need: 0, max: 5, name: 'Kritisches Wissen', text: r => `+${2 * r}% Krit-Chance` },
+  { id: 'p_move',  group: 'pass', need: 0, max: 3, name: 'Eile',             text: r => `+${3 * r}% Lauftempo` },
+  { id: 'p_kill',  group: 'pass', need: 5, max: 3, name: 'Seelenernte',      text: r => `Getötete Gegner heilen ${2 * r}% des max. Lebens` },
+];

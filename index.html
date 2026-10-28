@@ -31,6 +31,7 @@
   <button class="sk pot" id="btnPot"><span class="ic">🧪</span><span class="cdov"></span><span class="key">Q</span><span class="cnt"></span></button>
   <button class="round" id="btnInv">🎒</button>
   <button class="round" id="btnSnd">🔊</button>
+  <button class="round" id="btnSkills" data-n="">📜</button>
 </div>
 
 <div id="panel" class="hidden">
@@ -48,6 +49,15 @@
       </section>
       <section class="colR"><h3>Details</h3><div id="detail"><p class="muted">Tippe ein Item an.</p></div></section>
     </div>
+  </div>
+</div>
+
+<div id="skillPanel" class="hidden">
+  <div class="pbox">
+    <header><h2>Fertigkeiten <small class="muted">· Punkte: <b id="skillPts">0</b></small></h2>
+      <div class="hbtns"><button id="sReset">Zurücksetzen</button><button id="sClose">✕</button></div></header>
+    <div id="skillCols"></div>
+    <p class="muted small">Pro Level gibt es einen Punkt. Tippe auf einen Knoten, um einen Punkt auszugeben. Stärkere Knoten brauchen mehr Punkte im gleichen Baum.</p>
   </div>
 </div>
 

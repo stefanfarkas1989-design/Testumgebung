@@ -23,6 +23,7 @@ python3 -m http.server 8000
 
 - Zufällige Dungeons, pro Ebene ein Boss ("Knochenfürst"), danach Treppe zur nächsten Ebene
 - Magier mit 4 Skills (freigeschaltet bei Level 1 / 2 / 3 / 5)
+- Skill-Baum (Taste `K` / 📜-Button): pro Level 1 Punkt, pro Skill 5 Knoten mit Modifikatoren (z. B. Feuerball teilt sich, Nova friert ein, Blitz mit Donnerschlag, Teleport mit Phasenschock) plus Passiv-Baum, Respec kostenlos
 - Loot mit Seltenheiten (Normal, Magisch, Selten, Legendär), zufälligen Affixen und 6 Ausrüstungsplätzen
 - Champion-Gegner, Heiltränke, Level-Ups, Autosave (localStorage)
 - Synthetisierter Sound (WebAudio, Hall, 3D-Positionierung) und Kampf-Feedback: Trefferpause, Betäubung, Rückstoß, Kamerawackeln, Herzschlag bei wenig Leben (🔊-Button schaltet stumm)

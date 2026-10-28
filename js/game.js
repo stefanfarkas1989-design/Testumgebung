@@ -17,7 +17,7 @@ const G = {
 
 const P = {
   x: 0, y: 0, r: 11, face: 0, hp: 100, mana: 60, lvl: 1, xp: 0, potions: 3, potCd: 0,
-  cd: [0, 0, 0, 0], inv: [], eq: {}, gear: {}, castAnim: 0, walk: 0, fl: 1, moving: false, kx: 0, ky: 0,
+  cd: [0, 0, 0, 0], inv: [], eq: {}, gear: {}, castAnim: 0, walk: 0, fl: 1, moving: false, kx: 0, ky: 0, ranks: {}, fx: {}, drT: 0, drV: 0, hasteT: 0, hasteV: 0, invulnT: 0, echoT: 0, fireCount: 0,
 };
 const INV_MAX = 24;
 
@@ -38,6 +38,23 @@ function recalc() {
   P.regen = 1 + P.lvl * 0.1 + (s.lifeRegen || 0);
   P.manaRegen = 9 + (s.manaRegen || 0);
   P.move = Math.min(60, s.move || 0);
+  const rk = id => P.ranks[id] || 0;
+  P.fx = {
+    fireDmg: 1 + 0.1 * rk('fire_dmg'), fireSplash: 0.5 + 0.1 * rk('fire_splash'), fireRadius: 60 * (1 + 0.2 * rk('fire_splash')),
+    firePierce: rk('fire_pierce') > 0, fireSplit: rk('fire_split') > 0, fireInferno: rk('fire_cap') > 0,
+    novaDmg: 1 + 0.1 * rk('nova_dmg'), novaRadius: 1 + 0.15 * rk('nova_radius'), novaFreeze: rk('nova_freeze') > 0,
+    novaBarrier: 0.15 * rk('nova_barrier'), novaEcho: rk('nova_cap') > 0,
+    boltDmg: 1 + 0.1 * rk('bolt_dmg'), boltChains: 5 + rk('bolt_chain'), boltStun: rk('bolt_stun') > 0,
+    boltMana: 2 * rk('bolt_mana'), boltThunder: rk('bolt_cap') > 0,
+    blinkCdr: 0.12 * rk('blink_cdr'), blinkHaste: 0.15 * rk('blink_haste'), blinkShock: rk('blink_shock') > 0,
+    blinkVoid: rk('blink_void') > 0, blinkEcho: rk('blink_cap') > 0,
+    killHeal: 0.02 * rk('p_kill'),
+  };
+  P.maxHp += 20 * rk('p_life');
+  P.manaRegen += 1.5 * rk('p_mana');
+  P.crit = Math.min(60, P.crit + 2 * rk('p_crit'));
+  P.move = Math.min(60, P.move + 3 * rk('p_move'));
+  P.dmgPct += 4 * rk('p_dmg');
   P.hp = Math.min(P.hp, P.maxHp);
   P.mana = Math.min(P.mana, P.maxMana);
 }
@@ -46,7 +63,7 @@ const skillCd = sk => sk.cd * (1 - P.cdr / 100);
 
 // ---------- Spielstart / Speichern ----------
 function newGame() {
-  P.lvl = 1; P.xp = 0; P.potions = 3; P.inv = []; P.eq = {};
+  P.lvl = 1; P.xp = 0; P.potions = 3; P.inv = []; P.eq = {}; P.ranks = {};
   const staff = makeItem('weapon', 1, 'normal');
   staff.name = 'Lehrlingsstab';
   P.eq.weapon = staff;
@@ -57,7 +74,7 @@ function newGame() {
 }
 function saveGame() {
   try {
-    localStorage.setItem('aschenfall-save', JSON.stringify({ lvl: P.lvl, xp: P.xp, potions: P.potions, inv: P.inv, eq: P.eq, floor: G.floor }));
+    localStorage.setItem('aschenfall-save', JSON.stringify({ lvl: P.lvl, xp: P.xp, potions: P.potions, inv: P.inv, eq: P.eq, ranks: P.ranks, floor: G.floor }));
   } catch (e) { /* Speicher evtl. gesperrt */ }
 }
 function hasSave() {
@@ -66,7 +83,7 @@ function hasSave() {
 function loadGame() {
   try {
     const s = JSON.parse(localStorage.getItem('aschenfall-save'));
-    P.lvl = s.lvl; P.xp = s.xp; P.potions = s.potions; P.inv = s.inv; P.eq = s.eq; G.floor = s.floor;
+    P.lvl = s.lvl; P.xp = s.xp; P.potions = s.potions; P.inv = s.inv; P.eq = s.eq; P.ranks = s.ranks || {}; G.floor = s.floor;
     recalc(); P.hp = P.maxHp; P.mana = P.maxMana;
     startFloor();
     return true;
@@ -210,8 +227,9 @@ function damageEnemy(e, amt, o) {
 function hitstop(s) { G.hitstop = Math.max(G.hitstop, s); }
 function hurtPlayer(amt, fx, fy) {
   if (G.state !== 'play') return;
+  if (P.invulnT > 0) return;
   const red = P.armor / (P.armor + 60 + 8 * G.floor);
-  amt = Math.max(1, Math.round(amt * (1 - red)));
+  amt = Math.max(1, Math.round(amt * (1 - red) * (P.drT > 0 ? 1 - P.drV : 1)));
   P.hp -= amt;
   G.hurtFlash = 0.25; G.shake = Math.max(G.shake, clamp(2 + 14 * amt / P.maxHp, 2, 9));
   if (amt > P.maxHp * 0.12) hitstop(0.06);
@@ -237,6 +255,10 @@ function killEnemy(e) {
   Sfx.play(e.boss ? 'bossDie' : 'death', e);
   hitstop(e.boss ? 0.3 : e.elite ? 0.09 : 0.03);
   gainXp(e.xp);
+  if (P.fx.killHeal) {
+    const h = Math.max(1, Math.round(P.maxHp * P.fx.killHeal));
+    P.hp = Math.min(P.maxHp, P.hp + h); floatText(P.x, P.y - 24, '+' + h, '#6fe08a', false);
+  }
   const src = e.boss ? 'boss' : e.elite ? 'elite' : 'normal';
   const ilvl = Math.max(1, G.floor * 2 + Math.floor(P.lvl / 2));
   for (const it of rollDrops(src, ilvl)) dropItem(e.x, e.y, it);
@@ -263,7 +285,7 @@ function gainXp(n) {
     burst(P.x, P.y, '#ffd84a', 30, 200, 0.8, 4);
     Sfx.play('levelup');
     const ns = SKILLS.find(s => s.unlock === P.lvl);
-    UI.toast(`Level ${P.lvl}!` + (ns ? ` Neuer Skill: ${ns.name}` : ''), '#ffd84a');
+    UI.toast(`Level ${P.lvl}! +1 Fertigkeitspunkt` + (ns ? ` · Neuer Skill: ${ns.name}` : ''), '#ffd84a');
     saveGame();
   }
 }
@@ -290,25 +312,40 @@ function screenToWorld(mx, my) {
   return { x: (mx - G.vw / 2) / G.zoom + G.cam.x, y: (my - G.vh / 2) / G.zoom + G.cam.y };
 }
 
+function doNova(dmg, R) {
+  G.fx.push({ type: 'ring', x: P.x, y: P.y, t: 0, max: 0.45, r: R, color: '#8fd8ff' });
+  burst(P.x, P.y, '#bfeaff', 24, 220, 0.5, 3);
+  for (const e of G.enemies) {
+    if (e.dead || Math.hypot(e.x - P.x, e.y - P.y) >= R + e.r) continue;
+    damageEnemy(e, dmg, { player: true, kb: 260, fx: P.x, fy: P.y });
+    if (e.dead) continue;
+    e.slow = 2.5;
+    if (P.fx.novaFreeze && !e.boss && Math.random() < 0.35) {
+      e.stun = 1.6; floatText(e.x, e.y - e.r - 18, 'Eingefroren', '#8fd8ff', false);
+    }
+  }
+}
+
 function castSkill(i) {
   const sk = SKILLS[i];
   if (G.state !== 'play' || G.paused || P.lvl < sk.unlock || P.cd[i] > 0 || P.mana < sk.mana) return false;
-  const a = aimAngle();
+  const a = aimAngle(), F = P.fx;
   const dmg = skillDmg(sk);
   let ok = true;
   if (sk.id === 'fire') {
     const sp = 520;
-    G.projs.push({ x: P.x + Math.cos(a) * 14, y: P.y + Math.sin(a) * 14, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 8, dmg, friend: true, life: 1.1, color: '#ff8a2a', fire: true });
+    P.fireCount = (P.fireCount || 0) + 1;
+    const inferno = F.fireInferno && P.fireCount % 5 === 0;
+    G.projs.push({
+      x: P.x + Math.cos(a) * 14, y: P.y + Math.sin(a) * 14, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      r: inferno ? 14 : 8, dmg: dmg * F.fireDmg * (inferno ? 3 : 1), friend: true, life: 1.1, color: '#ff8a2a', fire: true,
+      radius: F.fireRadius * (inferno ? 1.7 : 1), splash: F.fireSplash, pierce: F.firePierce ? 1 : 0, split: F.fireSplit, hit: new Set(),
+    });
   } else if (sk.id === 'nova') {
-    const R = 170;
-    G.fx.push({ type: 'ring', x: P.x, y: P.y, t: 0, max: 0.45, r: R, color: '#8fd8ff' });
-    burst(P.x, P.y, '#bfeaff', 24, 220, 0.5, 3);
-    for (const e of G.enemies) {
-      if (!e.dead && Math.hypot(e.x - P.x, e.y - P.y) < R + e.r) {
-        damageEnemy(e, dmg, { player: true, kb: 260, fx: P.x, fy: P.y });
-        e.slow = 2.5;
-      }
-    }
+    const R = 170 * F.novaRadius, d = dmg * F.novaDmg;
+    doNova(d, R);
+    if (F.novaBarrier) { P.drT = 4; P.drV = F.novaBarrier; }
+    if (F.novaEcho) { P.echoT = 0.45; P.echoDmg = d * 0.6; P.echoR = R * 1.25; }
   } else if (sk.id === 'bolt') {
     let t;
     if (Input.mode === 'mouse') {
@@ -321,16 +358,25 @@ function castSkill(i) {
     } else t = nearestEnemy(P.x, P.y, 430, true);
     if (!t) ok = false;
     else {
-      const hit = new Set(), pts = [{ x: P.x, y: P.y }];
+      const d = dmg * F.boltDmg, hit = new Set(), pts = [{ x: P.x, y: P.y }];
       let cur = t;
-      for (let j = 0; j < 5 && cur; j++) {
+      for (let j = 0; j < F.boltChains && cur; j++) {
         hit.add(cur); pts.push({ x: cur.x, y: cur.y });
-        damageEnemy(cur, dmg, { player: true, kb: 60, fx: pts[pts.length - 2].x, fy: pts[pts.length - 2].y });
+        const cx = cur.x, cy = cur.y;
+        damageEnemy(cur, d, { player: true, kb: 60, fx: pts[pts.length - 2].x, fy: pts[pts.length - 2].y });
+        if (!cur.dead && F.boltStun && !cur.boss && Math.random() < 0.25) cur.stun = Math.max(cur.stun, 0.5);
+        if (F.boltMana) P.mana = Math.min(P.maxMana, P.mana + F.boltMana);
+        if (F.boltThunder) {
+          for (const e of G.enemies) {
+            if (!e.dead && !hit.has(e) && Math.hypot(e.x - cx, e.y - cy) < 90 + e.r) damageEnemy(e, d * 0.5, { player: true, kb: 100, fx: cx, fy: cy });
+          }
+          G.fx.push({ type: 'flash', x: cx, y: cy, t: 0, max: 0.2, r: 70 });
+        }
         let nx = null, nd = 210;
         for (const e of G.enemies) {
           if (e.dead || hit.has(e)) continue;
-          const d = Math.hypot(e.x - cur.x, e.y - cur.y);
-          if (d < nd && hasLOS(cur.x, cur.y, e.x, e.y)) { nx = e; nd = d; }
+          const dd = Math.hypot(e.x - cx, e.y - cy);
+          if (dd < nd && hasLOS(cx, cy, e.x, e.y)) { nx = e; nd = dd; }
         }
         cur = nx;
       }
@@ -339,6 +385,7 @@ function castSkill(i) {
   } else if (sk.id === 'blink') {
     const mv = Input.moveVec();
     const ang = (mv.x || mv.y) ? Math.atan2(mv.y, mv.x) : a;
+    const ox = P.x, oy = P.y;
     burst(P.x, P.y, '#b58cff', 18, 160, 0.5, 3);
     for (let d = 8; d <= 220; d += 8) {
       const nx = P.x + Math.cos(ang) * 8, ny = P.y + Math.sin(ang) * 8;
@@ -346,12 +393,22 @@ function castSkill(i) {
       P.x = nx; P.y = ny;
     }
     burst(P.x, P.y, '#b58cff', 18, 160, 0.5, 3);
+    if (F.blinkShock) {
+      const sd = (16 * (1 + 0.07 * (P.lvl - 1)) + P.dmgFlat * 0.8) * (1 + P.dmgPct / 100);
+      for (const [bx, by] of [[ox, oy], [P.x, P.y]]) {
+        G.fx.push({ type: 'ring', x: bx, y: by, t: 0, max: 0.35, r: 90, color: '#c04bff' });
+        for (const e of G.enemies) if (!e.dead && Math.hypot(e.x - bx, e.y - by) < 90 + e.r) damageEnemy(e, sd, { player: true, kb: 200, fx: bx, fy: by });
+      }
+    }
+    if (F.blinkHaste) { P.hasteT = 3; P.hasteV = F.blinkHaste; }
+    if (F.blinkVoid) P.invulnT = 0.6;
+    if (F.blinkEcho) for (let j = 0; j < 4; j++) if (j !== i) P.cd[j] = Math.max(0, P.cd[j] - 1);
   }
   if (!ok) return false;
   P.mana -= sk.mana;
   Sfx.play(sk.id);
   G.kx -= Math.cos(a) * (sk.id === 'fire' ? 2.5 : 4); G.ky -= Math.sin(a) * (sk.id === 'fire' ? 2.5 : 4);
-  P.cd[i] = skillCd(sk);
+  P.cd[i] = skillCd(sk) * (sk.id === 'blink' ? 1 - F.blinkCdr : 1);
   P.face = a; P.castAnim = 0.15;
   return true;
 }
@@ -392,7 +449,14 @@ function update(dt) {
   const mv = Input.moveVec();
 
   // Spieler
-  const spd = 170 * (1 + P.move / 100);
+  if (P.drT > 0) P.drT -= dt;
+  if (P.invulnT > 0) P.invulnT -= dt;
+  if (P.hasteT > 0) P.hasteT -= dt;
+  if (P.echoT > 0) {
+    P.echoT -= dt;
+    if (P.echoT <= 0) { doNova(P.echoDmg, P.echoR); Sfx.play('nova'); }
+  }
+  const spd = 170 * (1 + P.move / 100 + (P.hasteT > 0 ? P.hasteV : 0));
   if (P.kx || P.ky) {
     moveEnt(P, P.kx * dt, P.ky * dt);
     const f = Math.pow(0.003, dt);
@@ -568,10 +632,19 @@ function updateProjs(dt) {
     if (solid(p.x, p.y)) { p.life = 0; if (p.fire) explode(p, null); continue; }
     if (p.friend) {
       for (const e of G.enemies) {
-        if (e.dead) continue;
+        if (e.dead || (p.hit && p.hit.has(e))) continue;
         if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r) {
+          if (p.hit) p.hit.add(e);
           damageEnemy(e, p.dmg, { player: true, kb: 210, fx: p.x - p.vx, fy: p.y - p.vy });
-          explode(p, e); p.life = 0;
+          explode(p, e);
+          if (p.split) {
+            p.split = false;
+            const ba = Math.atan2(p.vy, p.vx), sp = Math.hypot(p.vx, p.vy);
+            for (const da of [-0.55, 0.55]) {
+              G.projs.push({ x: p.x, y: p.y, vx: Math.cos(ba + da) * sp, vy: Math.sin(ba + da) * sp, r: 6, dmg: p.dmg * 0.5, friend: true, life: 0.6, color: '#ff8a2a', fire: true, radius: p.radius * 0.7, splash: p.splash, pierce: 0, split: false, hit: new Set(p.hit) });
+            }
+          }
+          if (p.pierce > 0) p.pierce--; else p.life = 0;
           break;
         }
       }
@@ -586,10 +659,11 @@ function explode(p, direct) {
   burst(p.x, p.y, '#ffb347', 10, 140, 0.4, 3);
   if (!p.fire) return;
   Sfx.play('fireHit', p);
-  G.fx.push({ type: 'flash', x: p.x, y: p.y, t: 0, max: 0.18, r: 70 });
+  G.fx.push({ type: 'flash', x: p.x, y: p.y, t: 0, max: 0.18, r: 70 * ((p.radius || 60) / 60) });
+  if (p.big) G.shake = Math.max(G.shake, 5);
   for (const e of G.enemies) {
     if (e.dead || e === direct) continue;
-    if (Math.hypot(e.x - p.x, e.y - p.y) < 60 + e.r) damageEnemy(e, p.dmg * 0.5, { player: true, kb: 80, fx: p.x, fy: p.y });
+    if (Math.hypot(e.x - p.x, e.y - p.y) < (p.radius || 60) + e.r) damageEnemy(e, p.dmg * (p.splash === undefined ? 0.5 : p.splash), { player: true, kb: 80, fx: p.x, fy: p.y });
   }
 }
 
@@ -622,3 +696,23 @@ function addDecals(e, bony) {
   G.decals.push({ x: e.x, y: e.y, bony, bits, boss: e.boss });
   if (G.decals.length > 90) G.decals.shift();
 }
+
+// ---------- Skillpunkte ----------
+const nodeById = id => TREE.find(n => n.id === id);
+function spentIn(group) { let n = 0; for (const t of TREE) if (t.group === group) n += P.ranks[t.id] || 0; return n; }
+function pointsAvail() { let n = 0; for (const t of TREE) n += P.ranks[t.id] || 0; return Math.max(0, P.lvl - 1 - n); }
+function groupUnlocked(group) {
+  const g = TREE_GROUPS.find(x => x.id === group);
+  return g.skill < 0 || P.lvl >= SKILLS[g.skill].unlock;
+}
+function canSpend(id) {
+  const n = nodeById(id);
+  return !!n && (P.ranks[id] || 0) < n.max && pointsAvail() > 0 && groupUnlocked(n.group) && spentIn(n.group) >= n.need;
+}
+function spendPoint(id) {
+  if (!canSpend(id)) return false;
+  P.ranks[id] = (P.ranks[id] || 0) + 1;
+  recalc(); saveGame();
+  return true;
+}
+function respec() { P.ranks = {}; recalc(); saveGame(); }

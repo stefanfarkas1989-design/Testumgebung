@@ -36,6 +36,8 @@ const UI = {
     $('orbMana').firstElementChild.style.height = (100 * P.mana / P.maxMana) + '%';
     $('xp').firstElementChild.style.width = (100 * P.xp / xpNeed(P.lvl)) + '%';
     UI.set('floorLabel', 'text', `Ebene ${G.floor} · Level ${P.lvl}`);
+    const pa = pointsAvail();
+    if (UI.last.pa !== pa) { UI.last.pa = pa; $('btnSkills').dataset.n = pa > 0 ? pa : ''; }
 
     for (let i = 0; i < 4; i++) {
       const sk = SKILLS[i], b = $('sk' + i);
@@ -120,13 +122,44 @@ const UI = {
   // ---------- Inventar ----------
   updateSndButton() { $('btnSnd').textContent = Sfx.muted ? '🔇' : '🔊'; },
 
-  togglePanel() {
+  // which: 'inv' | 'skills' | null (alles schließen)
+  showPanel(which) {
     if (G.state !== 'play') return;
+    const cur = !$('panel').classList.contains('hidden') ? 'inv' : !$('skillPanel').classList.contains('hidden') ? 'skills' : null;
+    const next = which === cur ? null : which;
+    $('panel').classList.toggle('hidden', next !== 'inv');
+    $('skillPanel').classList.toggle('hidden', next !== 'skills');
+    G.paused = !!next;
     Sfx.play('ui');
-    const open = $('panel').classList.contains('hidden');
-    $('panel').classList.toggle('hidden', !open);
-    G.paused = open;
-    if (open) { Input.releaseAll(); UI.sel = null; UI.renderPanel(); }
+    if (next) Input.releaseAll();
+    if (next === 'inv') { UI.sel = null; UI.renderPanel(); }
+    if (next === 'skills') UI.renderSkills();
+  },
+  togglePanel() { UI.showPanel('inv'); },
+
+  renderSkills() {
+    $('skillPts').textContent = pointsAvail();
+    const box = $('skillCols'); box.innerHTML = '';
+    for (const g of TREE_GROUPS) {
+      const col = document.createElement('div'); col.className = 'scol';
+      const unl = groupUnlocked(g.id);
+      let head = `<div class="sh"><span class="si">${g.icon}</span><div><b>${g.name}</b><small>${spentIn(g.id)} Punkte${unl ? '' : ' · ab Level ' + SKILLS[g.skill].unlock}</small></div></div>`;
+      col.innerHTML = head;
+      for (const n of TREE.filter(t => t.group === g.id)) {
+        const r = P.ranks[n.id] || 0, can = canSpend(n.id), lockedBy = spentIn(g.id) < n.need;
+        const d = document.createElement('div');
+        d.className = 'node' + (r >= n.max ? ' maxed' : can ? ' avail' : '') + (r === 0 && !can ? ' dim' : '');
+        let h = `<div class="nt"><b>${n.name}</b><span>${r}/${n.max}</span></div>`;
+        h += `<div class="nd">${n.text(Math.max(1, r))}</div>`;
+        if (r > 0 && r < n.max) h += `<div class="nn">Nächster Rang: ${n.text(r + 1)}</div>`;
+        if (lockedBy) h += `<div class="nl">🔒 ${n.need} Punkte in ${g.name} nötig</div>`;
+        else if (!unl) h += `<div class="nl">🔒 Skill noch nicht freigeschaltet</div>`;
+        d.innerHTML = h;
+        d.onclick = () => { if (spendPoint(n.id)) { Sfx.play('pickupMagic'); UI.renderSkills(); } };
+        col.appendChild(d);
+      }
+      box.appendChild(col);
+    }
   },
 
   itemCard(it, tag) {

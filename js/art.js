@@ -238,7 +238,7 @@ function drawEnemy(e) {
     case 'brute': bruteBody(e, lunge, gl, F); break;
     case 'boss': bossBody(e, lunge, gl, F); break;
   }
-  if (e.slow > 0) { ctx.globalAlpha = 0.35; ell(0, -2, d.r * 0.75, d.r * 1.1, '#8fd8ff'); ctx.globalAlpha = 1; }
+  if (e.slow > 0) { ctx.globalAlpha = e.stun > 0.3 ? 0.65 : 0.35; ell(0, -2, d.r * 0.75, d.r * 1.1, '#8fd8ff'); ctx.globalAlpha = 1; }
   ctx.restore();
 
   if (e.state !== 'idle' || e.hp < e.maxHp) {
@@ -261,6 +261,8 @@ function drawPlayer() {
   const sway = mv ? Math.sin(P.walk) * 2 : Math.sin(G.time * 2) * 0.6;
   const gl = (lx, ly, r, c, core, a) => G.glows.push({ x: P.x + P.fl * lx, y: P.y + ly, r, c, core: core || 0, a: a || 1 });
   ctx.drawImage(ART.shadow, P.x - 17, P.y + 2, 34, 17);
+  if (P.drT > 0) G.glows.push({ x: P.x, y: P.y - 2, r: 46, c: '140,200,255', a: 0.6 });
+  if (P.invulnT > 0) G.glows.push({ x: P.x, y: P.y - 2, r: 52, c: '190,90,255', a: 0.9 });
   ctx.save();
   ctx.translate(P.x, P.y); ctx.scale(P.fl, 1);
   // Stiefel
