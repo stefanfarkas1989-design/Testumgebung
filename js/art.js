@@ -69,7 +69,7 @@ function genFloor(seed, pal) {
   return c;
 }
 
-function genFace(seed, pal) {
+function genFace(seed, pal, part) {
   const c = mkCanvas(TILE, TILE), g = c.getContext('2d'), R = mulberry(seed), b = pal.brick;
   g.fillStyle = '#1c1620'; g.fillRect(0, 0, TILE, TILE);
   if (pal.bricks) {
@@ -101,11 +101,15 @@ function genFace(seed, pal) {
     c.glowTex = glowCanvas(pts);
   }
   let gr = g.createLinearGradient(0, 0, 0, 8);
-  gr.addColorStop(0, 'rgba(210,195,230,.5)'); gr.addColorStop(1, 'rgba(210,195,230,0)');
-  g.fillStyle = gr; g.fillRect(0, 0, TILE, 8);
-  gr = g.createLinearGradient(0, TILE - 14, 0, TILE);
-  gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.6)');
-  g.fillStyle = gr; g.fillRect(0, TILE - 14, TILE, 14);
+  if (part !== 1) {
+    gr.addColorStop(0, 'rgba(210,195,230,.5)'); gr.addColorStop(1, 'rgba(210,195,230,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, TILE, 8);
+  }
+  if (part !== 2) {
+    gr = g.createLinearGradient(0, TILE - 14, 0, TILE);
+    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.6)');
+    g.fillStyle = gr; g.fillRect(0, TILE - 14, TILE, 14);
+  }
   return c;
 }
 

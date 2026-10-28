@@ -90,6 +90,8 @@ const Input = {
   $('btnPause').addEventListener('pointerdown', e => { e.preventDefault(); UI.setPause(true); });
   $('pResume').onclick = () => UI.setPause(false);
   $('pSound').onclick = () => { Sfx.init(); Sfx.setMuted(!Sfx.muted); };
+  $('pGfx').onclick = () => { setGfx(G.gfx === '3d' ? '2d' : '3d'); };
+  $('pQual').onclick = () => cycleQuality();
   $('pMenu').onclick = () => { saveGame(); UI.setPause(false); UI.showTitle(); };
   // Beim Wegwischen der App / Tab-Wechsel automatisch pausieren
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play' && !G.pausedMenu) UI.setPause(true); });

@@ -2,6 +2,10 @@
 initArt();
 window.addEventListener('resize', resize);
 resize();
+initR3();
+let savedGfx = null;
+try { savedGfx = localStorage.getItem('aschenfall-gfx'); } catch (e) { /* egal */ }
+setGfx(savedGfx || '3d');
 
 let lastT = performance.now();
 function frame(now) {
@@ -9,6 +13,7 @@ function frame(now) {
   lastT = now;
   if (G.hitstop > 0) G.hitstop -= dt;
   else if (G.state === 'play' && !G.paused) update(dt);
+  R3.dtReal = dt;
   render();
   if (G.map) UI.update(dt);
   requestAnimationFrame(frame);

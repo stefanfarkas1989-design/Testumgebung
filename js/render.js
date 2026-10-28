@@ -8,7 +8,7 @@ function resizeLight() {
 }
 
 
-function render() {
+function render2d() {
   const { dpr, zoom, vw, vh } = G;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;

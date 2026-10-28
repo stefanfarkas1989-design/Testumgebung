@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 
 const G = {
   state: 'title',      // title | play | dead
-  paused: false, pausedMenu: false,
+  paused: false, pausedMenu: false, gfx: '2d', quality: 'auto', dt: 0.016,
   floor: 1,
   map: null, rooms: [], startRoom: null, bossRoom: null,
   explored: new Uint8Array(MW * MH),
@@ -98,6 +98,8 @@ function startFloor() {
   const d = genDungeon();
   G.map = d.map; G.rooms = d.rooms; G.startRoom = d.start; G.bossRoom = d.boss;
   G.explored.fill(0);
+  UI.mmClear();
+  if (typeof R3 !== 'undefined') R3.dirty = true;
   G.enemies = []; G.projs = []; G.fx = []; G.texts = []; G.drops = []; G.parts = []; G.decals = [];
   placeTorches();
   G.stairs = null; G.boss = null; G.flowTile = -1; G.flowT = 0;
@@ -334,6 +336,7 @@ function aimAngle() {
   return t ? Math.atan2(t.y - P.y, t.x - P.x) : P.face;
 }
 function screenToWorld(mx, my) {
+  if (G.gfx === '3d' && R3.ready) return R3.screenToWorld(mx, my);
   return { x: (mx - G.vw / 2) / G.zoom + G.cam.x, y: (my - G.vh / 2) / G.zoom + G.cam.y };
 }
 
@@ -472,7 +475,7 @@ function unequip(key) {
 
 // ---------- Update ----------
 function update(dt) {
-  G.time += dt;
+  G.time += dt; G.dt = dt;
   const mv = Input.moveVec();
 
   // Spieler
@@ -523,7 +526,7 @@ function update(dt) {
     const px = Math.floor(P.x / TILE), py = Math.floor(P.y / TILE);
     for (let j = -7; j <= 7; j++) for (let i = -7; i <= 7; i++) {
       const x = px + i, y = py + j;
-      if (i * i + j * j <= 49 && x >= 0 && y >= 0 && x < MW && y < MH) G.explored[y * MW + x] = 1;
+      if (i * i + j * j <= 49 && x >= 0 && y >= 0 && x < MW && y < MH && !G.explored[y * MW + x]) { G.explored[y * MW + x] = 1; UI.mmReveal(x, y); }
     }
   }
 

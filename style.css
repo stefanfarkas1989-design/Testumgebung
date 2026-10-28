@@ -221,3 +221,12 @@ canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: blo
   background: linear-gradient(#5b3a8c, #3a2160); border: 1px solid #8a63c4;
 }
 #pButtons button.sec { background: #221e2e; border-color: #4a4160; font-size: 15px; }
+
+/* ---------- 3D ---------- */
+canvas#game3d, canvas#hud2d { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+canvas#hud2d { pointer-events: none; z-index: 0; }
+#vig, #hurtfx { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+#vig { background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,.6) 100%); }
+#vig.low { animation: lowhp 1.1s infinite; box-shadow: inset 0 0 120px 20px rgba(160,0,0,.45); }
+@keyframes lowhp { 50% { box-shadow: inset 0 0 160px 40px rgba(180,0,0,.6); } }
+#hurtfx { background: rgba(200,0,0,.55); opacity: 0; }

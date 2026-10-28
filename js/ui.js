@@ -30,6 +30,9 @@ const UI = {
   },
 
   update(dt) {
+    UI.accT = (UI.accT || 0) + dt;
+    if (UI.accT < 0.05) return;
+    dt = UI.accT; UI.accT = 0;
     UI.setSpan('orbLife', `${Math.ceil(P.hp)}/${P.maxHp}`);
     $('orbLife').firstElementChild.style.height = (100 * P.hp / P.maxHp) + '%';
     UI.setSpan('orbMana', `${Math.floor(P.mana)}/${P.maxMana}`);
@@ -63,16 +66,22 @@ const UI = {
     if (UI.mmT <= 0) { UI.mmT = 0.2; UI.drawMinimap(); }
   },
 
+  // Statische Ebene der Minimap: neue Kacheln werden nur einmal eingezeichnet
+  mmClear() {
+    if (!UI.mmStatic) { UI.mmStatic = document.createElement('canvas'); UI.mmStatic.width = UI.mmStatic.height = 128; }
+    UI.mmStatic.getContext('2d').clearRect(0, 0, 128, 128);
+  },
+  mmReveal(x, y) {
+    if (!UI.mmStatic) UI.mmClear();
+    const m = UI.mmStatic.getContext('2d');
+    m.fillStyle = G.map[y * MW + x] || G.deco[y * MW + x] ? '#6a6480' : '#17141f';
+    m.fillRect(x * 2, y * 2, 2, 2);
+  },
+
   drawMinimap() {
     const c = $('minimap'), m = c.getContext('2d'), s = 2;
     m.clearRect(0, 0, c.width, c.height);
-    // Ausschnitt um den Spieler (128px = 64 Kacheln)
-    for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
-      const i = y * MW + x;
-      if (!G.explored[i]) continue;
-      m.fillStyle = G.map[i] ? '#6a6480' : '#17141f';
-      m.fillRect(x * s, y * s, s, s);
-    }
+    if (UI.mmStatic) m.drawImage(UI.mmStatic, 0, 0);
     const dot = (wx, wy, col, r) => {
       m.fillStyle = col; m.beginPath(); m.arc(wx / TILE * s, wy / TILE * s, r, 0, 6.283); m.fill();
     };
@@ -120,6 +129,13 @@ const UI = {
   },
 
   // ---------- Inventar ----------
+  updateGfxButtons() {
+    const q = { auto: 'Auto', high: 'Hoch', mid: 'Mittel', low: 'Niedrig' }[G.quality] || 'Auto';
+    $('pGfx').textContent = `Grafik: ${G.gfx === '3d' ? '3D' : '2D'}`;
+    $('pQual').textContent = `Qualität: ${q}`;
+    $('pQual').style.display = G.gfx === '3d' ? '' : 'none';
+  },
+
   updateSndButton() {
     $('btnSnd').textContent = Sfx.muted ? '🔇' : '🔊';
     $('pSound').textContent = Sfx.muted ? '🔇 Ton: aus' : '🔊 Ton: an';
