@@ -23,6 +23,7 @@ python3 -m http.server 8000
 ## Inhalt
 
 - **Gold & Händler:** Gold fällt von Gegnern und Fässern. Die **Funkenkiste** im Startraum jeder Ebene (Taste `E` / Button) verkauft Tränke und Items, kauft Items auf und würfelt Werte neu
+- **Todes-Zusammenfassung:** Beim Tod zeigt das Spiel Ebene, besiegte Gegner (und Bosse), gesammeltes Gold und neu gefundene Namen seit dem letzten Start bzw. der letzten Wiederbelebung
 - Vibration auf dem Handy (abschaltbar), Einsteiger-Tipps
 
 - **Geschichte** (siehe `STORY.md`): Prolog mit Namenseingabe, Briefe der Odalie, Boss-Dialoge, Todes-Sätze, Chronik (Taste `C`) mit Bestiarium und Relikten, Namenssplitter als Sammelmechanik, Echo-Ebenen ab Ebene 7, Endkampf gegen „Das Schweigen“ auf Ebene 9, drei Enden und danach der Echo-Modus

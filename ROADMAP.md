@@ -5,7 +5,7 @@ Die automatischen Entwicklungsläufe (siehe `AUTOMATION.md`) arbeiten diese List
 ## Spielgefühl & Balance
 - [~] **Balance-Pass** – Teil 1 erledigt (Simulationsskript `tests/balance-sim.js`, Gegner-/Boss-Skalierung in `BALANCE`, `js/data.js`). Offen: Loot-Qualität und Gold-Preise (Händler) mit der Simulation abgleichen, Feintuning nach Handy-Rückmeldung (Ebene 9 / Das Schweigen).
 - [ ] **Schwierigkeitsgrade** (Normal / Schwer / Albtraum) mit besserem Loot, wählbar beim neuen Spiel.
-- [ ] **Todes-Zusammenfassung:** Nach dem Tod kurze Anzeige (Ebene, besiegte Gegner, gesammeltes Gold/Namen).
+- [x] **Todes-Zusammenfassung:** Nach dem Tod kurze Anzeige (Ebene, besiegte Gegner, gesammeltes Gold/Namen).
 - [ ] **Zielhilfe verbessern** (Touch): bevorzugt Gegner in Bewegungsrichtung, Elite/Boss priorisieren; optionale Anzeige des Ziels.
 
 ## Inhalt

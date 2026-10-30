@@ -64,6 +64,7 @@ const skillDmg = sk => (sk.base * (1 + 0.07 * (P.lvl - 1)) + P.dmgFlat * sk.coef
 const skillCd = sk => sk.cd * (1 - P.cdr / 100);
 
 // ---------- Spielstart / Speichern ----------
+function resetRun() { G.run = { kills: 0, gold: 0, bosses: 0, floor0: G.floor, names0: (P.story && P.story.names ? P.story.names.length : 0), t0: G.time || 0 }; }
 function newGame() {
   P.lvl = 1; P.xp = 0; P.potions = 3; P.inv = []; P.eq = {}; P.ranks = {}; P.gold = 0;
   P.story = Story.fresh(); P.story.name = UI.pendingName || '';
@@ -72,6 +73,7 @@ function newGame() {
   P.eq.weapon = staff;
   G.floor = 1;
   recalc(); P.hp = P.maxHp; P.mana = P.maxMana;
+  resetRun();
   startFloor();
   saveGame();
 }
@@ -86,7 +88,7 @@ function hasSave() {
 function loadGame() {
   try {
     const s = JSON.parse(localStorage.getItem('aschenfall-save'));
-    P.lvl = s.lvl; P.xp = s.xp; P.potions = s.potions; P.inv = s.inv; P.eq = s.eq; P.ranks = s.ranks || {}; P.story = s.story || Story.fresh(); P.gold = s.gold || 0; G.floor = s.floor;
+    P.lvl = s.lvl; P.xp = s.xp; P.potions = s.potions; P.inv = s.inv; P.eq = s.eq; P.ranks = s.ranks || {}; P.story = s.story || Story.fresh(); P.gold = s.gold || 0; G.floor = s.floor; resetRun();
     recalc(); P.hp = P.maxHp; P.mana = P.maxMana;
     startFloor();
     return true;
@@ -274,6 +276,7 @@ function wake(e) {
 
 function killEnemy(e) {
   e.dead = true;
+  if (G.run) { G.run.kills++; if (e.boss) G.run.bosses++; }
   Story.seen(e.type);
   const bony = e.type === 'skeleton' || e.type === 'archer' || e.boss;
   burst(e.x, e.y, bony ? '#d9d1b6' : '#8a1620', e.boss ? 40 : 14, 170, 0.7, 3.5, false);
@@ -559,7 +562,7 @@ function update(dt) {
     d.t += dt;
     if (Math.hypot(d.x - P.x, d.y - P.y) < (d.coin ? 52 : 38)) {
       if (d.coin) {
-        P.gold += d.amount; d.got = true; Sfx.play('coin');
+        P.gold += d.amount; if (G.run) G.run.gold += d.amount; d.got = true; Sfx.play('coin');
         floatText(P.x, P.y - 24, '+' + d.amount + ' Gold', '#ffd84a', false);
       } else if (d.potion) {
         if (P.potions < 6) { P.potions++; d.got = true; Sfx.play('pickup'); floatText(P.x, P.y - 24, '+Trank', '#e0343c', false); }

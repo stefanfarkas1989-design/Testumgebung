@@ -220,13 +220,18 @@ const UI = {
     add(hasSave() ? 'Neues Spiel' : 'Spiel starten', () => { UI.beginNewGame(); }, hasSave() ? 'sec' : '');
     $('overlay').classList.remove('hidden');
   },
+  deathSummary() {
+    const r = G.run || { kills: 0, gold: 0, bosses: 0, names0: 0 };
+    const names = (P.story && P.story.names ? P.story.names.length : 0) - r.names0;
+    return [`Ebene ${G.floor}`, `Besiegt: ${r.kills}` + (r.bosses ? ` (davon ${r.bosses} Boss${r.bosses > 1 ? 'e' : ''})` : ''), `Gold gesammelt: ${r.gold}`, `Namen gefunden: ${Math.max(0, names)}`].join(' · ');
+  },
   showDeath() {
-    $('oText').textContent = 'Du bist gefallen.\n' + Story.deathLine();
+    $('oText').textContent = 'Du bist gefallen.\n' + Story.deathLine() + '\n\n' + UI.deathSummary();
     const box = $('oButtons');
     box.innerHTML = '';
     const b = document.createElement('button');
     b.textContent = 'Wiederbeleben'; b.onclick = () => {
-      P.hp = P.maxHp; P.mana = P.maxMana; startFloor(); UI.hideOverlay();
+      P.hp = P.maxHp; P.mana = P.maxMana; resetRun(); startFloor(); UI.hideOverlay();
     };
     box.appendChild(b);
     $('overlay').classList.remove('hidden');
