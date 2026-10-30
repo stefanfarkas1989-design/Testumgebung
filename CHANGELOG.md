@@ -2,6 +2,8 @@
 
 Neueste zuerst.
 
+- **Todes-Zusammenfassung:** Nach dem Tod erscheinen Ebene, besiegte Gegner/Bosse, gesammeltes Gold und gefundene Namen; Test `tests/todes-zusammenfassung.js`.
+
 - **Echte Foto-Texturen:** Wände und Böden nutzen jetzt CC0-Fotomaterialien von Poly Haven (Kopfsteinpflaster, Mauerwerk, Fels, Marmor) mit Albedo-, Normalen- und Rauheitskarten (512 px, ca. 1 MB). Sie ersetzen die prozeduralen Texturen, sobald sie geladen sind; fehlen sie, bleibt die prozedurale Grafik. Der Lavaboden bleibt prozedural, damit die Risse leuchten. Quellen und Lizenz: `assets/tex/CREDITS.md`.
 
 - **Fotorealistischere Grafik:** neue PBR-Materialien (prozedural), Umgebungsreflexe, Bloom und Filmfarben, Schatten vom Spielerlicht, feiner modellierter Magier und Skelette mit Detailstufen, Qualitätstest `tests/grafik-qualitaet.js`.
