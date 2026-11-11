@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Möbel-Generator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>🪚 Möbel-Generator <small>Regal-Konfigurator</small></h1>
+  <div class="hbtns">
+    <button id="btnCsv">Stückliste (CSV)</button>
+    <button id="btnPrint">Drucken / PDF</button>
+    <button id="btnLink">Link kopieren</button>
+  </div>
+</header>
+
+<main>
+  <aside id="controls">
+    <section>
+      <h2>Vorlage</h2>
+      <select id="preset">
+        <option value="buch">Bücherregal</option>
+        <option value="wuerfel">Würfelregal</option>
+        <option value="schuh">Schuhregal</option>
+        <option value="sideboard">Sideboard offen</option>
+        <option value="nische">Nischenregal (Maß nehmen)</option>
+      </select>
+    </section>
+    <section>
+      <h2>Maße (mm)</h2>
+      <label>Breite <input type="range" id="W" min="300" max="3000" step="10"><input type="number" id="Wn" step="10"></label>
+      <label>Höhe <input type="range" id="H" min="300" max="2600" step="10"><input type="number" id="Hn" step="10"></label>
+      <label>Tiefe <input type="range" id="D" min="150" max="700" step="5"><input type="number" id="Dn" step="5"></label>
+      <label>Sockelhöhe <input type="range" id="plinth" min="0" max="150" step="5"><input type="number" id="plinthn" step="5"></label>
+    </section>
+    <section>
+      <h2>Aufbau</h2>
+      <label>Fachböden <input type="range" id="shelves" min="0" max="12" step="1"><input type="number" id="shelvesn"></label>
+      <label>Mittelteiler <input type="range" id="dividers" min="0" max="6" step="1"><input type="number" id="dividersn"></label>
+      <label class="row">Rückwand
+        <select id="back"><option value="3">HDF 3 mm</option><option value="0">keine</option></select>
+      </label>
+    </section>
+    <section>
+      <h2>Material</h2>
+      <label class="row">Platte <select id="material"></select></label>
+      <label class="row">Stärke <select id="t"><option>16</option><option>18</option><option selected>19</option><option>25</option></select></label>
+      <label class="row">Rohplatte <select id="sheet"></select></label>
+      <label class="row">Preis €/m² <input type="number" id="price" step="0.5"></label>
+      <label class="chk"><input type="checkbox" id="rotate"> Teile dürfen gedreht werden (Dekor ohne Maserung)</label>
+    </section>
+    <section>
+      <h2>Ansicht</h2>
+      <label>Explosion <input type="range" id="explode" min="0" max="100" step="1" value="0"></label>
+      <label class="chk"><input type="checkbox" id="person" checked> Größenvergleich (Person 1,75 m)</label>
+    </section>
+    <div id="warnings"></div>
+  </aside>
+
+  <section id="stage">
+    <div id="view"></div>
+    <div id="dims"></div>
+  </section>
+
+  <section id="results">
+    <nav id="tabs">
+      <button data-tab="list" class="on">Stückliste</button>
+      <button data-tab="cut">Zuschnitt</button>
+      <button data-tab="cost">Material &amp; Kosten</button>
+      <button data-tab="how">Anleitung</button>
+    </nav>
+    <div id="tab-list" class="tab on"></div>
+    <div id="tab-cut" class="tab"></div>
+    <div id="tab-cost" class="tab"></div>
+    <div id="tab-how" class="tab"></div>
+  </section>
+</main>
+
+<script src="../lib/three.min.js"></script>
+<script src="regal.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
