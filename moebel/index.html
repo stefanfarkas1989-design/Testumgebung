@@ -48,7 +48,6 @@
       <label class="row">Platte <select id="material"></select></label>
       <label class="row">Stärke <select id="t"><option>16</option><option>18</option><option selected>19</option><option>25</option></select></label>
       <label class="row">Rohplatte <select id="sheet"></select></label>
-      <label class="row">Preis €/m² <input type="number" id="price" step="0.5"></label>
       <label class="chk"><input type="checkbox" id="rotate"> Teile dürfen gedreht werden (Dekor ohne Maserung)</label>
     </section>
     <section>
@@ -91,13 +90,13 @@
     <nav id="tabs">
       <button data-tab="list" class="on">Stückliste</button>
       <button data-tab="cut">Zuschnitt</button>
-      <button data-tab="cost">Material &amp; Kosten</button>
-      <button data-tab="how">Anleitung</button>
+      <button data-tab="mat">Material</button>
+      <button data-tab="draw">Zeichnungen</button>
     </nav>
     <div id="tab-list" class="tab on"></div>
     <div id="tab-cut" class="tab"></div>
-    <div id="tab-cost" class="tab"></div>
-    <div id="tab-how" class="tab"></div>
+    <div id="tab-mat" class="tab"></div>
+    <div id="tab-draw" class="tab"></div>
   </section>
 </main>
 
@@ -106,6 +105,7 @@
 <script src="regal.js"></script>
 <script src="frischeis.js"></script>
 <script src="jaf.js"></script>
+<script src="zeichnung.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

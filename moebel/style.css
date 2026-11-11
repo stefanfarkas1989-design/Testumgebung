@@ -43,7 +43,9 @@ tr.part{cursor:pointer}tr.part:hover{background:var(--bg)}
 .sheet{margin:10px 0}.sheet svg{width:100%;height:auto;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
 .sheet h3{margin:0 0 4px;font-size:14px}
 .total{font-size:20px;font-weight:700;margin-top:10px}
-ol.how li{margin:6px 0}
+.drawbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.drawing{margin:0 0 14px;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
+.drawing svg{display:block;width:100%;height:auto}
 .note{color:var(--mut);font-size:13px}
 @media (max-width:900px){
   main{grid-template-columns:1fr;grid-template-areas:"s" "c" "r"}

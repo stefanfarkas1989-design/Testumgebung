@@ -19,7 +19,7 @@
   }
 
   /* Zeilen aus der gruppierten Stückliste.
-   * Länge = Maserrichtung. V/H = Kanten entlang der Länge, L/R = Kanten an den Längsenden. */
+   * Länge = Maserrichtung. */
   function rowsFromModel(model, opt) {
     const rows = [];
     model.cutlist.forEach((g) => {
@@ -28,8 +28,13 @@
         pos: String(g.no), mat: mat || '', thick: g.thick, name: g.name, qty: g.qty, l: g.l, w: g.w,
         drehb: g.back || opt.rotate ? 1 : null, v: '', h: '', lk: '', rk: ''
       };
-      if (!g.back && g.name !== 'Sockelblende') r.v = 'A'; // sichtbare Vorderkante
-      if (g.name === 'Seitenwand') r.lk = 'A';             // sichtbare Oberkante der Seitenwand
+      // Kantenlage aus dem Modell. Zuordnung zu den Formularspalten ist eine Annahme (siehe README):
+      // V/H = Kanten entlang der Länge (W0 = vorne, W1 = hinten), L/R = Kanten an den Enden (L0, L1)
+      const edges = g.edges || [];
+      if (edges.includes('W0')) r.v = 'A';
+      if (edges.includes('W1')) r.h = 'A';
+      if (edges.includes('L0')) r.lk = 'A';
+      if (edges.includes('L1')) r.rk = 'A';
       rows.push(r);
     });
     return rows;

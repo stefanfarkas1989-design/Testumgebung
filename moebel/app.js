@@ -15,7 +15,6 @@
   };
 
   let state = Object.assign({}, M.DEFAULTS, PRESETS.buch);
-  let priceOverride = null;
 
   /* ---------- Zustand speichern / laden ---------- */
   function loadState() {
@@ -45,11 +44,10 @@
       if (!state.backFe || state.backFe.t !== v) { delete state.backFe; delete state.backSheet; }
       update();
     });
-    $('material').addEventListener('change', () => { state.material = $('material').value; priceOverride = null; update(); });
+    $('material').addEventListener('change', () => { state.material = $('material').value; update(); });
     $('t').addEventListener('change', () => { state.t = Number($('t').value); update(); if (typeof kanten !== 'undefined') kanten.render(); });
     $('sheet').addEventListener('change', () => { state.sheet = $('sheet').value; update(); });
     $('rotate').addEventListener('change', () => { state.rotate = $('rotate').checked; update(); });
-    $('price').addEventListener('change', () => { priceOverride = Number($('price').value); update(); });
     $('preset').addEventListener('change', () => { Object.assign(state, PRESETS[$('preset').value]); syncForm(); update(); });
     $('explode').addEventListener('input', () => applyExplode());
     $('person').addEventListener('change', () => { if (personMesh) personMesh.visible = $('person').checked; render(); });
@@ -61,28 +59,23 @@
     $('t').value = state.t;
     $('sheet').value = state.sheet;
     $('rotate').checked = !!state.rotate;
-    $('price').value = priceOverride != null ? priceOverride : M.MATERIALS[state.material].price;
   }
 
   /* ---------- Berechnung ---------- */
   let model, plan;
   function update() {
-    // Preis-Override in Material schreiben (nur lokal)
-    M.MATERIALS[state.material].price = priceOverride != null ? priceOverride : defaultPrices[state.material];
     model = M.buildRegal(state);
-    $('price').value = M.MATERIALS[state.material].price;
     $('warnings').innerHTML = model.errors.map((e) => '<div class="e">⚠ ' + esc(e) + '</div>').join('');
-    if (model.errors.length) { $('tab-list').innerHTML = $('tab-cut').innerHTML = $('tab-cost').innerHTML = $('tab-how').innerHTML = ''; return; }
+    if (model.errors.length) { $('tab-list').innerHTML = $('tab-cut').innerHTML = $('tab-mat').innerHTML = $('tab-draw').innerHTML = ''; return; }
     plan = M.plan(model);
     $('warnings').innerHTML = model.warnings.map((w) => '<div class="w">💡 ' + esc(w) + '</div>').join('') +
       plan.errors.map((e) => '<div class="e">⚠ ' + esc(e) + '</div>').join('');
     $('dims').textContent = state.W + ' × ' + state.H + ' × ' + state.D + ' mm  ·  Fach ' +
       Math.round(model.derived.cw) + ' × ' + Math.round(model.derived.ch) + ' mm  ·  ' + model.parts.length + ' Teile';
-    renderList(); renderCut(); renderCost(); renderHow();
+    renderList(); renderCut(); renderMaterial(); renderDrawings();
     rebuild3D();
     saveState();
   }
-  const defaultPrices = {}; Object.entries(M.MATERIALS).forEach(([k, m]) => (defaultPrices[k] = m.price));
 
   /* ---------- Tabs ---------- */
   function renderList() {
@@ -127,24 +120,64 @@
     $('tab-cut').innerHTML = html;
   }
 
-  function renderCost() {
-    const c = plan.cost;
-    let rows = '';
-    Object.entries({ plate: M.MATERIALS[state.material].name + ' ' + state.t + ' mm', back: 'HDF Rückwand ' + state.bt + ' mm' }).forEach(([k, n]) => {
-      if (c[k]) rows += '<tr><td>' + esc(n) + '</td><td class="n">' + c[k].sheets + ' Platte(n)</td><td class="n">' + eur(c[k].price) + '/m²</td><td class="n">' + eur(c[k].cost) + '</td></tr>';
-    });
-    rows += '<tr><td>Kantenband (' + model.derived.edgeM.toFixed(1) + ' m)</td><td></td><td></td><td class="n">' + eur(c.edge) + '</td></tr>';
-    const hw = model.derived.hardware.map((h) => '<tr><td>' + esc(h.name) + '</td><td class="n">' + h.qty + ' Stk</td><td></td><td></td></tr>').join('');
-    $('tab-cost').innerHTML =
-      '<table><thead><tr><th>Position</th><th class="n">Menge</th><th class="n">Preis</th><th class="n">Summe</th></tr></thead><tbody>' +
-      rows + hw + '<tr><td>Beschläge gesamt</td><td></td><td></td><td class="n">' + eur(c.hardware) + '</td></tr></tbody></table>' +
-      '<div class="total">Gesamt ca. ' + eur(c.total) + '</div>' +
-      '<p class="note">Richtwerte, keine Angebote. Der Plattenpreis ist links anpassbar. Es werden ganze Platten gerechnet; beim Zuschnitt-Dienst zahlst du oft nur die genutzte Fläche plus Schnittkosten. Restplatten lassen sich für das nächste Möbel aufheben.</p>';
+  // Bezeichnungen für Material, Rückwand und Kante (für Tabellen und Zeichnungen)
+  function names() {
+    const plate = state.fe ? state.fe.nr + ' ' + state.fe.name : M.MATERIALS[state.material].name + ' (kein Frischeis-Artikel gewählt)';
+    const back = state.backFe ? state.backFe.nr + ' ' + state.backFe.name : 'Rückwand ' + fmtT(state.bt) + ' mm (kein Frischeis-Artikel gewählt)';
+    const kante = state.kanteFe ? state.kanteFe.nr + ' ' + state.kanteFe.name : ($('jKante').value.trim() || 'Kantenart A (noch nicht gewählt)');
+    return { plate, back, kante };
   }
 
-  function renderHow() {
-    $('tab-how').innerHTML = '<ol class="how">' + M.instructions(model).map((s) => '<li>' + esc(s) + '</li>').join('') + '</ol>' +
-      '<p class="note">Werkzeug: Akkuschrauber, Bohrer 5/7/8 mm, Zollstock, Winkel, Bleistift, Zwingen, ggf. Kantenbügeleisen.</p>';
+  function renderMaterial() {
+    const n = names();
+    let rows = '';
+    for (const [key, g] of Object.entries(plan.groups)) {
+      const parts = model.cutlist.filter((c) => !!c.back === (key === 'back'));
+      const area = parts.reduce((s, c) => s + c.l * c.w * c.qty, 0) / 1e6;
+      rows += '<tr><td>' + esc(key === 'back' ? n.back : n.plate) + '</td><td class="n">' + fmtT(g.thick) + ' mm</td><td class="n">' + g.sheet.l + ' × ' + g.sheet.w +
+        '</td><td class="n">' + g.sheets.length + '</td><td class="n">' + area.toFixed(2).replace('.', ',') + ' m²</td></tr>';
+    }
+    $('tab-mat').innerHTML =
+      '<table><thead><tr><th>Platte</th><th class="n">Stärke</th><th class="n">Rohformat</th><th class="n">Platten lt. Zuschnittplan</th><th class="n">Fläche der Teile</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<table style="margin-top:12px"><thead><tr><th>Kante</th><th class="n">Bekantete Länge</th></tr></thead><tbody><tr><td>' + esc(n.kante) + '</td><td class="n">' +
+      model.derived.edgeM.toFixed(2).replace('.', ',') + ' m</td></tr></tbody></table>' +
+      '<p class="note">Bekantete Länge = Summe der Kanten laut Zeichnungen, ohne Zuschlag. Beschläge: noch nicht festgelegt. Preise siehst du in WebCut.</p>';
+  }
+
+  /* ---------- Zeichnungen ---------- */
+  let drawings = [];
+  function drawingInfo() {
+    const n = names();
+    return { material: n.plate, kante: n.kante, projekt: ($('jObjekt') && $('jObjekt').value.trim()) || ('Regal ' + state.W + ' × ' + state.H + ' × ' + state.D) };
+  }
+  function renderDrawings() {
+    drawings = window.Zeichnung.analyze(model);
+    const info = drawingInfo(), n = names();
+    $('tab-draw').innerHTML = '<div class="drawbar"><button type="button" id="btnDraw">Alle Zeichnungen als ZIP (SVG)</button><span class="note" id="drawMsg">' +
+      drawings.length + ' Zeichnungen. Rote Linie = Kante, blau = anschließendes Teil.</span></div>' +
+      drawings.map((d) => '<figure class="drawing">' + window.Zeichnung.svg(d, Object.assign({}, info, { material: d.back ? n.back : n.plate })) + '</figure>').join('');
+    $('btnDraw').addEventListener('click', exportDrawings);
+  }
+  async function exportDrawings() {
+    const msg = $('drawMsg');
+    if (!window.JSZip) { msg.textContent = 'JSZip konnte nicht geladen werden (Internetverbindung?).'; return; }
+    const info = drawingInfo(), n = names();
+    const zip = new window.JSZip();
+    const safe = (s) => s.replace(/[^A-Za-z0-9ÄÖÜäöüß_-]+/g, '-');
+    drawings.forEach((d) => zip.file('Pos' + String(d.no).padStart(2, '0') + d.sub + '-' + safe(d.name) + '.svg',
+      window.Zeichnung.svg(d, Object.assign({}, info, { material: d.back ? n.back : n.plate }))));
+    const data = await zip.generateAsync({ type: 'uint8array' });
+    const filename = 'Zeichnungen-Regal-' + state.W + 'x' + state.H + 'x' + state.D + '.zip';
+    try {
+      let dl = null;
+      try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (e) { dl = null; }
+      if (dl) await dl.save({ filename, data });
+      else {
+        const el = document.createElement('a');
+        el.href = URL.createObjectURL(new Blob([data], { type: 'application/zip' })); el.download = filename; el.click();
+      }
+      msg.textContent = 'Gespeichert: ' + filename;
+    } catch (e) { msg.textContent = e && e.code === 'declined' ? 'Speichern abgebrochen.' : 'Fehler: ' + (e && e.message || e); }
   }
 
   /* ---------- Frischeis-Dekorkatalog ---------- */
@@ -168,8 +201,7 @@
     if (!state.fe) { if (state.sheet === 'fe' || state.material === 'fe') { state.sheet = '2800x2070'; state.material = 'melamin'; } return; }
     const a = state.fe;
     M.SHEETS.fe = { l: a.l, w: a.w, name: a.l + ' × ' + a.w + ' (Frischeis)' };
-    M.MATERIALS.fe = { name: a.nr + ' ' + a.name, color: guessColor(a.name), price: M.MATERIALS.fe ? M.MATERIALS.fe.price : 20 };
-    if (!('fe' in defaultPrices)) defaultPrices.fe = 20;
+    M.MATERIALS.fe = { name: a.nr + ' ' + a.name, color: guessColor(a.name) };
     if (!$('material').querySelector('option[value="fe"]')) $('material').add(new Option('Frischeis-Dekor', 'fe'));
     $('material').querySelector('option[value="fe"]').textContent = a.nr + ' ' + a.name;
     if (!$('sheet').querySelector('option[value="fe"]')) $('sheet').add(new Option('', 'fe'));

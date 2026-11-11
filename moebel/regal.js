@@ -5,12 +5,12 @@
   'use strict';
 
   const MATERIALS = {
-    spanplatte: { name: 'Spanplatte roh', color: '#d9bd8e', price: 11 },
-    melamin:    { name: 'Melamin weiß', color: '#f1f1ec', price: 19 },
-    melaminAnth:{ name: 'Melamin anthrazit', color: '#4b4e53', price: 21 },
-    eiche:      { name: 'Eiche-Dekor', color: '#c29a63', price: 24 },
-    mdf:        { name: 'MDF (zum Lackieren)', color: '#e4dfd4', price: 22 },
-    multiplex:  { name: 'Birke-Multiplex', color: '#dcc08f', price: 68 }
+    spanplatte: { name: 'Spanplatte roh', color: '#d9bd8e' },
+    melamin:    { name: 'Melamin weiß', color: '#f1f1ec' },
+    melaminAnth:{ name: 'Melamin anthrazit', color: '#4b4e53' },
+    eiche:      { name: 'Eiche-Dekor', color: '#c29a63' },
+    mdf:        { name: 'MDF (zum Lackieren)', color: '#e4dfd4' },
+    multiplex:  { name: 'Birke-Multiplex', color: '#dcc08f' }
   };
 
   const SHEETS = {
@@ -29,8 +29,7 @@
     material: 'melamin',
     sheet: '2800x2070',
     kerf: 4,            // Sägeblattbreite
-    rotate: false,      // Teile dürfen gedreht werden (Dekor ohne Maserung)
-    backPrice: 6        // €/m² HDF
+    rotate: false       // Teile dürfen gedreht werden (Dekor ohne Maserung)
   };
 
   const TRIM = 10; // Besäumschnitt je Seite der Rohplatte
@@ -55,93 +54,66 @@
     if (Wi <= 0) errors.push('Breite ist zu klein.');
     if (errors.length) return { p, parts: [], cutlist: [], errors, warnings, derived: {} };
 
-    const spanTab = { 16: 600, 18: 700, 19: 750, 22: 850, 25: 900 };
-    const nearT = Object.keys(spanTab).map(Number).reduce((a, b) => (Math.abs(b - t) < Math.abs(a - t) ? b : a));
-    const maxSpan = (t < 14 ? 450 : spanTab[nearT]) *
-      (p.material === 'multiplex' ? 1.25 : p.material === 'spanplatte' ? 0.9 : 1);
-    if (cw > maxSpan) warnings.push('Fachbreite ' + round(cw) + ' mm ist größer als ca. ' + round(maxSpan) +
-      ' mm: Böden hängen mit Büchern durch. Mittelteiler einplanen oder dickere Platte wählen.');
-    if (H / D > 5) warnings.push('Das Regal ist schlank (Höhe/Tiefe = ' + (H / D).toFixed(1) + '). Unbedingt an der Wand sichern (Kippschutz).');
-    if (!p.back && H / D > 4) warnings.push('Ohne Rückwand ist das Regal wenig aussteifend. Rückwand oder Diagonalstreben erwägen.');
-    if (D < 200) warnings.push('Sehr geringe Tiefe: Ordner passen erst ab ca. 320 mm Tiefe.');
+    if (H > 4 * D) warnings.push('Schlankes Regal: an der Wand gegen Kippen sichern.');
 
     const parts = []; // einzelne Instanzen (für 3D)
-    const add = (name, cut, size, pos) => parts.push({
-      name, cut: [round(Math.max(cut[0], cut[1])), round(Math.min(cut[0], cut[1]))],
-      thick: size.thick, back: !!size.back, size: size.dims, pos
+    // Geometrie = bestellte Teile: Länge und Breite auf ganze mm ABgerundet (Teil wird nie länger als die Lücke),
+    // Position bleibt mittig, ein Rest bis < 1 mm verteilt sich als Fuge.
+    const mm = (v) => Math.floor(v + 1e-6);
+    // cut = [Maß in Maserrichtung (= Länge im Formular), Maß quer]; grain = Weltachse der Maserung (0 = x, 1 = y)
+    const EDGE_NAMES = { Seitenwand: { W0: 'Vorderkante', L1: 'Oberkante' } };
+    const add = (name, cut, size, pos, edges, grain) => parts.push({
+      name, cut: [mm(cut[0]), mm(cut[1])], grain, edgeNames: Object.assign({ W0: 'Vorderkante' }, EDGE_NAMES[name]),
+      thick: size.thick, back: !!size.back, size: size.dims.map((v) => (v === size.thick ? v : mm(v))), pos, edges: edges || []
     });
 
     // Seitenwände
     for (const sx of [-1, 1]) {
       add('Seitenwand', [H, Db], { thick: t, dims: [t, H, Db] },
-        [sx * (W / 2 - t / 2), H / 2, bt / 2]);
+        [sx * (W / 2 - t / 2), H / 2, bt / 2], ['W0', 'L1'], 1); // Vorderkante, Oberkante
     }
     // Boden und Deckel
-    add('Boden', [Wi, Db], { thick: t, dims: [Wi, t, Db] }, [0, s + t / 2, bt / 2]);
-    add('Deckel', [Wi, Db], { thick: t, dims: [Wi, t, Db] }, [0, H - t / 2, bt / 2]);
+    add('Boden', [Wi, Db], { thick: t, dims: [Wi, t, Db] }, [0, s + t / 2, bt / 2], ['W0'], 0);
+    add('Deckel', [Wi, Db], { thick: t, dims: [Wi, t, Db] }, [0, H - t / 2, bt / 2], ['W0'], 0);
     // Sockelblende
-    if (s > 0) add('Sockelblende', [Wi, s], { thick: t, dims: [Wi, s, t] }, [0, s / 2, D / 2 - 30 - t / 2]);
+    if (s > 0) add('Sockelblende', [Wi, s], { thick: t, dims: [Wi, s, t] }, [0, s / 2, D / 2 - 30 - t / 2], [], 0);
     // Mittelteiler
     for (let i = 0; i < m; i++) {
       const x = -Wi / 2 + (i + 1) * cw + i * t + t / 2;
-      add('Mittelteiler', [Hi, Db], { thick: t, dims: [t, Hi, Db] }, [x, (y0 + y1) / 2, bt / 2]);
+      add('Mittelteiler', [Hi, Db], { thick: t, dims: [t, Hi, Db] }, [x, (y0 + y1) / 2, bt / 2], ['W0'], 1);
     }
     // Fachböden (je Spalte ein Stück)
     for (let j = 1; j <= n; j++) {
       const yc = y0 + j * ch + (j - 1) * t + t / 2;
       for (let c = 0; c <= m; c++) {
         const x = -Wi / 2 + c * (cw + t) + cw / 2;
-        add('Fachboden', [cw, Db], { thick: t, dims: [cw, t, Db] }, [x, yc, bt / 2]);
+        add('Fachboden', [cw, Db], { thick: t, dims: [cw, t, Db] }, [x, yc, bt / 2], ['W0'], 0);
       }
     }
     // Rückwand
     if (p.back) {
       const bw = W - 2, bh = H - s - 2;
       add('Rückwand (HDF)', [bh, bw], { thick: bt, back: true, dims: [bw, bh, bt] },
-        [0, s + (H - s) / 2, -D / 2 + bt / 2]);
+        [0, s + (H - s) / 2, -D / 2 + bt / 2], [], 1);
     }
 
     // Gruppierte Stückliste
     const map = new Map();
     parts.forEach((pt, idx) => {
       const key = pt.name + '|' + pt.cut.join('x') + '|' + pt.thick;
-      if (!map.has(key)) map.set(key, { name: pt.name, l: pt.cut[0], w: pt.cut[1], thick: pt.thick, back: pt.back, qty: 0, ids: [] });
+      if (!map.has(key)) map.set(key, { name: pt.name, l: pt.cut[0], w: pt.cut[1], thick: pt.thick, back: pt.back, edges: pt.edges, edgeNames: pt.edgeNames, qty: 0, ids: [] });
       const g = map.get(key); g.qty++; g.ids.push(idx);
     });
     const cutlist = [...map.values()].map((g, i) => { g.no = i + 1; g.ids.forEach((id) => (parts[id].group = g.no)); return g; });
 
-    // Kantenband: Vorderkanten der sichtbaren Teile
+    // Kantenband: Summe der bekanteten Kanten (ohne Zuschlag)
     let edgeMm = 0;
-    parts.forEach((pt) => {
-      if (pt.back) return;
-      if (pt.name === 'Seitenwand') edgeMm += pt.cut[0];
-      else if (pt.name === 'Mittelteiler') edgeMm += pt.cut[0];
-      else if (pt.name === 'Sockelblende') edgeMm += 0;
-      else edgeMm += pt.cut[0];
-    });
-    edgeMm += 2 * 0; // Deckel/Boden bereits enthalten
-    const edgeM = Math.ceil((edgeMm * 1.1) / 100) / 10; // +10 % Verschnitt
-
-    // Beschläge
-    const verticals = m + 2;
-    const boardsPieces = 2 + n * (m + 1);               // Boden, Deckel, Fachböden
-    const joints = 2 * boardsPieces + 0;                // jedes Brett hat zwei Enden
-    const perJoint = Math.max(2, Math.round(Db / 150));
-    const hardware = [
-      { name: 'Konfirmatschrauben 7×50', qty: joints * perJoint },
-      { name: 'Holzdübel 8×30 (Positionshilfe)', qty: joints * perJoint },
-      { name: 'Abdeckkappen für Konfirmat', qty: joints * perJoint }
-    ];
-    if (p.back) {
-      const perim = 2 * (W + H) / 1000;
-      hardware.push({ name: 'Rückwandnägel / Stifte 1,6×20', qty: Math.ceil(perim * 1000 / 150 + (n + m + 2) * 4) });
-    }
-    hardware.push({ name: 'Wandwinkel Kippschutz (mit Dübel)', qty: H > 1200 ? 2 : 0 });
-    if (s > 0) hardware.push({ name: 'Winkelverbinder für Sockelblende', qty: 4 });
+    parts.forEach((pt) => pt.edges.forEach((e) => { edgeMm += e[0] === 'W' ? pt.cut[0] : pt.cut[1]; }));
+    const edgeM = edgeMm / 1000;
 
     return {
       p, parts, cutlist, warnings, errors,
-      derived: { Wi, Hi, cw, ch, Db, edgeM, hardware: hardware.filter((h) => h.qty > 0), verticals }
+      derived: { Wi, Hi, cw, ch, Db, edgeM }
     };
   }
 
@@ -205,53 +177,19 @@
       (groups[key] = groups[key] || []);
       for (let i = 0; i < g.qty; i++) groups[key].push({ no: g.no, l: g.l, w: g.w });
     });
-    const result = { sheet, material: mat, groups: {}, errors: [], cost: {} };
-    let total = 0;
+    const result = { sheet, material: mat, groups: {}, errors: [] };
     for (const key of Object.keys(groups)) {
       const sh = key === 'back' && p.backSheet ? p.backSheet : sheet;
       const r = packSheets(groups[key], sh, p.kerf, key === 'back' ? true : p.rotate);
       r.sheet = sh;
+      r.thick = key === 'back' ? p.bt : p.t;
       result.groups[key] = r;
       result.errors.push(...r.errors);
-      const area = (sh.l * sh.w) / 1e6;
-      const price = key === 'back' ? p.backPrice : mat.price;
-      const thick = key === 'back' ? p.bt : p.t;
-      const cost = r.sheets.length * area * price;
-      result.cost[key] = { sheets: r.sheets.length, area, price, thick, cost };
-      total += cost;
     }
-    result.cost.boards = total;
-    const hwPrice = { 'Konfirmatschrauben 7×50': 0.09, 'Holzdübel 8×30 (Positionshilfe)': 0.04, 'Abdeckkappen für Konfirmat': 0.03,
-      'Rückwandnägel / Stifte 1,6×20': 0.02, 'Wandwinkel Kippschutz (mit Dübel)': 3.5, 'Winkelverbinder für Sockelblende': 0.8 };
-    let hw = 0;
-    (model.derived.hardware || []).forEach((h) => { hw += (hwPrice[h.name] || 0.1) * h.qty; });
-    result.cost.hardware = hw;
-    result.cost.edge = (model.derived.edgeM || 0) * 0.45;
-    result.cost.total = total + hw + result.cost.edge;
     return result;
   }
 
-  function instructions(model) {
-    const { p, derived } = model;
-    const n = p.shelves, m = p.dividers;
-    const steps = [
-      'Alle Teile gemäß Stückliste zuschneiden (lassen) und die Vorderkanten mit Kantenband versehen (Bügeleisen oder Kantenfräse).',
-      'Teile mit Bleistift nummerieren (Nr. aus der Stückliste), damit nichts verwechselt wird.',
-      'Bohrungen anzeichnen: Konfirmat 5 mm in die Plattenfläche, 7 mm Vorbohrung in das Stirnholz, Dübel 8 mm als Positionshilfe. Alle Schraubreihen mit Abstand ≥ 50 mm zur Vorderkante und Rückseite beginnen.'
-    ];
-    if (p.plinth > 0) steps.push('Sockelblende (' + p.plinth + ' mm) mit Winkeln 30 mm hinter der Vorderkante zwischen die Seitenwände setzen.');
-    steps.push('Eine Seitenwand flach auf den Boden legen, Boden und Deckel anschrauben' +
-      (p.plinth > 0 ? ' (Boden auf Höhe ' + p.plinth + ' mm über Unterkante)' : '') + '.');
-    if (m > 0) steps.push(m + ' Mittelteiler zwischen Boden und Deckel einsetzen, Abstand zwischen den Spalten je ' + round(derived.cw) + ' mm.');
-    if (n > 0) steps.push(n + ' Fachböden je Spalte einsetzen. Fachhöhe je ' + round(derived.ch) + ' mm (Lichtmaß). Mit Abstandsklötzen aus Restholz arbeiten.');
-    steps.push('Zweite Seitenwand aufsetzen, alles verschrauben, mit Winkel auf rechten Winkel prüfen und Diagonalen messen (gleich lang = rechtwinklig).');
-    if (p.back) steps.push('Regal auf die Vorderseite legen, Rückwand (HDF) rechtwinklig auflegen und alle 15 cm annageln. Die Rückwand steift das Regal aus.');
-    if (p.H > 1200) steps.push('Kippschutz: Regal mit zwei Wandwinkeln an der Wand sichern.');
-    steps.push('Konfirmat-Köpfe mit Abdeckkappen verschließen. Fertig!');
-    return steps;
-  }
-
-  const api = { MATERIALS, SHEETS, DEFAULTS, buildRegal, packSheets, plan, instructions };
+  const api = { MATERIALS, SHEETS, DEFAULTS, buildRegal, packSheets, plan };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Moebel = api;
 })(typeof window !== 'undefined' ? window : globalThis);
