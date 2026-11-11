@@ -36,8 +36,9 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
   Boden-Oberseite (Sockelblende) – bitte prüfen, ob dort sichtbar.
 
 ## Möbeltypen, Sockel (Vorgaben vom Nutzer, Maße mit * im Generator = bitte prüfen)
-- **Füße:** Hettich Sockel-Verstellfuß-Set Ø25 × 100 mm inkl. Klips (laut Produktname; Datenblatt mit
-  Verstellbereich und Schraubbild fehlt noch). Korpus steht auf Füßen, Seiten enden bündig mit dem Boden.
+- **Füße:** Hettich Sockel-Verstellfuß-Set, 4 Stück aus Kunststoff, höhenverstellbar 100–120 mm, max. 200 kg,
+  inkl. Klips für Frontblenden, EAN 4008057011990 (Produktbeschreibung vom Nutzer). Ø25 laut Produktname.
+  Schraubbild fehlt noch; ob 200 kg je Set oder je Fuß gilt, ist offen. Korpus steht auf Füßen, Seiten enden bündig mit dem Boden.
   Füße je Senkrechte vorne und hinten, Randabstand 50 mm*. Sockelblende volle Breite, 30 mm* zurück, geklipst.
 - **Schrank:** Deckenblende zurückversetzt (5 mm*), Höhe = Raumhöhe (2500*) − Schrankhöhe − Luft (5 mm*),
   von innen durch den Deckel mit Konfirmat/Dübel verbunden.

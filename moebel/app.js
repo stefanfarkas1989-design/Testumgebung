@@ -174,10 +174,12 @@
     const holes = model.holes || [];
     const konf = holes.filter((h) => h.kind === 'face' && h.type === 'Konfirmat').length;
     const dueb = holes.filter((h) => h.kind === 'face' && h.type === 'Dübel').length;
-    if (!konf && !dueb) return '';
+    const feet = (model.feet || []).length, set = state.fussSet || 4;
+    if (!konf && !dueb && !feet) return '';
     return '<table style="margin-top:12px"><thead><tr><th>Beschlag</th><th>Bezugsquelle</th><th class="n">Stück</th></tr></thead><tbody>' +
       (konf ? '<tr><td>Konfirmat 7 × 50</td><td>frei, z. B. Amazon – Kernloch/Senkung laut Hersteller mit Bohrbild abgleichen</td><td class="n">' + konf + '</td></tr>' : '') +
       (dueb ? '<tr><td>Rillendübel Buche 8 × 30</td><td>Frischeis 69010/0008 oder gleichwertig, z. B. Amazon</td><td class="n">' + dueb + '</td></tr>' : '') +
+      (feet ? '<tr><td>Hettich Sockel-Verstellfuß-Set (' + set + ' Stk., 100–120 mm, inkl. Klips)</td><td>EAN 4008057011990</td><td class="n">' + Math.ceil(feet / set) + ' Set (' + feet + ' Füße)</td></tr>' : '') +
       '</tbody></table>';
   }
 
@@ -226,7 +228,7 @@
     ? '<a class="shop" href="' + esc(a.url) + '" target="_blank" rel="noopener">' + (txt || 'im Shop ansehen') + ' ↗</a>' : '');
   const KAT_NAMES = {
     'beschichtete-platte': 'Beschichtete Platte', 'dekorative-platte-mdf-hdf-hartfaser': 'Dekor MDF/HDF/Hartfaser',
-    'durchgefarbte-platte': 'Durchgefärbte Platte', 'grundierplatte': 'Grundierplatte', 'mobelfront': 'Möbelfront', 'prageplatte': 'Prägeplatte', 'sonstige': 'Dekor-MDF/HDF, Prägeplatte u. a.'
+    'durchgefarbte-platte': 'Durchgefärbte Platte', 'grundierplatte': 'Grundierplatte', 'mobelfront': 'Möbelfront', 'prageplatte': 'Prägeplatte', 'sonstige': 'Sonstige', 'vollkernplatte': 'Vollkernplatte', 'werkstoffverbundplatte': 'Werkstoffverbundplatte'
   };
   const COLOR_HINTS = [
     [/weiß|weiss|white|w ?1000|w ?980|w ?1100|w ?1200|polar|alpinweiß/i, '#f1f1ec'], [/schwarz|black|u ?999|nero/i, '#2a2a2a'],

@@ -71,6 +71,8 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
   const g = (r, n) => r.cutlist.find((c) => c.name === n);
   ok(g(f, 'Seitenwand').l === 1900, 'Seiten ab Fußhöhe');
   ok(f.feet.length === 4 && f.feet.every((x) => x.d === 25 && x.h === 100), '4 Füße Ø25 × 100');
+  ok(M.buildRegal({ plinth: 80, sockel: 'fuesse' }).warnings.some((w) => /Verstellbereich/.test(w)), 'Sockelhöhe außerhalb 100–120 wird gemeldet');
+  ok(!f.warnings.some((w) => /Verstellbereich/.test(w)), '100 mm liegt im Verstellbereich');
   ok(g(f, 'Sockelblende').l === 800 && !f.holes.some((h) => f.parts[h.part].name === 'Sockelblende'), 'Sockelblende volle Breite, geklipst, ohne Verbinder');
   const s = M.buildRegal({ typ: 'schrank', W: 800, H: 2200, D: 600, raumH: 2500, blendeLuft: 5 });
   ok(g(s, 'Deckenblende').w === 295 && g(s, 'Deckenblende').l === 800, 'Deckenblende = Raumhöhe − Höhe − Luft');

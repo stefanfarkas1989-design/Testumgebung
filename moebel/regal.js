@@ -27,7 +27,9 @@
     plinth: 100,        // Sockelhöhe (bei Füßen: Fußhöhe = Abstand Boden-Unterkante zum Fußboden)
     typ: 'regal',       // 'regal' | 'schrank' (Deckenblende) | 'sideboard' (Arbeitsplatte)
     sockel: 'fuesse',   // 'fuesse' = Korpus auf verstellbaren Füßen, 'seiten' = Seiten bis zum Boden
-    fussD: 25,          // Fuß-Ø laut Produktname (Hettich Sockel-Verstellfuß-Set Ø25 × 100) – Datenblatt offen
+    fussD: 25,          // Fuß-Ø laut Produktname (Hettich Sockel-Verstellfuß-Set Ø25 × 100)
+    fussMin: 100, fussMax: 120,   // Verstellbereich laut Produktbeschreibung (Hettich, EAN 4008057011990)
+    fussSet: 4,         // Füße je Set laut Produktbeschreibung
     fussRand: 50,       // VORGABE PRÜFEN: Abstand Fußmitte von Vorder-, Hinter- und Seitenkante des Korpus
     sockelRueck: 30,    // VORGABE PRÜFEN: Sockelblende hinter der Vorderkante
     sockelLuft: 0,      // VORGABE PRÜFEN: Luft Sockelblende zum Fußboden
@@ -85,6 +87,8 @@
     if (nut && p.nutLuft >= p.nutT) errors.push('Luft am Nutgrund muss kleiner als die Nuttiefe sein.');
     if (nut && p.nutA + bt + p.nutPlus >= D) errors.push('Nutabstand und Rückwand sind tiefer als das Regal.');
     if (p.sockel === 'fuesse' && s <= 0) errors.push('Bei Füßen bitte eine Sockelhöhe (Fußhöhe) angeben.');
+    if (p.sockel === 'fuesse' && s > 0 && (s < p.fussMin || s > p.fussMax))
+      warnings.push('Sockelhöhe ' + s + ' mm liegt außerhalb des Verstellbereichs der Füße (' + p.fussMin + '–' + p.fussMax + ' mm).');
     if (errors.length) return { p, parts: [], cutlist: [], errors, warnings, derived: {} };
 
     if (H > 4 * D) warnings.push('Schlankes Regal: an der Wand gegen Kippen sichern.');
