@@ -80,7 +80,7 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
 - Vorlage „Vorschlag: Sideboard Fensterwand 3540“: 3540 von Wand zu Wand mit Passblenden 50 mm, Korpus 760 inkl. Füße 100,
   Arbeitsplatte 38 → 798 bis Fenster-UK 800; 2 Korpusse à 3 Spalten, 6 Drehtüren; Korpus EGGER W1000 ST19
   (14148/1000), Fronten EGGER Wildeiche natur H1318 (14158/1318), Arbeitsplatte Kaindl Granito anthrazit 4288
-  (50235/4288, Postforming 38 mm), Kanten 24747/0004, 24565/1318, 50382/4288, Rückwand FINSA HDF weiß 3 mm (04333/0015).
+  (50235/4288, Postforming 38 mm), Kanten 24747/0004, 24565/1318, 50382/4288, Rückwand in Korpusfarbe EGGER W1000 ST19 8 mm (14147/1000) in Nut 8 × 8.
 
 ## Wand zu Wand
 - Option „Von Wand zu Wand“: Korpusse um 2 × Passblende schmaler, Passblenden links/rechts in Frontmaterial
