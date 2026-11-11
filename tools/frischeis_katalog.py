@@ -108,7 +108,7 @@ def main(kat, outfile):
     def add(items):
         for it in items:
             if it['nr']:
-                rows[it['nr']] = {'nr': it['nr'], 'name': it['name'], 'l': it['l'], 'w': it['w'], 't': it['t'], 'kat': category_of(it['url'])}
+                rows[it['nr']] = {'nr': it['nr'], 'name': it['name'], 'l': it['l'], 'w': it['w'], 't': it['t'], 'kat': category_of(it['url']), 'url': it['url']}
 
     def full(extra, label):
         """Abfrage komplett holen; bei zu vielen Treffern je Unterkategorie."""

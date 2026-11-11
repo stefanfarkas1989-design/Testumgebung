@@ -3,7 +3,7 @@ const M = require('../moebel/regal.js');
 const assert = require('assert');
 let n = 0; const ok = (c, m) => { assert(c, m); n++; };
 
-const m = M.buildRegal({ W: 800, H: 2000, D: 300, shelves: 4, dividers: 0 });
+const m = M.buildRegal({ W: 800, H: 2000, D: 300, shelves: 4, dividers: 0, sockel: 'seiten', plinth: 0 });
 ok(!m.errors.length, 'Standardregal ohne Fehler');
 // 2 Seiten + Boden + Deckel + 4 Böden + Rückwand = 9 Teile
 ok(m.parts.length === 9, 'Teilezahl ' + m.parts.length);
@@ -35,7 +35,7 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
 }
 // Rückwand in Nut: Maße aus Nutparametern
 {
-  const r = M.buildRegal({ W: 800, H: 2000, D: 300, t: 19, shelves: 4, back: true, bt: 3, backMode: 'nut', nutA: 10, nutT: 8, nutLuft: 1 });
+  const r = M.buildRegal({ W: 800, H: 2000, D: 300, t: 19, shelves: 4, back: true, bt: 3, backMode: 'nut', nutA: 10, nutT: 8, nutLuft: 1, sockel: 'seiten', plinth: 0 });
   const g = (n) => r.cutlist.find((c) => c.name === n);
   ok(g('Seitenwand').w === 300 && g('Boden').w === 300, 'Korpus volle Tiefe');
   ok(g('Fachboden').w === 287, 'Fachboden endet an der Rückwand (300-10-3)');
@@ -43,12 +43,12 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
   const side = r.parts.find((p) => p.name === 'Seitenwand');
   ok(side.grooves && side.grooves[0].box[1][0] === 19 - 8 && side.grooves[0].box[1][1] === 2000 - 19 + 8, 'Seitennut gestoppt auf Höhe der Nutgründe');
   ok(M.buildRegal({ backMode: 'nut', nutT: 19, t: 19 }).errors.length > 0, 'zu tiefe Nut wird gemeldet');
-  const a = M.buildRegal({ W: 800, H: 2000, D: 300, backMode: 'auf' });
+  const a = M.buildRegal({ W: 800, H: 2000, D: 300, backMode: 'auf', sockel: 'seiten', plinth: 0 });
   ok(a.cutlist.find((c) => c.name === 'Seitenwand').w === 297 && !a.parts.some((p) => p.grooves), 'aufgesetzte Rückwand ohne Nut');
 }
 // Verbinder: Boden an Seitenwand, 300 tief: K 50, D 114, K 178, D 242 (von vorne)
 {
-  const r = M.buildRegal({ W: 1200, H: 2000, D: 300, shelves: 3, dividers: 1, plinth: 60 });
+  const r = M.buildRegal({ W: 1200, H: 2000, D: 300, shelves: 3, dividers: 1, plinth: 60, sockel: 'seiten' });
   const iB = r.parts.findIndex((p) => p.name === 'Boden');
   const left = r.parts.findIndex((p) => p.name === 'Seitenwand' && p.pos[0] < 0);
   const hs = r.holes.filter((h) => h.part === left && h.mate === iB).sort((a, b) => b.at[2] - a.at[2]);
@@ -65,12 +65,27 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
   ok(r.holes.filter((h) => h.part === mt && h.kind === 'face').every((h) => h.type === 'Dübel'), 'am Mittelteiler nur Dübel');
   ok(M.buildRegal({ verbinder: false }).holes.length === 0, 'Verbinder abschaltbar');
 }
+// Füße, Deckenblende, Arbeitsplatte
+{
+  const f = M.buildRegal({ W: 800, H: 2000, D: 300, plinth: 100, sockel: 'fuesse' });
+  const g = (r, n) => r.cutlist.find((c) => c.name === n);
+  ok(g(f, 'Seitenwand').l === 1900, 'Seiten ab Fußhöhe');
+  ok(f.feet.length === 4 && f.feet.every((x) => x.d === 25 && x.h === 100), '4 Füße Ø25 × 100');
+  ok(g(f, 'Sockelblende').l === 800 && !f.holes.some((h) => f.parts[h.part].name === 'Sockelblende'), 'Sockelblende volle Breite, geklipst, ohne Verbinder');
+  const s = M.buildRegal({ typ: 'schrank', W: 800, H: 2200, D: 600, raumH: 2500, blendeLuft: 5 });
+  ok(g(s, 'Deckenblende').w === 295 && g(s, 'Deckenblende').l === 800, 'Deckenblende = Raumhöhe − Höhe − Luft');
+  ok(s.holes.some((h) => s.parts[h.part].name === 'Deckenblende' && h.kind === 'edge'), 'Deckenblende von innen durch den Deckel verbunden');
+  const sb = M.buildRegal({ typ: 'sideboard', W: 1800, H: 700, D: 400, apUeb: 20, dividers: 2, shelves: 1 });
+  ok(g(sb, 'Arbeitsplatte').l === 1800 && g(sb, 'Arbeitsplatte').w === 420, 'Arbeitsplatte: seitlich bündig, vorne Überstand');
+  ok(!sb.holes.some((h) => sb.parts[h.part].name === 'Arbeitsplatte'), 'keine Bohrungen von oben in der Arbeitsplatte');
+  ok(sb.feet.length === 8, 'Füße auch unter den Mittelteilern');
+}
 const total = m.cutlist.reduce((s, g) => s + g.qty, 0);
 const placedAll = Object.values(plan.groups).reduce((s, g) => s + g.sheets.reduce((a, sh) => a + sh.items.length, 0), 0);
 ok(total === placedAll, 'alle ' + total + ' Teile platziert (' + placedAll + ')');
 
 // Würfelregal: viele gleiche Teile, 3 Mittelteiler => 4 Spalten
-const w = M.buildRegal({ W: 1500, H: 1500, D: 380, shelves: 3, dividers: 3 });
+const w = M.buildRegal({ W: 1500, H: 1500, D: 380, shelves: 3, dividers: 3, sockel: 'seiten', plinth: 0 });
 ok(w.parts.filter((p) => p.name === 'Fachboden').length === 12, 'Würfelregal 12 Fachböden');
 ok(w.parts.filter((p) => p.name === 'Mittelteiler').length === 3, '3 Mittelteiler');
 

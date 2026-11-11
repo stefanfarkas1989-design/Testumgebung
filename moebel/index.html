@@ -24,7 +24,8 @@
         <option value="buch">Bücherregal</option>
         <option value="wuerfel">Würfelregal</option>
         <option value="schuh">Schuhregal</option>
-        <option value="sideboard">Sideboard offen</option>
+        <option value="sideboard">Sideboard mit Arbeitsplatte</option>
+        <option value="hochschrank">Hochschrank mit Deckenblende</option>
         <option value="nische">Nischenregal (Maß nehmen)</option>
       </select>
     </section>
@@ -33,7 +34,21 @@
       <label>Breite <input type="range" id="W" min="300" max="3000" step="10"><input type="number" id="Wn" step="10"></label>
       <label>Höhe <input type="range" id="H" min="300" max="2600" step="10"><input type="number" id="Hn" step="10"></label>
       <label>Tiefe <input type="range" id="D" min="150" max="700" step="5"><input type="number" id="Dn" step="5"></label>
-      <label>Sockelhöhe <input type="range" id="plinth" min="0" max="150" step="5"><input type="number" id="plinthn" step="5"></label>
+      <label>Sockelhöhe <input type="range" id="plinth" min="0" max="200" step="5"><input type="number" id="plinthn" step="5"></label>
+      <label class="row">Möbeltyp <select id="typ"><option value="regal">Regal (oben offen)</option><option value="schrank">Schrank: Deckenblende</option><option value="sideboard">Sideboard: Arbeitsplatte</option></select></label>
+      <label class="row">Sockel <select id="sockel"><option value="fuesse">verstellbare Füße + Sockelblende</option><option value="seiten">Seiten bis zum Boden</option></select></label>
+      <div class="vgrid" id="typBox">
+        <label data-for="fuesse">Fuß Ø <input type="number" data-k="fussD" step="1"></label>
+        <label data-for="fuesse">Fuß Rand* <input type="number" data-k="fussRand" step="1"></label>
+        <label data-for="sockel">Blende zurück* <input type="number" data-k="sockelRueck" step="1"></label>
+        <label data-for="fuesse">Blende Luft* <input type="number" data-k="sockelLuft" step="1" min="0"></label>
+        <label data-for="schrank">Raumhöhe* <input type="number" data-k="raumH" step="5"></label>
+        <label data-for="schrank">Luft Decke* <input type="number" data-k="blendeLuft" step="1" min="0"></label>
+        <label data-for="schrank">Blende zurück* <input type="number" data-k="blendeRueck" step="1" min="0"></label>
+        <label data-for="sideboard">Platte stark <input type="number" data-k="apT" step="1" min="0"></label>
+        <label data-for="sideboard">Überstand vorne* <input type="number" data-k="apUeb" step="1" min="0"></label>
+      </div>
+      <p class="note">Höhe = Korpus inkl. Füße; Deckenblende bzw. Arbeitsplatte kommen oben dazu. * = Vorgabe, bitte prüfen. Fuß: Hettich Sockel-Verstellfuß-Set Ø25 × 100 (Datenblatt offen). Platte stark 0 = wie Korpus.</p>
     </section>
     <section>
       <h2>Aufbau</h2>

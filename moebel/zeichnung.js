@@ -81,6 +81,11 @@
         hEdge.push(Object.assign(base, { edge }));
       }
     });
+    // Markierungen (z. B. Fußpositionen) – keine Bearbeitung
+    const marks = (P.marks || []).map((mk) => {
+      const loc = toLocal(f, b, [0, 1, 2].map((i) => [mk.at[i], mk.at[i]]));
+      return { x: loc.x0, y: loc.y0, dia: mk.dia, label: mk.label, side: Math.abs(mk.at[f.ta] - b[f.ta][0]) < EPS ? 'min' : 'max' };
+    });
     // Ansichtsseite: Seite mit den meisten Anschlüssen und Bearbeitungen
     const score = (s) => face[s].length + feat[s].length * 10 + hFace[s].filter((h) => !h.through).length * 2;
     const view = score('max') >= score('min') ? 'max' : 'min';
@@ -96,7 +101,8 @@
       faceView: face[view].sort(sortC), faceOther: face[other].sort(sortC), edge: edge.sort(sortC),
       featView: feat[view].sort(sortC), featOther: feat[other].sort(sortC),
       holesView: hFace[view].sort((a, b2) => a.x - b2.x || a.y - b2.y), holesOther: hFace[other].sort((a, b2) => a.x - b2.x || a.y - b2.y),
-      holesEdge: hEdge.sort((a, b2) => a.edge.localeCompare(b2.edge) || a.x - b2.x || a.y - b2.y)
+      holesEdge: hEdge.sort((a, b2) => a.edge.localeCompare(b2.edge) || a.x - b2.x || a.y - b2.y),
+      marks: marks.map((mk) => Object.assign(mk, { other: mk.side !== view }))
     };
   }
 
@@ -119,7 +125,7 @@
           no: g.no, sub: variants.size > 1 ? String.fromCharCode(97 + k++) : '', name: g.name, qty: v.hands.length,
           l: g.l, w: g.w, thick: g.thick, edges: g.edges || [], edgeNames: g.edgeNames || {}, back: g.back,
           faceView: v.c.faceView, faceOther: v.c.faceOther, edge: v.c.edge, featView: v.c.featView, featOther: v.c.featOther,
-          holesView: v.c.holesView, holesOther: v.c.holesOther, holesEdge: v.c.holesEdge,
+          holesView: v.c.holesView, holesOther: v.c.holesOther, holesEdge: v.c.holesEdge, marks: v.c.marks,
           mirror: plus && minus ? { asDrawn: Math.max(plus, minus), mirrored: Math.min(plus, minus) } : null
         });
       });
@@ -136,8 +142,9 @@
     const cnt = (list, f) => { const m = {}; list.forEach((h) => { const k = f(h); m[k] = (m[k] || 0) + 1; }); return Object.entries(m).map(([k, n]) => n + '× ' + k).join(', '); };
     const fl = (d.holesView || []).concat(d.holesOther || []);
     const ed = d.holesEdge || [];
-    if (!fl.length && !ed.length) return 'Bohrungen: keine.';
     const s = [];
+    if ((d.marks || []).length) s.push(d.marks.length + '× Fußposition (Befestigung laut Fuß-Datenblatt, noch offen)');
+    if (!fl.length && !ed.length) return s.concat(['Bohrungen: keine']).join('.   ') + '.';
     if (fl.length) s.push('Flächenbohrungen (CNC): ' + cnt(fl, (h) => h.type + ' Ø' + fmt(h.dia) + (h.through ? ' durch' + (h.senk ? ', Senkung Ø' + fmt(h.senk) : '') : ' × ' + fmt(h.depth))));
     if (ed.length) s.push('Kantenbohrungen (von Hand): ' + cnt(ed, (h) => h.type + ' Ø' + fmt(h.dia) + ' × ' + fmt(h.depth) + ' Kante ' + EDGE_TXT[h.edge]));
     return s.join('.   ') + '.';
@@ -218,6 +225,14 @@
       o.push('<rect x="' + r1(x0) + '" y="' + r1(y0) + '" width="' + r1(w) + '" height="' + r1(hh) + '" fill="none" stroke="' + col + '" stroke-width="' + r1(u * 0.1) + '"' + dash + '/>');
     });
 
+    // Markierungen (Fußpositionen): Kreis strichpunktiert mit Mittelkreuz
+    (d.marks || []).forEach((mk) => {
+      const cx = X(mk.x), cy = Y(mk.y), rr = mk.dia / 2;
+      o.push('<circle cx="' + r1(cx) + '" cy="' + r1(cy) + '" r="' + r1(rr) + '" fill="none" stroke="#8a5a00" stroke-width="' + r1(u * 0.1) + '" stroke-dasharray="' + r1(u * 0.5) + ' ' + r1(u * 0.2) + ' ' + r1(u * 0.1) + ' ' + r1(u * 0.2) + '"/>');
+      o.push('<path d="M' + r1(cx - rr * 0.6) + ' ' + r1(cy) + 'H' + r1(cx + rr * 0.6) + 'M' + r1(cx) + ' ' + r1(cy - rr * 0.6) + 'V' + r1(cy + rr * 0.6) + '" stroke="#8a5a00" stroke-width="' + r1(u * 0.06) + '"/>');
+      o.push('<text x="' + r1(cx + rr + fs * 0.2) + '" y="' + r1(cy - rr * 0.3) + '" fill="#8a5a00" font-size="' + r1(fs * 0.75) + '">' + escX(mk.label) + ' Ø' + fmt(mk.dia) + (mk.other ? ' (Gegenseite)' : '') + '</text>');
+    });
+
     // Kanten (Bekantung)
     const ew = u * 0.6;
     const edgeLine = (e) => ({
@@ -257,7 +272,7 @@
     o.push('<text x="' + r1(dimX - fs * 0.4) + '" y="' + r1(Y(W / 2)) + '" text-anchor="middle" font-weight="bold" transform="rotate(-90 ' + r1(dimX - fs * 0.4) + ' ' + r1(Y(W / 2)) + ')">' + fmt(W) + '</text>');
     // Koordinaten-Bemaßung der Anschlüsse (ab Nullpunkt links vorne)
     const all = d.faceView.concat(d.faceOther, d.featView || [], d.featOther || []);
-    const hAll = (d.holesView || []).concat(d.holesOther || [], d.holesEdge || []);
+    const hAll = (d.holesView || []).concat(d.holesOther || [], d.holesEdge || [], d.marks || []);
     const xs = [...new Set(all.flatMap((c) => [c.x0, c.x1]).concat(hAll.filter((h) => h.edge !== 'L0' && h.edge !== 'L1').map((h) => r1(h.x))).filter((v) => v > 0.05 && v < L - 0.05))].sort((a, b) => a - b);
     const ys = [...new Set(all.flatMap((c) => [c.y0, c.y1]).concat(hAll.filter((h) => h.edge !== 'W0' && h.edge !== 'W1').map((h) => r1(h.y))).filter((v) => v > 0.05 && v < W - 0.05))].sort((a, b) => a - b);
     // Maßzahlen nicht überlappen lassen: Textposition mindestens eine Schrifthöhe auseinander

@@ -19,7 +19,11 @@ main{display:grid;grid-template-columns:300px 1fr;grid-template-areas:"c s" "c r
 #controls input[type=text],#controls input[type=search]{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
 .dlist{max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:6px;margin-top:4px}
 .dlist:empty{display:none}
-.dlist button{display:grid;grid-template-columns:14px 1fr;gap:2px 8px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:6px 8px;font-size:13px}
+.dlist .hit{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+.dlist .hit button{flex:1;min-width:0}
+.dlist a.shop{align-self:center;padding:0 8px;font-size:12px;white-space:nowrap}
+a.shop{color:var(--acc)}
+.dlist button{display:grid;grid-template-columns:14px 1fr;gap:2px 8px;width:100%;text-align:left;border:0;border-radius:0;background:transparent;padding:6px 8px;font-size:13px}
 .dlist button:hover,.dlist button:focus-visible,.dlist button.on{background:var(--bg);outline:none}
 .dlist button.on{box-shadow:inset 3px 0 0 var(--acc)}
 .dlist .sw{width:14px;height:14px;border-radius:3px;border:1px solid var(--line);grid-row:span 2;align-self:center}

@@ -24,7 +24,18 @@
     t: 19,              // Plattenstärke
     shelves: 4,         // Fachböden (zusätzlich zu Boden und Deckel)
     dividers: 0,        // senkrechte Mittelteiler
-    plinth: 0,          // Sockelhöhe
+    plinth: 100,        // Sockelhöhe (bei Füßen: Fußhöhe = Abstand Boden-Unterkante zum Fußboden)
+    typ: 'regal',       // 'regal' | 'schrank' (Deckenblende) | 'sideboard' (Arbeitsplatte)
+    sockel: 'fuesse',   // 'fuesse' = Korpus auf verstellbaren Füßen, 'seiten' = Seiten bis zum Boden
+    fussD: 25,          // Fuß-Ø laut Produktname (Hettich Sockel-Verstellfuß-Set Ø25 × 100) – Datenblatt offen
+    fussRand: 50,       // VORGABE PRÜFEN: Abstand Fußmitte von Vorder-, Hinter- und Seitenkante des Korpus
+    sockelRueck: 30,    // VORGABE PRÜFEN: Sockelblende hinter der Vorderkante
+    sockelLuft: 0,      // VORGABE PRÜFEN: Luft Sockelblende zum Fußboden
+    raumH: 2500,        // VORGABE PRÜFEN: Raumhöhe (für Deckenblende)
+    blendeLuft: 5,      // VORGABE PRÜFEN: Luft Deckenblende zur Decke
+    blendeRueck: 5,     // VORGABE PRÜFEN: Deckenblende hinter der Vorderkante (zurückversetzt)
+    apT: 0,             // Stärke Arbeitsplatte (0 = wie Plattenstärke)
+    apUeb: 20,          // VORGABE PRÜFEN: Überstand Arbeitsplatte vorne
     back: true, bt: 3,  // Rückwand
     backMode: 'nut',    // 'nut' = in Nut (Seiten, Boden, Deckel), 'auf' = hinten aufgesetzt
     nutA: 10,           // Abstand Hinterkante bis Nut
@@ -73,6 +84,7 @@
     if (nut && p.nutT >= t) errors.push('Nuttiefe (' + p.nutT + ' mm) muss kleiner als die Plattenstärke (' + t + ' mm) sein.');
     if (nut && p.nutLuft >= p.nutT) errors.push('Luft am Nutgrund muss kleiner als die Nuttiefe sein.');
     if (nut && p.nutA + bt + p.nutPlus >= D) errors.push('Nutabstand und Rückwand sind tiefer als das Regal.');
+    if (p.sockel === 'fuesse' && s <= 0) errors.push('Bei Füßen bitte eine Sockelhöhe (Fußhöhe) angeben.');
     if (errors.length) return { p, parts: [], cutlist: [], errors, warnings, derived: {} };
 
     if (H > 4 * D) warnings.push('Schlankes Regal: an der Wand gegen Kippen sichern.');
@@ -88,16 +100,24 @@
       thick: size.thick, back: !!size.back, size: size.dims.map((v) => (v === size.thick ? v : mm(v))), pos, edges: edges || []
     });
 
-    // Seitenwände
+    // Seitenwände (bei Füßen: ab Sockelhöhe, Boden bündig mit Unterkante)
+    const feetMode = p.sockel === 'fuesse';
+    const sy0 = feetMode ? s : 0;
     for (const sx of [-1, 1]) {
-      add('Seitenwand', [H, Dk], { thick: t, dims: [t, H, Dk] },
-        [sx * (W / 2 - t / 2), H / 2, zK], ['W0', 'L1'], 1); // Vorderkante, Oberkante
+      add('Seitenwand', [H - sy0, Dk], { thick: t, dims: [t, H - sy0, Dk] },
+        [sx * (W / 2 - t / 2), (sy0 + H) / 2, zK], ['W0', 'L1'], 1); // Vorderkante, Oberkante
     }
     // Boden und Deckel
     add('Boden', [Wi, Dk], { thick: t, dims: [Wi, t, Dk] }, [0, s + t / 2, zK], ['W0'], 0);
     add('Deckel', [Wi, Dk], { thick: t, dims: [Wi, t, Dk] }, [0, H - t / 2, zK], ['W0'], 0);
-    // Sockelblende
-    if (s > 0) add('Sockelblende', [Wi, s], { thick: t, dims: [Wi, s, t] }, [0, s / 2, D / 2 - 30 - t / 2], [], 0);
+    // Sockelblende: bei Füßen volle Breite, an die Füße geklipst (keine Verbinder); sonst zwischen den Seiten
+    if (s > 0) {
+      if (feetMode) {
+        const sh = s - p.sockelLuft;
+        if (sh > 0) add('Sockelblende', [W, sh], { thick: t, dims: [W, sh, t] }, [0, p.sockelLuft + sh / 2, D / 2 - p.sockelRueck - t / 2], [], 0);
+        parts[parts.length - 1].noJoint = true;
+      } else add('Sockelblende', [Wi, s], { thick: t, dims: [Wi, s, t] }, [0, s / 2, D / 2 - p.sockelRueck - t / 2], [], 0);
+    }
     // Mittelteiler
     for (let i = 0; i < m; i++) {
       const x = -Wi / 2 + (i + 1) * cw + i * t + t / 2;
@@ -111,6 +131,28 @@
         add('Fachboden', [cw, Di], { thick: t, dims: [cw, t, Di] }, [x, yc, zI], ['W0'], 0);
       }
     }
+    // Schrank: Deckenblende auf dem Deckel, zurückversetzt
+    if (p.typ === 'schrank') {
+      const bh = p.raumH - H - p.blendeLuft;
+      if (bh >= 20) add('Deckenblende', [W, bh], { thick: t, dims: [W, bh, t] }, [0, H + bh / 2, D / 2 - p.blendeRueck - t / 2], [], 0);
+      else warnings.push('Deckenblende: nur ' + Math.round(bh) + ' mm bis zur Decke – keine Blende eingeplant.');
+    }
+    // Sideboard: Arbeitsplatte oben drauf, vorne Überstand, seitlich und hinten bündig (von unten verschraubt)
+    if (p.typ === 'sideboard') {
+      const at = p.apT || t;
+      add('Arbeitsplatte', [W, D + p.apUeb], { thick: at, dims: [W, at, D + p.apUeb] }, [0, H + at / 2, p.apUeb / 2], ['W0', 'L0', 'L1'], 0);
+      parts[parts.length - 1].noJoint = true;   // keine Konfirmat von oben; Verschraubung von unten noch offen
+    }
+    // Füße: unter dem Boden, je Senkrechte (Seiten mit Randabstand, Mittelteiler mittig), vorne und hinten
+    const feet = [];
+    if (feetMode && s > 0) {
+      const xs = [-W / 2 + p.fussRand, W / 2 - p.fussRand];
+      for (let i = 0; i < m; i++) xs.push(-Wi / 2 + (i + 1) * cw + i * t + t / 2);
+      xs.sort((a, b) => a - b).forEach((x) => [D / 2 - p.fussRand, -D / 2 + p.fussRand].forEach((z) => feet.push({ x, z, d: p.fussD, h: s })));
+      const iBoden = parts.findIndex((q) => q.name === 'Boden');
+      parts[iBoden].marks = feet.map((f) => ({ at: [f.x, s, f.z], dia: f.d, label: 'Fuß' }));
+    }
+
     // Rückwand und Nuten
     const grooves = []; // Fräsbearbeitungen als Welt-Quader: { part, box: [[x0,x1],[y0,y1],[z0,z1]], name }
     if (p.back && !nut) {
@@ -155,7 +197,7 @@
     const edgeM = edgeMm / 1000;
 
     return {
-      p, parts, cutlist, warnings, errors, holes,
+      p, parts, cutlist, warnings, errors, holes, feet,
       derived: { Wi, Hi, cw, ch, Db, Dk, Di, edgeM, nut }
     };
   }
@@ -175,7 +217,7 @@
     parts.forEach((P, ip) => {
       if (P.back) return;
       parts.forEach((Q, iq) => {
-        if (iq === ip || Q.back) return;
+        if (iq === ip || Q.back || P.noJoint || Q.noJoint) return;
         const bP = boxes[ip], bQ = boxes[iq];
         for (let a = 0; a < 3; a++) {
           if (tax[iq] !== a || tax[ip] === a) continue;          // Q liegt mit Fläche, P mit Kante an

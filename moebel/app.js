@@ -7,11 +7,12 @@
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
   const PRESETS = {
-    buch:      { W: 800,  H: 2000, D: 300, shelves: 4, dividers: 0, plinth: 0 },
-    wuerfel:   { W: 1500, H: 1500, D: 380, shelves: 3, dividers: 3, plinth: 0 },
-    schuh:     { W: 900,  H: 600,  D: 300, shelves: 2, dividers: 0, plinth: 0 },
-    sideboard: { W: 1800, H: 700,  D: 400, shelves: 1, dividers: 2, plinth: 60 },
-    nische:    { W: 1200, H: 2400, D: 250, shelves: 7, dividers: 1, plinth: 0 }
+    buch:      { W: 800,  H: 2000, D: 300, shelves: 4, dividers: 0, plinth: 100, typ: 'regal' },
+    wuerfel:   { W: 1500, H: 1500, D: 380, shelves: 3, dividers: 3, plinth: 100, typ: 'regal' },
+    schuh:     { W: 900,  H: 600,  D: 300, shelves: 2, dividers: 0, plinth: 100, typ: 'regal' },
+    sideboard: { W: 1800, H: 700,  D: 400, shelves: 1, dividers: 2, plinth: 100, typ: 'sideboard' },
+    hochschrank: { W: 800, H: 2200, D: 600, shelves: 5, dividers: 0, plinth: 100, typ: 'schrank' },
+    nische:    { W: 1200, H: 2400, D: 250, shelves: 7, dividers: 1, plinth: 100, typ: 'regal' }
   };
 
   let state = Object.assign({}, M.DEFAULTS, PRESETS.buch);
@@ -52,6 +53,11 @@
     $('preset').addEventListener('change', () => { Object.assign(state, PRESETS[$('preset').value]); syncForm(); update(); });
     $('explode').addEventListener('input', () => applyExplode());
     $('person').addEventListener('change', () => { if (personMesh) personMesh.visible = $('person').checked; render(); });
+    $('typ').addEventListener('change', () => { state.typ = $('typ').value; syncForm(); update(); });
+    $('sockel').addEventListener('change', () => { state.sockel = $('sockel').value; syncForm(); update(); });
+    document.querySelectorAll('#typBox input[data-k]').forEach((el) => el.addEventListener('change', () => {
+      const v = Number(el.value); if (Number.isFinite(v) && v >= 0) state[el.dataset.k] = v; syncForm(); update();
+    }));
     $('verbinder').addEventListener('change', () => { state.verbinder = $('verbinder').checked; syncForm(); update(); });
     document.querySelectorAll('#vBox input[data-k]').forEach((el) => el.addEventListener('change', () => {
       const v = Number(el.value); if (Number.isFinite(v) && v > 0) state[el.dataset.k] = v; syncForm(); update();
@@ -62,6 +68,13 @@
     pairs.forEach((k) => { $(k).value = state[k]; $(k + 'n').value = state[k]; });
     $('back').value = state.back ? state.bt : 0;
     $('backMode').value = state.backMode || 'nut';
+    $('typ').value = state.typ || 'regal';
+    $('sockel').value = state.sockel || 'fuesse';
+    document.querySelectorAll('#typBox label').forEach((lb) => {
+      const f = lb.dataset.for;
+      lb.hidden = !(f === 'sockel' || f === state.sockel || f === state.typ);
+    });
+    document.querySelectorAll('#typBox input[data-k]').forEach((el) => { el.value = state[el.dataset.k] != null ? state[el.dataset.k] : M.DEFAULTS[el.dataset.k]; });
     $('verbinder').checked = state.verbinder !== false;
     $('vBox').hidden = state.verbinder === false;
     document.querySelectorAll('#vBox input[data-k]').forEach((el) => { el.value = state[el.dataset.k] != null ? state[el.dataset.k] : M.DEFAULTS[el.dataset.k]; });
@@ -146,12 +159,12 @@
     for (const [key, g] of Object.entries(plan.groups)) {
       const parts = model.cutlist.filter((c) => !!c.back === (key === 'back'));
       const area = parts.reduce((s, c) => s + c.l * c.w * c.qty, 0) / 1e6;
-      rows += '<tr><td>' + esc(key === 'back' ? n.back : n.plate) + '</td><td class="n">' + fmtT(g.thick) + ' mm</td><td class="n">' + g.sheet.l + ' × ' + g.sheet.w +
+      rows += '<tr><td>' + esc(key === 'back' ? n.back : n.plate) + ' ' + shopLink(key === 'back' ? state.backFe : state.fe) + '</td><td class="n">' + fmtT(g.thick) + ' mm</td><td class="n">' + g.sheet.l + ' × ' + g.sheet.w +
         '</td><td class="n">' + g.sheets.length + '</td><td class="n">' + area.toFixed(2).replace('.', ',') + ' m²</td></tr>';
     }
     $('tab-mat').innerHTML =
       '<table><thead><tr><th>Platte</th><th class="n">Stärke</th><th class="n">Rohformat</th><th class="n">Platten lt. Zuschnittplan</th><th class="n">Fläche der Teile</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<table style="margin-top:12px"><thead><tr><th>Kante</th><th class="n">Bekantete Länge</th></tr></thead><tbody><tr><td>' + esc(n.kante) + '</td><td class="n">' +
+      '<table style="margin-top:12px"><thead><tr><th>Kante</th><th class="n">Bekantete Länge</th></tr></thead><tbody><tr><td>' + esc(n.kante) + ' ' + shopLink(state.kanteFe) + '</td><td class="n">' +
       model.derived.edgeM.toFixed(2).replace('.', ',') + ' m</td></tr></tbody></table>' +
       hardwareTable() +
       '<p class="note">Bekantete Länge = Summe der Kanten laut Zeichnungen, ohne Zuschlag. Stückzahlen der Beschläge = Anzahl der Verbindungen laut Bohrbild, ohne Reserve. Preise siehst du in WebCut bzw. beim Beschlaghändler.</p>';
@@ -209,6 +222,8 @@
   }
 
   /* ---------- Frischeis-Dekorkatalog ---------- */
+  const shopLink = (a, txt) => (a && a.url && /^https:\/\/www\.frischeis\.at\//.test(a.url)
+    ? '<a class="shop" href="' + esc(a.url) + '" target="_blank" rel="noopener">' + (txt || 'im Shop ansehen') + ' ↗</a>' : '');
   const KAT_NAMES = {
     'beschichtete-platte': 'Beschichtete Platte', 'dekorative-platte-mdf-hdf-hartfaser': 'Dekor MDF/HDF/Hartfaser',
     'durchgefarbte-platte': 'Durchgefärbte Platte', 'grundierplatte': 'Grundierplatte', 'mobelfront': 'Möbelfront', 'prageplatte': 'Prägeplatte', 'sonstige': 'Dekor-MDF/HDF, Prägeplatte u. a.'
@@ -245,7 +260,7 @@
   }
 
   function applyDekor(a) {
-    state.fe = { nr: a.nr, name: a.name, l: a.l, w: a.w, t: a.t, kat: a.kat };
+    state.fe = { nr: a.nr, name: a.name, l: a.l, w: a.w, t: a.t, kat: a.kat, url: a.url };
     state.t = a.t; state.sheet = 'fe'; state.material = 'fe';
     restoreFe();
     $('jMat').value = a.nr + ' ' + a.name;
@@ -270,13 +285,14 @@
     const more = hits.length > 60; hits.length = Math.min(hits.length, 60);
     const cur = state.fe && state.fe.nr;
     $('dList').innerHTML = (q.length || kat || onlyT) ? hits.map((a, i) =>
-      '<button type="button" role="option" data-i="' + catalog.indexOf(a) + '"' + (a.nr === cur ? ' class="on" aria-selected="true"' : '') + '>' +
+      '<div class="hit"><button type="button" role="option" data-i="' + catalog.indexOf(a) + '"' + (a.nr === cur ? ' class="on" aria-selected="true"' : '') + '>' +
       '<span class="sw" style="background:' + guessColor(a.name) + '"></span><span>' + esc(a.name) + '</span>' +
-      '<small>' + esc(a.nr) + ' · ' + fmtT(a.t) + ' mm · ' + a.l + '×' + a.w + '</small></button>').join('') : '';
+      '<small>' + esc(a.nr) + ' · ' + fmtT(a.t) + ' mm · ' + a.l + '×' + a.w + '</small></button>' + shopLink(a, 'Shop') + '</div>').join('') : '';
     const total = catalog.length;
     $('dInfo').textContent = !total ? 'Katalog nicht verfügbar.' :
       (q.length || kat || onlyT ? (more ? '60 von mehr Treffern, Suche verfeinern.' : hits.length + ' Treffer.') : total + ' dekorative Platten von frischeis.at (Stand ' + catalogDate + '). Ohne Preise, die siehst du in WebCut.') +
       (state.fe ? ' Gewählt: ' + state.fe.nr + '.' : '') + ' Farbe in 3D ist geschätzt.';
+    if (state.fe && state.fe.url) $('dInfo').insertAdjacentHTML('beforeend', ' ' + shopLink(state.fe));
   }
   let catalogDate = '';
   async function initDekor() {
@@ -284,7 +300,7 @@
       let data = window.__FE_DEKOR;
       if (!data) { const r = await fetch('frischeis-dekor.json'); data = await r.json(); }
       catalogDate = data.abgerufen;
-      catalog = data.artikel.map((r) => ({ nr: r[0], name: r[1], l: r[2], w: r[3], t: r[4], kat: data.kategorien[r[5]] }));
+      catalog = data.artikel.map((r) => ({ nr: r[0], name: r[1], l: r[2], w: r[3], t: r[4], kat: data.kategorien[r[5]], url: r[6] ? data.url_basis + r[6] : '' }));
       const kats = [...new Set(catalog.map((a) => a.kat))].sort();
       kats.forEach((k) => $('dKat').add(new Option((KAT_NAMES[k] || k) + ' (' + catalog.filter((a) => a.kat === k).length + ')', k)));
     } catch (e) { catalog = []; }
@@ -297,7 +313,7 @@
 
   /* ---------- Kanten und Rückwände aus dem Frischeis-Katalog ---------- */
   const decorCode = (name) => { const m = /\b([A-Z]{1,2}\d{3,5})\b/.exec(name || ''); return m ? m[1] : ''; };
-  const unpack = (data) => data.artikel.map((r) => ({ nr: r[0], name: r[1], l: r[2], w: r[3], t: r[4], kat: data.kategorien[r[5]] }));
+  const unpack = (data) => data.artikel.map((r) => ({ nr: r[0], name: r[1], l: r[2], w: r[3], t: r[4], kat: data.kategorien[r[5]], url: r[6] ? data.url_basis + r[6] : '' }));
   async function loadJson(globalName, file) {
     if (window[globalName]) return window[globalName];
     const r = await fetch(file); if (!r.ok) throw new Error(file); return r.json();
@@ -313,10 +329,12 @@
       hits.sort((x, y) => o.rank(x) - o.rank(y) || x.name.localeCompare(y.name, 'de'));
       const shown = q.length ? hits.slice(0, 40) : [];
       const cur = o.current();
-      $(o.list).innerHTML = shown.map((a) => '<button type="button" role="option" data-nr="' + esc(a.nr) + '"' + (a.nr === cur ? ' class="on" aria-selected="true"' : '') + '>' +
-        '<span class="sw" style="background:' + guessColor(a.name) + '"></span><span>' + esc(a.name) + '</span><small>' + esc(a.nr) + ' · ' + o.detail(a) + '</small></button>').join('');
+      $(o.list).innerHTML = shown.map((a) => '<div class="hit"><button type="button" role="option" data-nr="' + esc(a.nr) + '"' + (a.nr === cur ? ' class="on" aria-selected="true"' : '') + '>' +
+        '<span class="sw" style="background:' + guessColor(a.name) + '"></span><span>' + esc(a.name) + '</span><small>' + esc(a.nr) + ' · ' + o.detail(a) + '</small></button>' + shopLink(a, 'Shop') + '</div>').join('');
       $(o.info).textContent = (q.length ? (hits.length > 40 ? '40 von ' + hits.length + ' Treffern.' : hits.length + ' Treffer.') : o.hint(p.items.length)) +
         (cur ? ' Gewählt: ' + cur + '.' : '');
+      const sel = o.currentObj && o.currentObj();
+      if (sel && sel.url) $(o.info).insertAdjacentHTML('beforeend', ' ' + shopLink(sel));
     };
     $(o.search).addEventListener('input', p.render);
     $(o.list).addEventListener('click', (e) => {
@@ -332,9 +350,9 @@
     rank: (a) => Math.abs(a.w - (state.t + 4)) * 10 + a.t, // Standard: ca. 4 mm Überstand, dünne Kante zuerst
     detail: (a) => fmtT(a.w) + ' × ' + fmtT(a.t) + ' mm, Rolle ' + Math.round(a.l / 1000) + ' m',
     hint: (n) => n + ' Kanten von frischeis.at. Nach Dekor-Code oder Name suchen; nur Kanten, die höher als die Platte sind.',
-    current: () => state.kanteFe && state.kanteFe.nr,
+    current: () => state.kanteFe && state.kanteFe.nr, currentObj: () => state.kanteFe,
     pick: (a) => {
-      state.kanteFe = { nr: a.nr, name: a.name, w: a.w, t: a.t };
+      state.kanteFe = { nr: a.nr, name: a.name, w: a.w, t: a.t, url: a.url };
       $('jKante').value = a.nr + ' ' + a.name; $('jKante').dispatchEvent(new Event('change')); saveState();
     }
   });
@@ -345,9 +363,9 @@
     rank: (a) => Math.abs(a.t - 3) * 10,
     detail: (a) => fmtT(a.t) + ' mm · ' + a.l + '×' + a.w,
     hint: (n) => n + ' dünne Platten bis 8 mm (MDF/HDF roh und dekorativ).',
-    current: () => state.backFe && state.backFe.nr,
+    current: () => state.backFe && state.backFe.nr, currentObj: () => state.backFe,
     pick: (a) => {
-      state.backFe = { nr: a.nr, name: a.name, l: a.l, w: a.w, t: a.t };
+      state.backFe = { nr: a.nr, name: a.name, l: a.l, w: a.w, t: a.t, url: a.url };
       state.backSheet = { l: a.l, w: a.w, name: a.l + ' × ' + a.w };
       state.back = true; state.bt = a.t; ensureBackOption(a.t);
       $('jBack').value = a.nr + ' ' + a.name; $('jBack').dispatchEvent(new Event('change'));
@@ -508,12 +526,19 @@
   function rebuild3D() {
     if (!renderer) return;
     meshes.length = 0;
-    while (group.children.length) { const c = group.children.pop(); c.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); }
+    while (group.children.length) {
+      const c = group.children.pop();
+      c.traverse((o) => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material && o !== c.userData.feat) (Array.isArray(o.material) ? o.material : [o.material]).forEach((mt) => { if (mt.map) mt.map.dispose(); if (!Object.values(FEAT_MAT).includes(mt)) mt.dispose(); });
+      });
+    }
     const k = 0.001;
     const mat = M.MATERIALS[state.material];
+    const wood = isWood();
     model.parts.forEach((pt) => {
-      const color = pt.back ? 0xb8a98a : new THREE.Color(mat.color);
-      const m = new THREE.MeshStandardMaterial({ color, roughness: 0.75 });
+      const color = pt.back ? '#b8a98a' : mat.color;
+      const m = (wood && !pt.back) ? woodMaterials(pt, color) : new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.75 });
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(pt.size[0] * k, pt.size[1] * k, pt.size[2] * k), m);
       mesh.castShadow = mesh.receiveShadow = true;
       mesh.userData = { pt, base: pt.pos.map((v) => v * k) };
@@ -523,11 +548,59 @@
       feat.visible = $('feat').checked; mesh.add(feat); mesh.userData.feat = feat;
       group.add(mesh); meshes.push(mesh);
     });
-    cam.target.set(0, state.H * k / 2, 0);
+    // Füße (stehen am Fußboden, bewegen sich beim Explodieren nicht)
+    const footMat = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, roughness: 0.6 });
+    (model.feet || []).forEach((f) => {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(f.d / 2 * k, f.d / 2 * k, f.h * k, 20), footMat);
+      c.position.set(f.x * k, f.h * k / 2, f.z * k); c.castShadow = true;
+      group.add(c);
+    });
+    const topY = Math.max(...model.parts.map((pt) => pt.pos[1] + pt.size[1] / 2));
+    cam.target.set(0, topY * k / 2, 0);
     cam.r = Math.max(2.2, Math.hypot(state.W, state.H) * k * 1.9);
     personMesh.position.set(state.W * k / 2 + 0.6, 0, state.D * k / 2 - 0.1);
     personMesh.visible = $('person').checked;
     applyExplode();
+  }
+
+  /* ---------- Holzmaserung (erzeugt, nicht fotografisch) ---------- */
+  const WOOD_RE = /eiche|nuss|buche|ahorn|esche|kirsch|holz|oak|walnut|wood|teak|lärche|kiefer|fichte|ulme|akazie|zeder|birke|pinie|olive|cherry|beech|maple|chestnut|kastanie|\bH ?\d{4}\b/i;
+  function isWood() {
+    if (state.material === 'fe' && state.fe) return WOOD_RE.test(state.fe.name);
+    return state.material === 'eiche' || state.material === 'multiplex';
+  }
+  const woodCache = {};
+  function woodCanvas(color) {
+    if (woodCache[color]) return woodCache[color];
+    const S = 512, c = document.createElement('canvas'); c.width = c.height = S;
+    const g = c.getContext('2d'), base = new THREE.Color(color);
+    g.fillStyle = color; g.fillRect(0, 0, S, S);
+    let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    // Jahresringe: lange, leicht gewellte Linien entlang der Maserrichtung (u = waagrecht)
+    for (let i = 0; i < 90; i++) {
+      const y = rnd() * S, amp = 1 + rnd() * 3, freq = 0.5 + rnd() * 1.5, phase = rnd() * 6.28;
+      const dark = rnd() < 0.65, f = dark ? 0.78 + rnd() * 0.12 : 1.06 + rnd() * 0.08;
+      const col = base.clone().multiplyScalar(f);
+      g.strokeStyle = 'rgba(' + Math.round(Math.min(1, col.r) * 255) + ',' + Math.round(Math.min(1, col.g) * 255) + ',' + Math.round(Math.min(1, col.b) * 255) + ',' + (0.15 + rnd() * 0.35) + ')';
+      g.lineWidth = 0.6 + rnd() * 2.2;
+      g.beginPath();
+      for (let x = 0; x <= S; x += 8) { const yy = y + Math.sin((x / S) * 6.28 * freq + phase) * amp; x ? g.lineTo(x, yy) : g.moveTo(x, yy); }
+      g.stroke();
+    }
+    woodCache[color] = c; return c;
+  }
+  // BoxGeometry-Flächen: +x, -x, +y, -y, +z, -z mit (u-Achse, v-Achse)
+  const FACE_UV = [[2, 1], [2, 1], [0, 2], [0, 2], [0, 1], [0, 1]];
+  function woodMaterials(pt, color) {
+    const cv = woodCanvas(color), tile = 700; // eine Texturkachel = 700 mm
+    return FACE_UV.map(([ua, va]) => {
+      const tex = new THREE.CanvasTexture(cv);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      if (va === pt.grain) { tex.center.set(0.5, 0.5); tex.rotation = Math.PI / 2; tex.repeat.set(pt.size[va] / tile, pt.size[ua] / tile); }
+      else tex.repeat.set(pt.size[ua] / tile, pt.size[va] / tile);
+      if (renderer) tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7 });
+    });
   }
 
   // Nuten und Bohrungen als dunkle Körper; an der offenen Seite 0,4 mm über die Fläche gezogen, damit sie sichtbar sind
@@ -568,8 +641,7 @@
   function highlight(no) {
     meshes.forEach((m) => {
       const on = no && m.userData.pt.group === no;
-      m.material.emissive.setHex(on ? 0xb8662b : 0x000000);
-      m.material.emissiveIntensity = on ? 0.6 : 0;
+      (Array.isArray(m.material) ? m.material : [m.material]).forEach((mt) => { mt.emissive.setHex(on ? 0xb8662b : 0x000000); mt.emissiveIntensity = on ? 0.6 : 0; });
     });
     render();
   }

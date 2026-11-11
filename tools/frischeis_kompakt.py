@@ -9,7 +9,8 @@ for a in src['artikel']:
 kats = sorted({a['kat'] for a in src['artikel']})
 out = {'quelle': src['quelle'], 'abgerufen': src['abgerufen'], 'hinweis': 'Öffentliche Artikeldaten ohne Preise',
        'kategorien': kats,
-       'artikel': [[a['nr'], a['name'], a['l'], a['w'], a['t'], kats.index(a['kat'])] for a in src['artikel']
+       'url_basis': 'https://www.frischeis.at/shop/platte/',
+       'artikel': [[a['nr'], a['name'], a['l'], a['w'], a['t'], kats.index(a['kat']), (a.get('url') or '').replace('/shop/platte/', '', 1)] for a in src['artikel']
                    if a['l'] and a['w'] and a['t'] and (kante or (a['l'] >= 500 and a['w'] >= 300))]}
 json.dump(out, open(sys.argv[2], 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 print(len(out['artikel']), 'Artikel,', len(kats), 'Kategorien')
