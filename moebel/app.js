@@ -36,7 +36,7 @@
     Object.entries(M.SHEETS).forEach(([k, s]) => $('sheet').add(new Option(s.name, k)));
     pairs.forEach((k) => {
       const r = $(k), n = $(k + 'n');
-      const set = (v) => { state[k] = Number(v); update(); };
+      const set = (v) => { state[k] = Number(v); if (k === 'dividers') syncForm(); update(); };
       r.addEventListener('input', () => set(r.value));
       n.addEventListener('change', () => { r.value = n.value; set(n.value); });
     });
@@ -63,12 +63,14 @@
     document.querySelectorAll('#vBox input[data-k]').forEach((el) => el.addEventListener('change', () => {
       const v = Number(el.value); if (Number.isFinite(v) && v > 0) state[el.dataset.k] = v; syncForm(); update();
     }));
+    $('showDoors').addEventListener('change', () => { meshes.forEach((m) => { if (m.userData.pt.mat === 'front') m.visible = $('showDoors').checked; }); render(); });
     $('feat').addEventListener('change', () => { meshes.forEach((m) => { if (m.userData.feat) m.userData.feat.visible = $('feat').checked; }); render(); });
   }
   function syncForm() {
     pairs.forEach((k) => { $(k).value = state[k]; $(k + 'n').value = state[k]; });
     $('back').value = state.back ? state.bt : 0;
     $('backMode').value = state.backMode || 'nut';
+    renderDoorUI();
     $('typ').value = state.typ || 'regal';
     $('apBox').hidden = state.typ !== 'sideboard';
     $('sockel').value = state.sockel || 'fuesse';
@@ -89,6 +91,28 @@
     $('t').value = state.t;
     $('sheet').value = state.sheet;
     $('rotate').checked = !!state.rotate;
+  }
+
+  /* ---------- Türen je Spalte ---------- */
+  const DOOR_OPTS = [['offen', 'offen'], ['dt-l', 'Drehtür, Band links'], ['dt-r', 'Drehtür, Band rechts'], ['dt-2', '2 Drehtüren'], ['st', 'Schiebetüren']];
+  function renderDoorUI() {
+    const n = (state.dividers || 0) + 1;
+    state.doors = (state.doors || []).slice(0, n);
+    const box = $('doorsBox');
+    if (box.children.length !== n) {
+      box.innerHTML = '';
+      for (let c = 0; c < n; c++) {
+        const lb = document.createElement('label'); lb.className = 'row';
+        lb.textContent = 'Spalte ' + (c + 1) + ' ';
+        const sel = document.createElement('select'); sel.id = 'door' + c;
+        DOOR_OPTS.forEach(([v, t]) => sel.add(new Option(t, v)));
+        sel.addEventListener('change', () => { state.doors[c] = sel.value; syncForm(); update(); });
+        lb.appendChild(sel); box.appendChild(lb);
+      }
+    }
+    for (let c = 0; c < n; c++) $('door' + c).value = state.doors[c] || 'offen';
+    const any = state.doors.some((d) => d && d !== 'offen');
+    $('frontBox').hidden = !any;
   }
 
   /* ---------- Berechnung ---------- */
@@ -129,8 +153,8 @@
     let html = '<p class="note">Je 10 mm Besäumschnitt, ' +
       state.kerf + ' mm Sägeblatt. Zahlen = Nr aus der Stückliste.</p>';
     const nm = names();
-    const names_ = { plate: nm.plate + ' ' + fmtT(state.t) + ' mm', back: nm.back, ap: 'Arbeitsplatte: ' + nm.ap };
-    const fills = { plate: M.MATERIALS[state.material].color, back: '#c9b99a', ap: apColor() };
+    const names_ = { plate: nm.plate + ' ' + fmtT(state.t) + ' mm', back: nm.back, ap: 'Arbeitsplatte: ' + nm.ap, front: 'Fronten: ' + nm.front };
+    const fills = { plate: M.MATERIALS[state.material].color, back: '#c9b99a', ap: apColor(), front: frontColor() };
     for (const key of Object.keys(plan.groups)) {
       const g = plan.groups[key];
       g.sheets.forEach((sh, i) => {
@@ -159,7 +183,9 @@
     const kante = state.kanteFe ? state.kanteFe.nr + ' ' + state.kanteFe.name : ($('jKante').value.trim() || 'Kantenart A (noch nicht gewählt)');
     const ap = state.apFe ? state.apFe.nr + ' ' + state.apFe.name : plate + ' (wie Korpus)';
     const kanteB = state.apKanteFe ? state.apKanteFe.nr + ' ' + state.apKanteFe.name : (state.apFe ? 'Kantenart B (noch nicht gewählt)' : kante);
-    return { plate, back, kante, ap, kanteB };
+    const front = state.frontFe ? state.frontFe.nr + ' ' + state.frontFe.name : plate + ' (wie Korpus)';
+    const kanteC = state.frontKanteFe ? state.frontKanteFe.nr + ' ' + state.frontKanteFe.name : (state.frontFe ? 'Kantenart C (noch nicht gewählt)' : kante);
+    return { plate, back, kante, ap, kanteB, front, kanteC };
   }
 
   function renderMaterial() {
@@ -168,8 +194,8 @@
     for (const [key, g] of Object.entries(plan.groups)) {
       const parts = model.cutlist.filter((c) => c.mat === key);
       const area = parts.reduce((s, c) => s + c.l * c.w * c.qty, 0) / 1e6;
-      const label = { plate: n.plate, back: n.back, ap: 'Arbeitsplatte: ' + n.ap }[key];
-      const obj = { plate: state.fe, back: state.backFe, ap: state.apFe || state.fe }[key];
+      const label = { plate: n.plate, back: n.back, ap: 'Arbeitsplatte: ' + n.ap, front: 'Fronten: ' + n.front }[key];
+      const obj = { plate: state.fe, back: state.backFe, ap: state.apFe || state.fe, front: state.frontFe || state.fe }[key];
       rows += '<tr><td>' + esc(label) + ' ' + shopLink(obj) + '</td><td class="n">' + fmtT(g.thick) + ' mm</td><td class="n">' + g.sheet.l + ' × ' + g.sheet.w +
         '</td><td class="n">' + g.sheets.length + '</td><td class="n">' + area.toFixed(2).replace('.', ',') + ' m²</td></tr>';
     }
@@ -184,8 +210,9 @@
   function edgeTable(n) {
     const len = {};
     model.parts.forEach((pt) => pt.edges.forEach((e) => { len[pt.edgeKind] = (len[pt.edgeKind] || 0) + (e[0] === 'W' ? pt.cut[0] : pt.cut[1]); }));
-    const rows = Object.entries(len).sort().map(([k, mm]) => '<tr><td>Kantenart ' + k + ': ' + esc(k === 'B' ? n.kanteB : n.kante) + ' ' +
-      shopLink(k === 'B' ? state.apKanteFe : state.kanteFe) + '</td><td class="n">' + (mm / 1000).toFixed(2).replace('.', ',') + ' m</td></tr>').join('');
+    const kn = { A: n.kante, B: n.kanteB, C: n.kanteC }, ko = { A: state.kanteFe, B: state.apKanteFe, C: state.frontKanteFe };
+    const rows = Object.entries(len).sort().map(([k, mm]) => '<tr><td>Kantenart ' + k + ': ' + esc(kn[k]) + ' ' +
+      shopLink(ko[k]) + '</td><td class="n">' + (mm / 1000).toFixed(2).replace('.', ',') + ' m</td></tr>').join('');
     return '<table style="margin-top:12px"><thead><tr><th>Kante</th><th class="n">Bekantete Länge</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
@@ -195,10 +222,23 @@
     const dueb = holes.filter((h) => h.kind === 'face' && h.type === 'Dübel').length;
     const feet = (model.feet || []).length, FT = M.FEET[state.fussTyp] || M.FEET.hettich, set = FT.set;
     const spax = holes.filter((h) => h.type === 'Spax-Durchgang').length;
-    if (!konf && !dueb && !feet && !spax) return '';
+    const hv = (model.hinges || []).filter((x) => x.art === 'vorliegend').length, hm = (model.hinges || []).length - hv;
+    const st = model.parts.filter((pt) => pt.name === 'Schiebetür');
+    const stCols = (model.profiles || []).length / 2;
+    const stStops = (model.profiles || []).filter((_, i) => i % 2 === 0).reduce((s, pr) => {
+      const door = st.find((d) => Math.abs(d.pos[0] - d.size[0] / 2 - pr.x0 - state.stSeite) < 1); return s + (door && door.size[1] > 1000 ? 2 : 1);
+    }, 0);
+    const profLen = (model.profiles || []).filter((_, i) => i % 2 === 0).map((pr) => pr.len);
+    if (!konf && !dueb && !feet && !spax && !hv && !hm && !st.length) return '';
     return '<table style="margin-top:12px"><thead><tr><th>Beschlag</th><th>Bezugsquelle</th><th class="n">Stück</th></tr></thead><tbody>' +
       (konf ? '<tr><td>Konfirmat 7 × 50</td><td>frei, z. B. Amazon – Kernloch/Senkung laut Hersteller mit Bohrbild abgleichen</td><td class="n">' + konf + '</td></tr>' : '') +
       (dueb ? '<tr><td>Rillendübel Buche 8 × 30</td><td>Frischeis 69010/0008 oder gleichwertig, z. B. Amazon</td><td class="n">' + dueb + '</td></tr>' : '') +
+      (hv ? '<tr><td>Hettich Sensys Topfscharnier Ø35, vorliegend</td><td>Hettich</td><td class="n">' + hv + '</td></tr>' : '') +
+      (hm ? '<tr><td>Hettich Sensys Topfscharnier Ø35, Mittelwandanschlag</td><td>Hettich (z. B. DIY-Shop 9246679)</td><td class="n">' + hm + '</td></tr>' : '') +
+      (hv + hm ? '<tr><td>Hettich Kreuzmontageplatte 37 × 32, Euroschrauben Ø5 × 12, Distanz 0</td><td>Hettich</td><td class="n">' + (hv + hm) + '</td></tr>' : '') +
+      (st.length ? '<tr><td>Hettich SlideLine M einliegend, Beschlagset je Tür</td><td>Hettich</td><td class="n">' + st.length + '</td></tr>' +
+        '<tr><td>SlideLine M 2-bahniges Laufprofil (oben + unten), Zuschnitt ' + profLen.join(', ') + ' mm</td><td>Hettich, z. B. 9 227 183 (2500 mm)</td><td class="n">' + stCols * 2 + '</td></tr>' +
+        '<tr><td>SlideLine M Türanschlag/Abstandhalter (1 bis 1000 mm Türhöhe, sonst 2)</td><td>Hettich 9 115 216</td><td class="n">' + stStops + '</td></tr>' : '') +
       (spax ? '<tr><td>Spax ' + state.spaxD + ' × ' + state.spaxL + ' (Arbeitsplatte von innen)</td><td>frei</td><td class="n">' + spax + '</td></tr>' : '') +
       (feet ? '<tr><td>' + esc(FT.name) + '</td><td>' + esc(FT.bezug) + '</td><td class="n">' + Math.ceil(feet / set) + ' Pack (' + feet + ' Füße)</td></tr>' : '') +
       '</tbody></table>';
@@ -211,8 +251,8 @@
     return { material: n.plate, kante: n.kante, projekt: ($('jObjekt') && $('jObjekt').value.trim()) || ('Regal ' + state.W + ' × ' + state.H + ' × ' + state.D) };
   }
   const drawInfo = (d, info, n) => Object.assign({}, info, {
-    material: d.mat === 'back' ? n.back : d.mat === 'ap' ? n.ap : n.plate,
-    kante: d.edgeKind === 'B' ? n.kanteB : n.kante
+    material: d.mat === 'back' ? n.back : d.mat === 'ap' ? n.ap : d.mat === 'front' ? n.front : n.plate,
+    kante: d.edgeKind === 'B' ? n.kanteB : d.edgeKind === 'C' ? n.kanteC : n.kante
   });
   function renderDrawings() {
     drawings = window.Zeichnung.analyze(model);
@@ -423,6 +463,30 @@
     current: () => state.apKanteFe && state.apKanteFe.nr, currentObj: () => state.apKanteFe,
     pick: (a) => { state.apKanteFe = { nr: a.nr, name: a.name, w: a.w, t: a.t, url: a.url }; update(); }
   });
+  const frontPick = makePicker({
+    search: 'frSearch', list: 'frList', info: 'frInfo', missing: 'Dekorkatalog nicht verfügbar.',
+    accept: () => true,
+    rank: (a) => Math.abs(a.t - (state.frontT || state.t)) * 10,
+    detail: (a) => fmtT(a.t) + ' mm · ' + a.l + '×' + a.w,
+    hint: () => 'Eigenes Dekor für die Fronten; ohne Auswahl wie der Korpus.',
+    current: () => state.frontFe && state.frontFe.nr, currentObj: () => state.frontFe,
+    pick: (a) => {
+      state.frontFe = { nr: a.nr, name: a.name, l: a.l, w: a.w, t: a.t, url: a.url };
+      state.frontT = a.t; state.frontSheet = { l: a.l, w: a.w, name: a.l + ' × ' + a.w };
+      const code = decorCode(a.name);
+      if (code) $('frkSearch').value = code;
+      syncForm(); update(); frontKante.render();
+    }
+  });
+  const frontKante = makePicker({
+    search: 'frkSearch', list: 'frkList', info: 'frkInfo', missing: 'Kantenkatalog nicht verfügbar.',
+    accept: (a) => a.w >= (state.frontT || state.t) + 1,
+    rank: (a) => Math.abs(a.w - ((state.frontT || state.t) + 4)) * 10 + a.t,
+    detail: (a) => fmtT(a.w) + ' × ' + fmtT(a.t) + ' mm, Rolle ' + Math.round(a.l / 1000) + ' m',
+    hint: () => 'Kante für die Fronten (Kantenart C im JAF-Formular).',
+    current: () => state.frontKanteFe && state.frontKanteFe.nr, currentObj: () => state.frontKanteFe,
+    pick: (a) => { state.frontKanteFe = { nr: a.nr, name: a.name, w: a.w, t: a.t, url: a.url }; update(); }
+  });
   function ensureBackOption(t) {
     const sel = $('back');
     if (![...sel.options].some((o) => Number(o.value) === Number(t))) sel.add(new Option('Frischeis ' + fmtT(t) + ' mm', t), sel.options[sel.options.length - 1]);
@@ -438,8 +502,8 @@
       const have = new Set(roh.map((x) => x.nr));
       rueck.items = roh.concat(thin.filter((x) => !have.has(x.nr)));
     } catch (e) { rueck.items = catalog.filter((a) => a.t <= 8.1); }
-    apPick.items = catalog; apKante.items = kanten.items;
-    kanten.render(); rueck.render(); apPick.render(); apKante.render();
+    apPick.items = catalog; apKante.items = kanten.items; frontPick.items = catalog; frontKante.items = kanten.items;
+    kanten.render(); rueck.render(); apPick.render(); apKante.render(); frontPick.render(); frontKante.render();
   }
 
   /* ---------- JAF/Frischeis-Formular ---------- */
@@ -477,6 +541,8 @@
         material: $('jMat').value.trim(), backMaterial: $('jBack').value.trim(), kante: $('jKante').value.trim(),
         apMaterial: state.apFe ? state.apFe.nr + ' ' + state.apFe.name : $('jMat').value.trim(),
         kanteB: state.apKanteFe ? state.apKanteFe.nr + ' ' + state.apKanteFe.name : (state.apFe ? '' : $('jKante').value.trim()),
+        frontMaterial: state.frontFe ? state.frontFe.nr + ' ' + state.frontFe.name : $('jMat').value.trim(),
+        kanteC: state.frontKanteFe ? state.frontKanteFe.nr + ' ' + state.frontKanteFe.name : (state.frontFe ? '' : $('jKante').value.trim()),
         objekt: $('jObjekt').value.trim() || ('Regal ' + state.W + 'x' + state.H + 'x' + state.D), firma: $('jFirma').value.trim(),
         kundenNr: $('jKunde').value.trim(), rotate: state.rotate
       });
@@ -592,9 +658,10 @@
     const wood = isWood();
     const apWood = state.apFe ? WOOD_RE.test(state.apFe.name) : wood;
     model.parts.forEach((pt) => {
-      const isAp = pt.mat === 'ap';
-      const color = pt.back ? '#b8a98a' : isAp ? apColor() : mat.color;
-      const m = ((isAp ? apWood : wood) && !pt.back) ? woodMaterials(pt, color) : new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.75 });
+      const isAp = pt.mat === 'ap', isFront = pt.mat === 'front';
+      const color = pt.back ? '#b8a98a' : isAp ? apColor() : isFront ? frontColor() : mat.color;
+      const w = isAp ? apWood : isFront ? (state.frontFe ? WOOD_RE.test(state.frontFe.name) : wood) : wood;
+      const m = (w && !pt.back) ? woodMaterials(pt, color) : new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.75 });
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(pt.size[0] * k, pt.size[1] * k, pt.size[2] * k), m);
       mesh.castShadow = mesh.receiveShadow = true;
       mesh.userData = { pt, base: pt.pos.map((v) => v * k) };
@@ -602,7 +669,14 @@
       mesh.add(edges);
       const feat = buildFeatures(pt, k);
       feat.visible = $('feat').checked; mesh.add(feat); mesh.userData.feat = feat;
+      if (isFront) mesh.visible = $('showDoors').checked;
       group.add(mesh); meshes.push(mesh);
+    });
+    // Schiebetür-Laufprofile (Aluminium)
+    const profMat = new THREE.MeshStandardMaterial({ color: 0xb9bcc0, roughness: 0.4, metalness: 0.6 });
+    (model.profiles || []).forEach((pr) => {
+      const b = new THREE.Mesh(new THREE.BoxGeometry((pr.x1 - pr.x0) * k, (pr.y1 - pr.y0) * k, (pr.z1 - pr.z0) * k), profMat);
+      b.position.set((pr.x0 + pr.x1) / 2 * k, (pr.y0 + pr.y1) / 2 * k, (pr.z0 + pr.z1) / 2 * k); group.add(b);
     });
     // Füße (stehen am Fußboden, bewegen sich beim Explodieren nicht)
     const footMat = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, roughness: 0.6 });
@@ -627,6 +701,7 @@
 
   /* ---------- Holzmaserung (erzeugt, nicht fotografisch) ---------- */
   const WOOD_RE = /eiche|nuss|buche|ahorn|esche|kirsch|holz|oak|walnut|wood|teak|lärche|kiefer|fichte|ulme|akazie|zeder|birke|pinie|olive|cherry|beech|maple|chestnut|kastanie|\bH ?\d{4}\b/i;
+  function frontColor() { return state.frontFe ? guessColor(state.frontFe.name) : M.MATERIALS[state.material].color; }
   function apColor() { return state.apFe ? guessColor(state.apFe.name) : M.MATERIALS[state.material].color; }
   function isWood() {
     if (state.material === 'fe' && state.fe) return WOOD_RE.test(state.fe.name);

@@ -54,6 +54,22 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
   Prüfung: Spax-Länge − Deckelstärke muss kleiner als die Arbeitsplattenstärke sein.
 - **Darstellung:** Holzmaserung im 3D-Modell ist erzeugt (kein Foto), läuft je Teil in Maserrichtung.
 
+## Türen (Vorgaben vom Nutzer, Hettich-Daten)
+- Pro Spalte wählbar: offen, Drehtür Band links/rechts, 2 Drehtüren, Schiebetüren. Fronten mit eigenem Dekor
+  und eigener Kante (Kantenart C im JAF-Formular), rundum bekantet, Maserung senkrecht.
+- **Drehtüren aufliegend**, Fuge 3 mm: außen bündig mit der Seitenwand, am Mittelteiler bis zur Mitte.
+  Hettich Sensys: Topf Ø35, Mindestbohrtiefe 12,9 mm, Türstärke 15–24 mm (Shop-/Händlerdaten), Topfabstand K = 5
+  (Nutzer, Bereich 3–7). Kreuzmontageplatte Lochreihe 37 × 32, Euroschrauben Ø5 × 12, Distanz 0 (Hettich-Shop).
+  Bänder: 2 bis 1000 mm Türhöhe, 3 bis 1800, darüber 4, je 100 mm von Ober-/Unterkante (Nutzer).
+  An Seitenwänden vorliegend, am Mittelteiler Mittelwandanschlag. Schraublöcher im Topf (TH 52) noch nicht gesetzt.
+- **Schiebetüren Hettich SlideLine M einliegend**, 2-bahniges Profil (Katalog „SlideLine M“, Hettich 2017):
+  Türgewicht ≤ 30 kg, Breite 300–1800, Höhe ≤ 2000 und ≤ 2 × Breite (Text). Aus der Montagezeichnung abgelesen
+  (bitte prüfen): Profil 12 mm hoch oben und unten, oben 3 mm Luft → Türhöhe = lichte Höhe − 27; vordere Tür 1 mm
+  hinter Vorderkante, Spurabstand 32 (19 + 13), dahinter ≥ 7 mm → Fachböden 59 mm zurück; seitlich 1 mm;
+  Beschlag-Schraubpositionen 11,5 mm vom Türrand, oben ab 27 mm, unten ab 11,5 mm, Raster 32 (nur markiert,
+  Bohrdurchmesser je nach Schraube). Türstärke laut Zeichnung ≤ 20 mm. Überlappung 30 mm (Nutzer).
+- Griffe: noch offen.
+
 ## Kataloge aktualisieren
 ```
 python3 tools/frischeis_katalog.py dekor /tmp/dekor.json && python3 tools/frischeis_kompakt.py /tmp/dekor.json moebel/frischeis-dekor.json

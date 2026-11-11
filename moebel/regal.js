@@ -53,6 +53,19 @@
     // Arbeitsplatte von innen mit Spax durch den Deckel (Vorgaben vom Nutzer): 4 × 35, Durchgang Ø5, keine Vorbohrung
     spaxD: 4, spaxL: 35, spaxDurch: 5,
     spaxRand: 50,       // VORGABE PRÜFEN: Abstand der Spax von Vorder-/Hinterkante und von den Senkrechten (pro Fach 4 Stück)
+    // Türen je Spalte: 'offen' | 'dt-l' | 'dt-r' | 'dt-2' | 'st' (Vorgaben vom Nutzer)
+    doors: [],
+    fuge: 3,            // Fuge zwischen Fronten bzw. zum Rand
+    frontT: 0,          // Frontstärke (0 = wie Korpus)
+    // Hettich Sensys (Datenblatt/Shop): Topf Ø35, Mindestbohrtiefe 12,9; Topfabstand K = 5 (Nutzer, Bereich 3–7)
+    topfD: 35, topfT: 12.9, topfK: 5,
+    bandRand: 100,      // Abstand Topfband von Ober-/Unterkante der Tür (Nutzer)
+    // Kreuzmontageplatte Lochreihe 37 × 32, Euroschrauben Ø5 × 12 (Hettich-Shop)
+    mpVorne: 37, mpRaster: 32, mpD: 5, mpT: 12,
+    // Hettich SlideLine M einliegend, 2-bahniges Profil (aus der Katalogzeichnung abgelesen)
+    stProfilH: 12, stLuftOben: 3, stVorne: 1, stSpur: 32, stHinten: 7, stSeite: 1, stMaxT: 20,
+    stUeberlapp: 30,    // Überlappung der beiden Schiebetüren (Nutzer)
+    stRand: 11.5, stObenStart: 27, stUntenStart: 11.5, stRaster: 32,
     back: true, bt: 3,  // Rückwand
     backMode: 'nut',    // 'nut' = in Nut (Seiten, Boden, Deckel), 'auf' = hinten aufgesetzt
     nutA: 10,           // Abstand Hinterkante bis Nut
@@ -150,7 +163,7 @@
       const yc = y0 + j * ch + (j - 1) * t + t / 2;
       for (let c = 0; c <= m; c++) {
         const x = -Wi / 2 + c * (cw + t) + cw / 2;
-        add('Fachboden', [cw, Di], { thick: t, dims: [cw, t, Di] }, [x, yc, zI], ['W0'], 0);
+        add('Fachboden', [cw, Di], { thick: t, dims: [cw, t, Di] }, [x, yc, zI], ['W0'], 0, { col: c });
       }
     }
     // Schrank: Deckenblende auf dem Deckel, zurückversetzt
@@ -202,6 +215,58 @@
       grooves.forEach((g) => { g.name = 'Nut ' + nb + ' × ' + p.nutT + ' tief'; g.width = nb; g.depth = p.nutT; });
     }
 
+    /* ---------- Türen ---------- */
+    const ft = p.frontT || t;
+    const doorInfo = [];   // { part, typ, hingeSide: -1|1, vertIdx } für Bohrungen nach den Verbindern
+    const profiles = [];   // Schiebetür-Laufprofile (nur Darstellung / Stückliste)
+    const verts = parts.map((q, i) => ({ q, i })).filter((o) => o.q.name === 'Seitenwand' || o.q.name === 'Mittelteiler')
+      .map((o) => ({ i: o.i, name: o.q.name, x0: o.q.pos[0] - o.q.size[0] / 2, x1: o.q.pos[0] + o.q.size[0] / 2 })).sort((a, b) => a.x0 - b.x0);
+    const yb = feetMode ? s : 0, yt = H, zf = D / 2;
+    const doorTypes = p.doors || [];
+    for (let c = 0; c + 1 < verts.length; c++) {
+      const typ = doorTypes[c] || 'offen';
+      if (typ === 'offen') continue;
+      const L = verts[c], R = verts[c + 1];
+      if (typ === 'st') {
+        if (ft > p.stMaxT) { errors.push('Schiebetür Spalte ' + (c + 1) + ': Frontstärke ' + ft + ' mm, SlideLine M 2-bahnig laut Zeichnung max. ' + p.stMaxT + ' mm.'); continue; }
+        const x0 = L.x1, x1 = R.x0, LW = x1 - x0, LH = (yt - t) - (yb + t);
+        const TH = LH - 2 * p.stProfilH - p.stLuftOben;
+        const TB = (LW - 2 * p.stSeite + p.stUeberlapp) / 2;
+        if (TB < 300) warnings.push('Schiebetür Spalte ' + (c + 1) + ': Türbreite ' + Math.round(TB) + ' mm, SlideLine M erst ab 300 mm.');
+        if (TH > 2 * TB) warnings.push('Schiebetür Spalte ' + (c + 1) + ': Höhe ' + Math.round(TH) + ' mm > 2 × Breite – laut Hettich nicht zulässig.');
+        if (TH > 2000) warnings.push('Schiebetür Spalte ' + (c + 1) + ': Türhöhe über 2000 mm – laut Hettich nicht zulässig.');
+        const yd = yb + t + p.stProfilH + TH / 2;
+        const zFront = zf - p.stVorne - ft / 2, zBack = zf - p.stVorne - p.stSpur - ft / 2;
+        add('Schiebetür', [TH, TB], { thick: ft, dims: [TB, TH, ft] }, [x0 + p.stSeite + TB / 2, yd, zFront], ['W0', 'W1', 'L0', 'L1'], 1, { mat: 'front', edgeKind: 'C', noJoint: true, edgeNames: { L0: 'Unterkante', L1: 'Oberkante', W0: 'links (von vorne)', W1: 'rechts (von vorne)' } });
+        doorInfo.push({ part: parts.length - 1, typ: 'st' });
+        add('Schiebetür', [TH, TB], { thick: ft, dims: [TB, TH, ft] }, [x1 - p.stSeite - TB / 2, yd, zBack], ['W0', 'W1', 'L0', 'L1'], 1, { mat: 'front', edgeKind: 'C', noJoint: true, edgeNames: { L0: 'Unterkante', L1: 'Oberkante', W0: 'links (von vorne)', W1: 'rechts (von vorne)' } });
+        doorInfo.push({ part: parts.length - 1, typ: 'st' });
+        // Fachböden dieser Spalte hinter die hintere Tür zurücksetzen
+        const rueck = p.stVorne + p.stSpur + ft + p.stHinten;
+        parts.forEach((q) => {
+          if (q.name !== 'Fachboden' || q.col !== c) return;
+          const back = q.pos[2] - q.size[2] / 2, nd = mm(q.size[2] - rueck);
+          q.size[2] = nd; q.cut[1] = nd; q.pos[2] = back + nd / 2; q.name = 'Fachboden';
+          q.recessed = rueck;
+        });
+        [yb + t, yt - t].forEach((y, k) => profiles.push({ x0, x1, y0: k ? y - p.stProfilH : y, y1: k ? y : y + p.stProfilH, z0: zf - p.stVorne - 65, z1: zf - p.stVorne, len: Math.floor(LW) }));
+        continue;
+      }
+      // Drehtüren aufliegend: außen an der Seitenwand bündig, am Mittelteiler bis zur Mitte; Fuge halbiert
+      const xl = (L.name === 'Seitenwand' ? L.x0 : (L.x0 + L.x1) / 2) + p.fuge / 2;
+      const xr = (R.name === 'Seitenwand' ? R.x1 : (R.x0 + R.x1) / 2) - p.fuge / 2;
+      const y0d = yb + p.fuge / 2, y1d = yt - p.fuge / 2, hD = y1d - y0d;
+      const zc = zf + ft / 2;
+      const mk = (a, b, side, vert) => {
+        add('Drehtür', [hD, b - a], { thick: ft, dims: [b - a, hD, ft] }, [(a + b) / 2, (y0d + y1d) / 2, zc], ['W0', 'W1', 'L0', 'L1'], 1, { mat: 'front', edgeKind: 'C', noJoint: true, edgeNames: { L0: 'Unterkante', L1: 'Oberkante', W0: 'links (von vorne)', W1: 'rechts (von vorne)' } });
+        doorInfo.push({ part: parts.length - 1, typ: 'dt', side, vert });
+      };
+      if (typ === 'dt-2') { const m = (xl + xr) / 2; mk(xl, m - p.fuge / 2, -1, L); mk(m + p.fuge / 2, xr, 1, R); }
+      else if (typ === 'dt-l') mk(xl, xr, -1, L);
+      else if (typ === 'dt-r') mk(xl, xr, 1, R);
+      if (ft < 15 || ft > 24) warnings.push('Drehtür Spalte ' + (c + 1) + ': Frontstärke ' + ft + ' mm, Sensys laut Datenblatt 15–24 mm.');
+    }
+
     (typeof grooves !== 'undefined' ? grooves : []).forEach((g) => { (parts[g.part].grooves = parts[g.part].grooves || []).push(g); });
     const holes = p.verbinder ? joints(parts, p, warnings) : [];
     // Spax: pro Fach (zwischen den Senkrechten) 2 vorne + 2 hinten, Durchgang im Deckel von innen (unten)
@@ -217,6 +282,50 @@
         }));
       }
     }
+
+    // Topfbänder und Montageplatten (Drehtüren), Beschlagpositionen (Schiebetüren)
+    const hingeList = [];
+    doorInfo.forEach((di) => {
+      const d = parts[di.part], bx = boxOf(d);
+      if (di.typ === 'dt') {
+        const h = bx[1][1] - bx[1][0];
+        const n = h <= 1000 ? 2 : h <= 1800 ? 3 : 4;   // Regel vom Nutzer
+        const ys = [];
+        for (let k = 0; k < n; k++) ys.push(bx[1][0] + p.bandRand + k * (h - 2 * p.bandRand) / (n - 1));
+        const edgeX = di.side < 0 ? bx[0][0] : bx[0][1];
+        const cupX = edgeX - di.side * (p.topfK + p.topfD / 2);
+        const vert = parts[di.vert.i], vb = boxOf(vert);
+        const faceX = di.side < 0 ? vb[0][1] : vb[0][0];               // Innenfläche der Senkrechten zur Tür hin
+        const into = di.side < 0 ? -1 : 1;                              // Bohrrichtung in die Senkrechte
+        const front = vb[2][1];
+        ys.forEach((y) => {
+          holes.push({ part: di.part, kind: 'face', type: 'Topf', dia: p.topfD, depth: p.topfT, axis: 2, dir: 1, at: [cupX, y, bx[2][0]] });
+          [-p.mpRaster / 2, p.mpRaster / 2].forEach((dy) => holes.push({ part: di.vert.i, kind: 'face', type: 'Montageplatte', dia: p.mpD, depth: p.mpT, axis: 0, dir: into, at: [faceX, y + dy, front - p.mpVorne] }));
+          hingeList.push({ art: di.vert.name === 'Mittelteiler' ? 'Mittelwandanschlag' : 'vorliegend', vert: di.vert.i, y });
+        });
+      } else {
+        // SlideLine M: Schraubpositionen an beiden Türenden (Durchmesser je nach Schraube – nur markiert)
+        const marks = [];
+        [bx[0][0] + p.stRand, bx[0][1] - p.stRand].forEach((x) => {
+          [0, 1, 2].forEach((k) => {
+            marks.push({ at: [x, bx[1][1] - p.stObenStart - k * p.stRaster, bx[2][0]], dia: 4, label: k ? '' : 'Führungsteil' });
+            marks.push({ at: [x, bx[1][0] + p.stUntenStart + k * p.stRaster, bx[2][0]], dia: 4, label: k ? '' : 'Laufteil' });
+          });
+        });
+        d.marks = (d.marks || []).concat(marks);
+      }
+    });
+    // Montageplatte trifft Boden/Fachboden/Deckel an derselben Fläche?
+    holes.filter((h) => h.type === 'Montageplatte').forEach((h) => {
+      parts.forEach((q) => {
+        if (!['Fachboden', 'Boden', 'Deckel'].includes(q.name)) return;
+        const qb = boxOf(q);
+        if (Math.abs(h.at[0] - qb[0][0]) > 1 && Math.abs(h.at[0] - qb[0][1]) > 1) return;
+        if (h.at[1] + h.dia / 2 > qb[1][0] && h.at[1] - h.dia / 2 < qb[1][1] && h.at[2] > qb[2][0] && h.at[2] < qb[2][1])
+          warnings.push('Topfband-Montageplatte trifft ' + q.name + ' (Höhe ' + Math.round(h.at[1]) + ' mm). Bandposition oder Fachhöhe anpassen.');
+      });
+    });
+    collisions(parts, holes, warnings);
     holes.forEach((h) => { (parts[h.part].holes = parts[h.part].holes || []).push(h); });
 
     // Gruppierte Stückliste
@@ -234,7 +343,7 @@
     const edgeM = edgeMm / 1000;
 
     return {
-      p, parts, cutlist, warnings, errors, holes, feet,
+      p, parts, cutlist, warnings, errors, holes, feet, profiles, hinges: hingeList,
       derived: { Wi, Hi, cw, ch, Db, Dk, Di, edgeM, nut }
     };
   }
@@ -302,6 +411,10 @@
         }
       });
     });
+    return holes;
+  }
+
+  function collisions(parts, holes, warnings) {
     // Kollision: Flächenbohrungen von beiden Seiten an derselben Stelle, zusammen tiefer als die Platte
     const byPart = {};
     holes.filter((h) => h.kind === 'face').forEach((h) => (byPart[h.part] = byPart[h.part] || []).push(h));
@@ -317,7 +430,6 @@
         }
       }
     });
-    return holes;
   }
 
   /* ---------- Zuschnittoptimierung (Streifen-Packung, Guillotine-tauglich) ---------- */
@@ -376,16 +488,16 @@
     const mat = MATERIALS[p.material];
     const groups = {};
     cutlist.forEach((g) => {
-      const key = g.back ? 'back' : (g.mat === 'ap' ? 'ap' : 'plate');
+      const key = g.back ? 'back' : (g.mat === 'ap' || g.mat === 'front' ? g.mat : 'plate');
       (groups[key] = groups[key] || []);
       for (let i = 0; i < g.qty; i++) groups[key].push({ no: g.no, l: g.l, w: g.w });
     });
     const result = { sheet, material: mat, groups: {}, errors: [] };
     for (const key of Object.keys(groups)) {
-      const sh = key === 'back' && p.backSheet ? p.backSheet : key === 'ap' && p.apSheet ? p.apSheet : sheet;
+      const sh = key === 'back' && p.backSheet ? p.backSheet : key === 'ap' && p.apSheet ? p.apSheet : key === 'front' && p.frontSheet ? p.frontSheet : sheet;
       const r = packSheets(groups[key], sh, p.kerf, key === 'back' ? true : p.rotate);
       r.sheet = sh;
-      r.thick = key === 'back' ? p.bt : key === 'ap' ? (p.apT || p.t) : p.t;
+      r.thick = key === 'back' ? p.bt : key === 'ap' ? (p.apT || p.t) : key === 'front' ? (p.frontT || p.t) : p.t;
       result.groups[key] = r;
       result.errors.push(...r.errors);
     }

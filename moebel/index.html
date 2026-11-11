@@ -69,6 +69,11 @@
       </div>
     </section>
     <section>
+      <h2>Türen</h2>
+      <div id="doorsBox"></div>
+      <p class="note">Drehtüren aufliegend, Fuge 3 mm, Hettich Sensys (Topf Ø35 × 12,9, K = 5), Montageplatte 37 × 32 mit Euroschrauben Ø5 × 12; 2 Bänder bis 1000 mm, 3 bis 1800, darüber 4, je 100 mm vom Rand. Schiebetüren: Hettich SlideLine M einliegend, 30 mm Überlappung; Einbaumaße aus der Hettich-Zeichnung abgelesen. Griffe: noch offen.</p>
+    </section>
+    <section>
       <h2>Verbinder</h2>
       <label class="chk"><input type="checkbox" id="verbinder"> Konfirmat + Dübel setzen</label>
       <div id="vBox" class="vgrid">
@@ -117,6 +122,14 @@
         <div id="akList" class="dlist" role="listbox" aria-label="Kante Arbeitsplatte"></div>
         <p class="note" id="akInfo"></p>
       </div>
+      <div id="frontBox">
+        <label class="row">Fronten suchen <input type="search" id="frSearch" placeholder="Dekor, z. B. W1000"></label>
+        <div id="frList" class="dlist" role="listbox" aria-label="Fronten"></div>
+        <p class="note" id="frInfo"></p>
+        <label class="row">Kante Front suchen <input type="search" id="frkSearch" placeholder="Dekor-Code"></label>
+        <div id="frkList" class="dlist" role="listbox" aria-label="Kante Fronten"></div>
+        <p class="note" id="frkInfo"></p>
+      </div>
       <label class="row">Objekt <input type="text" id="jObjekt" placeholder="z. B. Regal Flur"></label>
       <label class="row">Firma <input type="text" id="jFirma"></label>
       <label class="row">Kunden-Nr. <input type="text" id="jKunde"></label>
@@ -128,6 +141,7 @@
       <label>Explosion <input type="range" id="explode" min="0" max="100" step="1" value="0"></label>
       <label class="chk"><input type="checkbox" id="person" checked> Größenvergleich (Person 1,75 m)</label>
       <label class="chk"><input type="checkbox" id="feat" checked> Nuten und Bohrungen zeigen</label>
+      <label class="chk"><input type="checkbox" id="showDoors" checked> Türen zeigen</label>
     </section>
     <div id="warnings"></div>
   </aside>

@@ -23,7 +23,7 @@
   function rowsFromModel(model, opt) {
     const rows = [];
     model.cutlist.forEach((g) => {
-      const mat = g.back ? opt.backMaterial : g.mat === 'ap' ? (opt.apMaterial || opt.material) : opt.material;
+      const mat = g.back ? opt.backMaterial : g.mat === 'ap' ? (opt.apMaterial || opt.material) : g.mat === 'front' ? (opt.frontMaterial || opt.material) : opt.material;
       const r = {
         pos: String(g.no), mat: mat || '', thick: g.thick, name: g.name, qty: g.qty, l: g.l, w: g.w,
         drehb: g.back || opt.rotate ? 1 : null, v: '', h: '', lk: '', rk: ''
@@ -62,6 +62,7 @@
     if (opt.objekt) xml = setCell(xml, 'I8', opt.objekt);
     if (opt.kante) xml = setCell(xml, 'F10', opt.kante); // Kantenart A
     if (opt.kanteB) xml = setCell(xml, 'F11', opt.kanteB); // Kantenart B (Arbeitsplatte)
+    if (opt.kanteC) xml = setCell(xml, 'F12', opt.kanteC); // Kantenart C (Fronten)
 
     rows.forEach((r, i) => {
       const n = FIRST_ROW + i;

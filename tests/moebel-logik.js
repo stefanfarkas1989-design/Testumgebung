@@ -94,6 +94,29 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
   ok(Object.keys(M.plan(sb).groups).includes('ap'), 'Arbeitsplatte im Zuschnitt als eigene Gruppe');
   ok(M.buildRegal({ typ: 'sideboard', apT: 16 }).errors.some((e) => /zu lang/.test(e)), 'zu lange Spax wird gemeldet');
 }
+// Türen: Drehtüren aufliegend (Sensys), Schiebetüren SlideLine M einliegend
+{
+  const r = M.buildRegal({ typ: 'sideboard', W: 1800, H: 700, D: 400, shelves: 1, dividers: 2, doors: ['dt-l', 'st', 'dt-2'] });
+  const g = (n) => r.cutlist.filter((c) => c.name === n);
+  ok(!r.errors.length, 'Türen ohne Fehler');
+  ok(g('Drehtür').some((c) => c.l === 597 && c.w === 600), 'Drehtür: Höhe = Korpus − Fuge, Breite bis Mitte Mittelteiler');
+  ok(g('Drehtür').some((c) => c.qty === 2 && c.w === 298), 'Doppeltür: (600 − 3) / 2');
+  ok(g('Schiebetür')[0].l === 562 - 27 && g('Schiebetür')[0].w === 301 && g('Schiebetür')[0].qty === 2, 'Schiebetür: LH − 27, (LW − 2 + 30) / 2');
+  ok(g('Fachboden').some((c) => c.w === 387 - 59), 'Fachboden hinter den Schiebetüren 59 mm zurück');
+  ok(r.cutlist.filter((c) => c.mat === 'front').every((c) => c.edgeKind === 'C' && c.edges.length === 4), 'Fronten: Kantenart C, rundum');
+  ok(r.hinges.length === 6 && r.hinges.filter((h) => h.art === 'Mittelwandanschlag').length === 2, '6 Bänder, 2 am Mittelteiler');
+  const topf = r.holes.filter((h) => h.type === 'Topf');
+  ok(topf.length === 6 && topf.every((h) => h.dia === 35 && h.depth === 12.9), 'Topfbohrung Ø35 × 12,9');
+  const door = r.parts.find((q) => q.name === 'Drehtür');
+  const t0 = topf.find((h) => h.part === r.parts.indexOf(door));
+  ok(Math.abs((t0.at[0] - (door.pos[0] - door.size[0] / 2)) - 22.5) < 0.01, 'Topfmitte = K 5 + 17,5 vom Türrand');
+  const mp = r.holes.filter((h) => h.type === 'Montageplatte');
+  ok(mp.length === 12 && mp.every((h) => h.dia === 5 && h.depth === 12 && Math.abs(h.at[2] - (200 - 37)) < 0.01), 'Montageplatte 2 × Ø5 × 12, 37 mm von vorne');
+  ok(r.holes.filter((h) => h.type === 'Topf' && h.part === r.parts.indexOf(door)).length === 2, 'Tür bis 1000 mm: 2 Bänder');
+  const tall = M.buildRegal({ typ: 'schrank', W: 800, H: 2200, D: 600, shelves: 5, doors: ['dt-2'] });
+  ok(tall.holes.filter((h) => h.type === 'Topf').length === 8, 'Tür über 1800 mm: 4 Bänder je Tür');
+  ok(M.buildRegal({ W: 800, H: 700, D: 400, doors: ['st'], frontT: 22 }).errors.length > 0, 'Schiebetür über 20 mm wird gemeldet');
+}
 const total = m.cutlist.reduce((s, g) => s + g.qty, 0);
 const placedAll = Object.values(plan.groups).reduce((s, g) => s + g.sheets.reduce((a, sh) => a + sh.items.length, 0), 0);
 ok(total === placedAll, 'alle ' + total + ' Teile platziert (' + placedAll + ')');

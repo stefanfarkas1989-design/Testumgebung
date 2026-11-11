@@ -143,7 +143,9 @@
     const fl = (d.holesView || []).concat(d.holesOther || []);
     const ed = d.holesEdge || [];
     const s = [];
-    if ((d.marks || []).length) s.push(d.marks.length + '× Fußposition (Befestigung laut Fuß-Datenblatt, noch offen)');
+    const feetM = (d.marks || []).filter((m) => /Fuß/.test(m.label || '')).length, slM = (d.marks || []).length - feetM;
+    if (feetM) s.push(feetM + '× Fußposition (Befestigung laut Fuß-Datenblatt, noch offen)');
+    if (slM) s.push(slM + '× Schraubposition SlideLine M (Bohrung je nach Schraube)');
     if (!fl.length && !ed.length) return s.concat(['Bohrungen: keine']).join('.   ') + '.';
     if (fl.length) s.push('Flächenbohrungen (CNC): ' + cnt(fl, (h) => h.type + ' Ø' + fmt(h.dia) + (h.through ? ' durch' + (h.senk ? ', Senkung Ø' + fmt(h.senk) : '') : ' × ' + fmt(h.depth))));
     if (ed.length) s.push('Kantenbohrungen (von Hand): ' + cnt(ed, (h) => h.type + ' Ø' + fmt(h.dia) + ' × ' + fmt(h.depth) + ' Kante ' + EDGE_TXT[h.edge]));
@@ -206,7 +208,7 @@
       label(c, 'Pos ' + c.no + ' Gegenseite', '#555', fs * 0.8);
     });
     // Bohrungen: Fläche = Kreis (durchgehend: mit Kreuz), Gegenseite gestrichelt, Kante = verdeckte Bohrung gestrichelt
-    const HCOL = { 'Konfirmat': '#6a1b9a', 'Konfirmat-Kernloch': '#6a1b9a', 'Dübel': '#1b5e20', 'Spax-Durchgang': '#0d47a1' };
+    const HCOL = { 'Konfirmat': '#6a1b9a', 'Konfirmat-Kernloch': '#6a1b9a', 'Dübel': '#1b5e20', 'Spax-Durchgang': '#0d47a1', 'Topf': '#b71c1c', 'Montageplatte': '#e65100' };
     const hv = d.holesView || [], ho = d.holesOther || [], he = d.holesEdge || [];
     hv.concat(ho).forEach((h) => {
       const other = ho.includes(h) && !h.through, col = HCOL[h.type] || '#000', cx = X(h.x), cy = Y(h.y), rr = h.dia / 2;
@@ -230,7 +232,7 @@
       const cx = X(mk.x), cy = Y(mk.y), rr = mk.dia / 2;
       o.push('<circle cx="' + r1(cx) + '" cy="' + r1(cy) + '" r="' + r1(rr) + '" fill="none" stroke="#8a5a00" stroke-width="' + r1(u * 0.1) + '" stroke-dasharray="' + r1(u * 0.5) + ' ' + r1(u * 0.2) + ' ' + r1(u * 0.1) + ' ' + r1(u * 0.2) + '"/>');
       o.push('<path d="M' + r1(cx - rr * 0.6) + ' ' + r1(cy) + 'H' + r1(cx + rr * 0.6) + 'M' + r1(cx) + ' ' + r1(cy - rr * 0.6) + 'V' + r1(cy + rr * 0.6) + '" stroke="#8a5a00" stroke-width="' + r1(u * 0.06) + '"/>');
-      o.push('<text x="' + r1(cx + rr + fs * 0.2) + '" y="' + r1(cy - rr * 0.3) + '" fill="#8a5a00" font-size="' + r1(fs * 0.75) + '">' + escX(mk.label) + ' Ø' + fmt(mk.dia) + (mk.other ? ' (Gegenseite)' : '') + '</text>');
+      if (mk.label) o.push('<text x="' + r1(cx + rr + fs * 0.2) + '" y="' + r1(cy - rr * 0.3) + '" fill="#8a5a00" font-size="' + r1(fs * 0.75) + '">' + escX(mk.label) + (mk.label === 'Fuß' || /Kopf/.test(mk.label) ? ' Ø' + fmt(mk.dia) : '') + (mk.other ? ' (Gegenseite)' : '') + '</text>');
     });
 
     // Kanten (Bekantung)
