@@ -50,6 +50,7 @@
     blendeRueck: 5,     // VORGABE PRÜFEN: Deckenblende hinter der Vorderkante (zurückversetzt)
     apT: 0,             // Stärke Arbeitsplatte (0 = wie Plattenstärke)
     apUeb: 20,          // VORGABE PRÜFEN: Überstand Arbeitsplatte vorne
+    apHinten: 0,        // Luft hinter dem Korpus zur Wand, von der Arbeitsplatte überdeckt (Nutzer: 20 mm)
     // Arbeitsplatte von innen mit Spax durch den Deckel (Vorgaben vom Nutzer): 4 × 35, Durchgang Ø5, keine Vorbohrung
     spaxD: 4, spaxL: 35, spaxDurch: 5,
     korpusse: 1,
@@ -133,9 +134,10 @@
     if (p0.typ === 'sideboard') {
       const at = p0.apT || p0.t;
       const pf = p0.apFe && /postforming/i.test(p0.apFe.name);   // Vorderkante ab Werk geformt
-      parts.push({ name: 'Arbeitsplatte', cut: [Math.floor(W), Math.floor(p0.D + p0.apUeb)], grain: 0, mat: 'ap', edgeKind: 'B', edgeNames: { W0: 'Vorderkante' },
-        thick: at, back: false, size: [Math.floor(W), at, Math.floor(p0.D + p0.apUeb)], pos: [0, p0.H + at / 2, p0.apUeb / 2], edges: pf ? [] : ['W0'], noJoint: true,
-        order: [Math.floor(W) + 2 * p0.uebermass, Math.floor(p0.D + p0.apUeb)], orderNote: 'Länge +2 × ' + p0.uebermass + ' mm Übermaß zum Anpassen an die Wände' });
+      const apD = Math.floor(p0.D + p0.apUeb + p0.apHinten);
+      parts.push({ name: 'Arbeitsplatte', cut: [Math.floor(W), apD], grain: 0, mat: 'ap', edgeKind: 'B', edgeNames: { W0: 'Vorderkante' },
+        thick: at, back: false, size: [Math.floor(W), at, apD], pos: [0, p0.H + at / 2, (p0.apUeb - p0.apHinten) / 2], edges: pf ? [] : ['W0'], noJoint: true,
+        order: [Math.floor(W) + 2 * p0.uebermass, apD], orderNote: 'Länge +2 × ' + p0.uebermass + ' mm Übermaß zum Anpassen an die Wände' });
       if (W > 4100) inner.warnings.push('Arbeitsplatte ' + W + ' mm ist länger als die Frischeis-Arbeitsplatten (4100 mm).');
       if (pf) inner.warnings.push('Arbeitsplatte Postforming: Vorderkante ab Werk geformt – keine Kante gesetzt.');
       if (p0.spaxL - p0.t >= at) inner.errors.push('Spax ' + p0.spaxD + ' × ' + p0.spaxL + ' ist zu lang für die Arbeitsplatte.');
@@ -175,8 +177,9 @@
     if (all.errors.length) return { p, parts: [], cutlist: [], errors: all.errors, warnings: all.warnings, derived: {}, holes: [], feet: [], profiles: [], hinges: [] };
     if (p.typ === 'sideboard' && !p.noAp) {
       const at = p.apT || p.t;
-      all.parts.push({ name: 'Arbeitsplatte', cut: [Math.floor(p.W), Math.floor(p.D + p.apUeb)], grain: 0, mat: 'ap', edgeKind: 'B', edgeNames: { W0: 'Vorderkante' },
-        thick: at, back: false, size: [Math.floor(p.W), at, Math.floor(p.D + p.apUeb)], pos: [0, p.H + at / 2, p.apUeb / 2], edges: ['W0', 'L0', 'L1'], noJoint: true });
+      const apD = Math.floor(p.D + p.apUeb + p.apHinten);
+      all.parts.push({ name: 'Arbeitsplatte', cut: [Math.floor(p.W), apD], grain: 0, mat: 'ap', edgeKind: 'B', edgeNames: { W0: 'Vorderkante' },
+        thick: at, back: false, size: [Math.floor(p.W), at, apD], pos: [0, p.H + at / 2, (p.apUeb - p.apHinten) / 2], edges: ['W0', 'L0', 'L1'], noJoint: true });
       if (p.W > 4100) all.warnings.push('Arbeitsplatte ' + p.W + ' mm ist länger als die Frischeis-Arbeitsplatten (4100 mm).');
     }
     all.warnings.push(nk + ' Korpusse à ' + Math.round(Wk) + ' mm nebeneinander: Seitenwände untereinander verschrauben (Verbindung noch nicht festgelegt).');
@@ -282,7 +285,7 @@
     // Sideboard: Arbeitsplatte oben drauf, vorne Überstand, seitlich und hinten bündig (von unten verschraubt)
     if (p.typ === 'sideboard' && !p.noAp) {
       const at = p.apT || t;
-      add('Arbeitsplatte', [W, D + p.apUeb], { thick: at, dims: [W, at, D + p.apUeb] }, [0, H + at / 2, p.apUeb / 2], ['W0', 'L0', 'L1'], 0,
+      add('Arbeitsplatte', [W, D + p.apUeb + p.apHinten], { thick: at, dims: [W, at, D + p.apUeb + p.apHinten] }, [0, H + at / 2, (p.apUeb - p.apHinten) / 2], ['W0', 'L0', 'L1'], 0,
         { mat: 'ap', edgeKind: 'B' });
       parts[parts.length - 1].noJoint = true;   // keine Konfirmat von oben; Verschraubung von unten noch offen
       if (p.spaxL - t >= at) errors.push('Spax ' + p.spaxD + ' × ' + p.spaxL + ' ist zu lang: kommt durch die Arbeitsplatte (Deckel ' + t + ' + Platte ' + at + ' mm).');

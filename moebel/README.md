@@ -90,7 +90,8 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
   bei „Postforming“ im Artikelnamen keine Vorderkante (ab Werk geformt).
   Übermaß je Wandseite (Nutzer: 20 mm): Arbeitsplatte Länge +2 × 20, Passblenden Breite +20. Zeichnung, 3D und
   Verbinder rechnen mit Fertigmaß; Bestellmaß steht in Stückliste, Zeichnung, Zuschnitt und JAF-Formular (mit Notiz).
-  Arbeitsplatte hinten bündig mit dem Korpus (kein Überstand), vorne 20 mm.
+  Arbeitsplatte vorne 20 mm Überstand; hinten „Luft hinten“ (Vorlage Fensterwand: 20 mm) zwischen Korpus und Wand,
+  von der Arbeitsplatte überdeckt – Arbeitsplatte dann 440 tief und liegt an der Wand an.
 - 3D: Regler „Türen öffnen“ – Drehtüren schwenken um die Bandkante (bis 100°), vordere Schiebetür fährt über die hintere.
 
 ## Kataloge aktualisieren
