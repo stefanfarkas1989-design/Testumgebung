@@ -17,9 +17,14 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
 - **Kantenspalten im JAF-Formular:** V/H = Kanten entlang der Länge (V = vorne), L/R = Kanten an den Enden.
   Abgeleitet aus der Legende im Formular, nicht von Frischeis bestätigt.
 - **Farbe in 3D:** aus dem Dekornamen geschätzt.
-- **Konstruktion Regal:** Seiten durchgehend, Boden/Deckel/Fachböden dazwischen, Rückwand 3 mm aufgesetzt
-  (Rückwandmaß = Breite − 2 mm, Höhe − Sockel − 2 mm), Sockelblende 30 mm hinter der Vorderkante.
-  Das sind Konstruktionsentscheidungen, keine Normwerte.
+- **Konstruktion Regal:** Seiten durchgehend, Boden/Deckel/Fachböden dazwischen, Sockelblende 30 mm hinter
+  der Vorderkante. Das sind Konstruktionsentscheidungen, keine Normwerte.
+- **Rückwand in Nut (Standard, Vorgaben vom Nutzer):** Nut in Seiten, Boden und Deckel, 10 mm ab Hinterkante,
+  8 mm tief, Breite = Rückwandstärke; Rückwand 1 mm Luft am Nutgrund (greift 7 mm ein); Seitennut gestoppt auf
+  Höhe der Nutgründe in Boden/Deckel; Nut in Boden/Deckel durchgehend. Fachböden und Mittelteiler enden an der
+  Rückwand (Tiefe − Nutabstand − Rückwandstärke). Alles im Generator änderbar.
+  Hinweis: Eine gefräste Nut hat an ihren Enden den Radius des Fräsers.
+- **Rückwand aufgesetzt (Alternative):** Rückwandmaß = Breite − 2 mm, Höhe − Sockel − 2 mm (Konstruktionsentscheidung).
 - **Bohrungen/Verbinder:** noch keine. Maschine bohrt nur von oben (keine Kantenbohrungen).
 
 ## Kataloge aktualisieren

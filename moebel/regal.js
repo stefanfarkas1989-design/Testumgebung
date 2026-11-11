@@ -25,7 +25,12 @@
     shelves: 4,         // Fachböden (zusätzlich zu Boden und Deckel)
     dividers: 0,        // senkrechte Mittelteiler
     plinth: 0,          // Sockelhöhe
-    back: true, bt: 3,  // Rückwand (aufgesetzt, HDF)
+    back: true, bt: 3,  // Rückwand
+    backMode: 'nut',    // 'nut' = in Nut (Seiten, Boden, Deckel), 'auf' = hinten aufgesetzt
+    nutA: 10,           // Abstand Hinterkante bis Nut
+    nutT: 8,            // Nuttiefe
+    nutLuft: 1,         // Luft der Rückwand am Nutgrund (je Seite)
+    nutPlus: 0,         // Nutbreite = Rückwandstärke + nutPlus
     material: 'melamin',
     sheet: '2800x2070',
     kerf: 4,            // Sägeblattbreite
@@ -41,7 +46,12 @@
     const p = Object.assign({}, DEFAULTS, input);
     const { W, H, D, t, shelves: n, dividers: m, plinth: s } = p;
     const bt = p.back ? p.bt : 0;
-    const Db = D - bt;
+    const nut = p.back && p.backMode === 'nut';
+    // Tiefen: Korpus (Seiten, Boden, Deckel) und Innenteile (Fachböden, Mittelteiler)
+    const Dk = nut ? D : D - bt;
+    const Di = nut ? D - p.nutA - bt : D - bt;
+    const zK = D / 2 - Dk / 2, zI = D / 2 - Di / 2; // Mitte in z (Vorderkante bündig bei +D/2)
+    const Db = Dk;
     const Wi = W - 2 * t;
     const y0 = s + t, y1 = H - t, Hi = y1 - y0;
     const cw = (Wi - m * t) / (m + 1);
@@ -52,6 +62,9 @@
     if (ch < 100) errors.push('Fächer sind zu niedrig (' + round(ch) + ' mm). Weniger Fachböden oder mehr Höhe.');
     if (Hi <= 0) errors.push('Höhe ist zu klein für Sockel, Boden und Deckel.');
     if (Wi <= 0) errors.push('Breite ist zu klein.');
+    if (nut && p.nutT >= t) errors.push('Nuttiefe (' + p.nutT + ' mm) muss kleiner als die Plattenstärke (' + t + ' mm) sein.');
+    if (nut && p.nutLuft >= p.nutT) errors.push('Luft am Nutgrund muss kleiner als die Nuttiefe sein.');
+    if (nut && p.nutA + bt + p.nutPlus >= D) errors.push('Nutabstand und Rückwand sind tiefer als das Regal.');
     if (errors.length) return { p, parts: [], cutlist: [], errors, warnings, derived: {} };
 
     if (H > 4 * D) warnings.push('Schlankes Regal: an der Wand gegen Kippen sichern.');
@@ -69,33 +82,53 @@
 
     // Seitenwände
     for (const sx of [-1, 1]) {
-      add('Seitenwand', [H, Db], { thick: t, dims: [t, H, Db] },
-        [sx * (W / 2 - t / 2), H / 2, bt / 2], ['W0', 'L1'], 1); // Vorderkante, Oberkante
+      add('Seitenwand', [H, Dk], { thick: t, dims: [t, H, Dk] },
+        [sx * (W / 2 - t / 2), H / 2, zK], ['W0', 'L1'], 1); // Vorderkante, Oberkante
     }
     // Boden und Deckel
-    add('Boden', [Wi, Db], { thick: t, dims: [Wi, t, Db] }, [0, s + t / 2, bt / 2], ['W0'], 0);
-    add('Deckel', [Wi, Db], { thick: t, dims: [Wi, t, Db] }, [0, H - t / 2, bt / 2], ['W0'], 0);
+    add('Boden', [Wi, Dk], { thick: t, dims: [Wi, t, Dk] }, [0, s + t / 2, zK], ['W0'], 0);
+    add('Deckel', [Wi, Dk], { thick: t, dims: [Wi, t, Dk] }, [0, H - t / 2, zK], ['W0'], 0);
     // Sockelblende
     if (s > 0) add('Sockelblende', [Wi, s], { thick: t, dims: [Wi, s, t] }, [0, s / 2, D / 2 - 30 - t / 2], [], 0);
     // Mittelteiler
     for (let i = 0; i < m; i++) {
       const x = -Wi / 2 + (i + 1) * cw + i * t + t / 2;
-      add('Mittelteiler', [Hi, Db], { thick: t, dims: [t, Hi, Db] }, [x, (y0 + y1) / 2, bt / 2], ['W0'], 1);
+      add('Mittelteiler', [Hi, Di], { thick: t, dims: [t, Hi, Di] }, [x, (y0 + y1) / 2, zI], ['W0'], 1);
     }
     // Fachböden (je Spalte ein Stück)
     for (let j = 1; j <= n; j++) {
       const yc = y0 + j * ch + (j - 1) * t + t / 2;
       for (let c = 0; c <= m; c++) {
         const x = -Wi / 2 + c * (cw + t) + cw / 2;
-        add('Fachboden', [cw, Db], { thick: t, dims: [cw, t, Db] }, [x, yc, bt / 2], ['W0'], 0);
+        add('Fachboden', [cw, Di], { thick: t, dims: [cw, t, Di] }, [x, yc, zI], ['W0'], 0);
       }
     }
-    // Rückwand
-    if (p.back) {
+    // Rückwand und Nuten
+    const grooves = []; // Fräsbearbeitungen als Welt-Quader: { part, box: [[x0,x1],[y0,y1],[z0,z1]], name }
+    if (p.back && !nut) {
       const bw = W - 2, bh = H - s - 2;
-      add('Rückwand (HDF)', [bh, bw], { thick: bt, back: true, dims: [bw, bh, bt] },
+      add('Rückwand', [bh, bw], { thick: bt, back: true, dims: [bw, bh, bt] },
         [0, s + (H - s) / 2, -D / 2 + bt / 2], [], 1);
     }
+    if (nut) {
+      const e = p.nutT - p.nutLuft;               // Eingriff der Rückwand je Seite
+      const nb = bt + p.nutPlus;                  // Nutbreite
+      const zb0 = -D / 2 + p.nutA;                // Nut / Rückwand beginnt hier (von hinten gemessen)
+      const bw = Wi + 2 * e, bh = Hi + 2 * e;
+      add('Rückwand', [bh, bw], { thick: bt, back: true, dims: [bw, bh, bt] }, [0, (y0 + y1) / 2, zb0 + bt / 2], [], 1);
+      const gz = [zb0, zb0 + nb];
+      const iL = parts.findIndex((q) => q.name === 'Seitenwand' && q.pos[0] < 0);
+      const iR = parts.findIndex((q) => q.name === 'Seitenwand' && q.pos[0] > 0);
+      const iB = parts.findIndex((q) => q.name === 'Boden'), iT = parts.findIndex((q) => q.name === 'Deckel');
+      const gy = [y0 - p.nutT, y1 + p.nutT];      // Seitennut gestoppt: endet auf Höhe der Nutgründe in Boden/Deckel
+      grooves.push({ part: iL, box: [[-W / 2 + t - p.nutT, -W / 2 + t], gy, gz] });
+      grooves.push({ part: iR, box: [[W / 2 - t, W / 2 - t + p.nutT], gy, gz] });
+      grooves.push({ part: iB, box: [[-Wi / 2, Wi / 2], [y0 - p.nutT, y0], gz] });
+      grooves.push({ part: iT, box: [[-Wi / 2, Wi / 2], [y1, y1 + p.nutT], gz] });
+      grooves.forEach((g) => { g.name = 'Nut ' + nb + ' × ' + p.nutT + ' tief'; g.width = nb; g.depth = p.nutT; });
+    }
+
+    (typeof grooves !== 'undefined' ? grooves : []).forEach((g) => { (parts[g.part].grooves = parts[g.part].grooves || []).push(g); });
 
     // Gruppierte Stückliste
     const map = new Map();
@@ -113,7 +146,7 @@
 
     return {
       p, parts, cutlist, warnings, errors,
-      derived: { Wi, Hi, cw, ch, Db, edgeM }
+      derived: { Wi, Hi, cw, ch, Db, Dk, Di, edgeM, nut }
     };
   }
 

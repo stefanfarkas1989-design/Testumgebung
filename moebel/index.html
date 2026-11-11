@@ -42,6 +42,14 @@
       <label class="row">Rückwand
         <select id="back"><option value="3">HDF 3 mm</option><option value="0">keine</option></select>
       </label>
+      <label class="row">Montage <select id="backMode"><option value="nut">in Nut (Seiten, Boden, Deckel)</option><option value="auf">hinten aufgesetzt</option></select></label>
+      <div id="nutBox">
+        <label>Nutabstand <input type="range" id="nutA" min="0" max="40" step="1"><input type="number" id="nutAn" step="1"></label>
+        <label>Nuttiefe <input type="range" id="nutT" min="3" max="15" step="0.5"><input type="number" id="nutTn" step="0.5"></label>
+        <label>Luft Nutgrund <input type="range" id="nutLuft" min="0" max="3" step="0.5"><input type="number" id="nutLuftn" step="0.5"></label>
+        <label>Nut + Zugabe <input type="range" id="nutPlus" min="0" max="2" step="0.1"><input type="number" id="nutPlusn" step="0.1"></label>
+        <p class="note">Nutabstand ab Hinterkante. Nutbreite = Rückwandstärke + Zugabe. Seitennut endet auf Höhe der Nuten in Boden und Deckel.</p>
+      </div>
     </section>
     <section>
       <h2>Material</h2>

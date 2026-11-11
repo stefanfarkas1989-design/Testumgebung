@@ -60,8 +60,14 @@
         }
       }
     });
-    // Ansichtsseite: Seite mit den meisten Anschlüssen
-    const view = face.max.length >= face.min.length ? 'max' : 'min';
+    // Fräsbearbeitungen (Nuten) des Teils
+    const feat = { min: [], max: [] };
+    (P.grooves || []).forEach((g) => {
+      const side = Math.abs(g.box[f.ta][0] - b[f.ta][0]) < EPS ? 'min' : 'max';
+      feat[side].push(Object.assign({ name: g.name, width: g.width, depth: g.depth }, toLocal(f, b, g.box)));
+    });
+    // Ansichtsseite: Seite mit den meisten Anschlüssen und Bearbeitungen
+    const view = face.max.length + feat.max.length * 10 >= face.min.length + feat.min.length * 10 ? 'max' : 'min';
     const other = view === 'max' ? 'min' : 'max';
     // Händigkeit: Rechtssystem aus x-Richtung, y-Richtung und Blickrichtung (Normale der Ansichtsseite)
     const ex = [0, 0, 0]; ex[f.la] = 1;
@@ -71,7 +77,8 @@
     const sortC = (a, b2) => a.x0 - b2.x0 || a.y0 - b2.y0;
     return {
       frame: f, viewAxis: AX[f.ta], hand: det > 0 ? 1 : -1,
-      faceView: face[view].sort(sortC), faceOther: face[other].sort(sortC), edge: edge.sort(sortC)
+      faceView: face[view].sort(sortC), faceOther: face[other].sort(sortC), edge: edge.sort(sortC),
+      featView: feat[view].sort(sortC), featOther: feat[other].sort(sortC)
     };
   }
 
@@ -82,7 +89,7 @@
       const variants = new Map();
       g.ids.forEach((id) => {
         const c = contactsOf(model, id);
-        const sig = JSON.stringify([c.faceView, c.faceOther, c.edge].map((l) => l.map((k) => [k.x0, k.x1, k.y0, k.y1, k.edge || ''])));
+        const sig = JSON.stringify([c.faceView, c.faceOther, c.edge, c.featView, c.featOther].map((l) => l.map((k) => [k.x0, k.x1, k.y0, k.y1, k.edge || ''])));
         if (!variants.has(sig)) variants.set(sig, { c, hands: [] });
         variants.get(sig).hands.push(c.hand);
       });
@@ -92,7 +99,7 @@
         out.push({
           no: g.no, sub: variants.size > 1 ? String.fromCharCode(97 + k++) : '', name: g.name, qty: v.hands.length,
           l: g.l, w: g.w, thick: g.thick, edges: g.edges || [], edgeNames: g.edgeNames || {}, back: g.back,
-          faceView: v.c.faceView, faceOther: v.c.faceOther, edge: v.c.edge,
+          faceView: v.c.faceView, faceOther: v.c.faceOther, edge: v.c.edge, featView: v.c.featView, featOther: v.c.featOther,
           mirror: plus && minus ? { asDrawn: Math.max(plus, minus), mirrored: Math.min(plus, minus) } : null
         });
       });
@@ -121,12 +128,24 @@
       const cx = X((c.x0 + c.x1) / 2), cy = Y((c.y0 + c.y1) / 2);
       if (w >= need && h >= size * 1.2) o.push('<text x="' + r1(cx) + '" y="' + r1(cy) + '" text-anchor="middle" dominant-baseline="middle" fill="' + col + '" font-size="' + r1(size) + '">' + txt + '</text>');
       else if (h >= need && w >= size * 1.1) o.push('<text x="' + r1(cx) + '" y="' + r1(cy) + '" text-anchor="middle" dominant-baseline="middle" fill="' + col + '" font-size="' + r1(size) + '" transform="rotate(-90 ' + r1(cx) + ' ' + r1(cy) + ')">' + txt + '</text>');
-      else o.push('<text x="' + r1(X(c.x1) + size * 0.4) + '" y="' + r1(cy) + '" dominant-baseline="middle" fill="' + col + '" font-size="' + r1(size) + '">' + txt + '</text>');
+      else if (w >= need) { // flach und lang: Text knapp unter (bzw. über) dem Rechteck, innerhalb des Teils
+        const below = c.y0 > size * 1.6;
+        o.push('<text x="' + r1(cx) + '" y="' + r1(below ? Y(c.y0) + size * 1.1 : Y(c.y1) - size * 0.4) + '" text-anchor="middle" fill="' + col + '" font-size="' + r1(size) + '">' + txt + '</text>');
+      } else o.push('<text x="' + r1(X(c.x1) + size * 0.4) + '" y="' + r1(cy) + '" dominant-baseline="middle" fill="' + col + '" font-size="' + r1(size) + '">' + txt + '</text>');
     };
     o.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + r1(VW) + ' ' + r1(VH) + '" font-family="Arial, Helvetica, sans-serif" font-size="' + r1(fs) + '">');
     o.push('<rect x="0" y="0" width="' + r1(VW) + '" height="' + r1(VH) + '" fill="#ffffff"/>');
-    // Teil, dann Anschlüsse der Ansichtsseite (gefüllt), dann der Gegenseite (gestrichelt)
+    // Teil, Nuten, dann Anschlüsse der Ansichtsseite (gefüllt) und der Gegenseite (gestrichelt)
+    const hid = 'h' + d.no + d.sub;
+    o.push('<defs><pattern id="' + hid + '" width="' + r1(u * 0.8) + '" height="' + r1(u * 0.8) + '" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="' + r1(u * 0.8) + '" stroke="#b03a2e" stroke-width="' + r1(u * 0.15) + '"/></pattern></defs>');
     o.push('<rect x="' + r1(X(0)) + '" y="' + r1(Y(W)) + '" width="' + L + '" height="' + W + '" fill="#f6f3ec" stroke="#000" stroke-width="' + r1(u * 0.15) + '"/>');
+    const fv = d.featView || [], fo = d.featOther || [];
+    fv.concat(fo).forEach((g) => {
+      const other = fo.includes(g);
+      o.push('<rect x="' + r1(X(g.x0)) + '" y="' + r1(Y(g.y1)) + '" width="' + r1(g.x1 - g.x0) + '" height="' + r1(g.y1 - g.y0) + '" fill="' + (other ? 'none' : 'url(#' + hid + ')') +
+        '" stroke="#b03a2e" stroke-width="' + r1(u * 0.12) + '"' + (other ? ' stroke-dasharray="' + r1(u * 0.6) + ' ' + r1(u * 0.4) + '"' : '') + '/>');
+      label(g, g.name + (other ? ' (Gegenseite)' : ''), '#b03a2e', fs * 0.8);
+    });
     d.faceView.forEach((c) => {
       o.push('<rect x="' + r1(X(c.x0)) + '" y="' + r1(Y(c.y1)) + '" width="' + r1(c.x1 - c.x0) + '" height="' + r1(c.y1 - c.y0) +
         '" fill="#d7e3f0" stroke="#2f5d8a" stroke-width="' + r1(u * 0.12) + '"/>');
@@ -175,17 +194,24 @@
     o.push('<line x1="' + r1(dimX - fs * 0.5) + '" y1="' + r1(Y(W)) + '" x2="' + X(0) + '" y2="' + r1(Y(W)) + '" stroke="#000" stroke-width="' + sw + '"/>');
     o.push('<text x="' + r1(dimX - fs * 0.4) + '" y="' + r1(Y(W / 2)) + '" text-anchor="middle" font-weight="bold" transform="rotate(-90 ' + r1(dimX - fs * 0.4) + ' ' + r1(Y(W / 2)) + ')">' + fmt(W) + '</text>');
     // Koordinaten-Bemaßung der Anschlüsse (ab Nullpunkt links vorne)
-    const xs = [...new Set(d.faceView.concat(d.faceOther).flatMap((c) => [c.x0, c.x1]).filter((v) => v > 0.05 && v < L - 0.05))].sort((a, b) => a - b);
-    const ys = [...new Set(d.faceView.concat(d.faceOther).flatMap((c) => [c.y0, c.y1]).filter((v) => v > 0.05 && v < W - 0.05))].sort((a, b) => a - b);
+    const all = d.faceView.concat(d.faceOther, d.featView || [], d.featOther || []);
+    const xs = [...new Set(all.flatMap((c) => [c.x0, c.x1]).filter((v) => v > 0.05 && v < L - 0.05))].sort((a, b) => a - b);
+    const ys = [...new Set(all.flatMap((c) => [c.y0, c.y1]).filter((v) => v > 0.05 && v < W - 0.05))].sort((a, b) => a - b);
+    // Maßzahlen nicht überlappen lassen: Textposition mindestens eine Schrifthöhe auseinander
+    const spread = (vals, toScreen, dir) => { let last = -Infinity; return vals.map((v) => { let p = toScreen(v) * dir; if (p < last + fs * 0.95) p = last + fs * 0.95; last = p; return p * dir; }); };
+    const xText = spread(xs, X, 1), yText = spread(ys, Y, -1);
     const tickY = Y(W) - fs * 2.6;
-    xs.forEach((x) => {
+    xs.forEach((x, i) => {
       o.push('<line x1="' + r1(X(x)) + '" y1="' + r1(Y(W)) + '" x2="' + r1(X(x)) + '" y2="' + r1(tickY) + '" stroke="#000" stroke-width="' + sw + '" stroke-dasharray="' + r1(u * 0.2) + ' ' + r1(u * 0.2) + '"/>');
-      o.push('<text x="' + r1(X(x)) + '" y="' + r1(tickY - fs * 0.3) + '" font-size="' + r1(fs * 0.85) + '" transform="rotate(-90 ' + r1(X(x)) + ' ' + r1(tickY - fs * 0.3) + ')">' + fmt(x) + '</text>');
+      const tx = xText[i] + fs * 0.3;
+      if (Math.abs(xText[i] - X(x)) > 0.5) o.push('<line x1="' + r1(X(x)) + '" y1="' + r1(tickY) + '" x2="' + r1(xText[i]) + '" y2="' + r1(tickY - fs * 0.25) + '" stroke="#000" stroke-width="' + sw + '"/>');
+      o.push('<text x="' + r1(tx) + '" y="' + r1(tickY - fs * 0.3) + '" font-size="' + r1(fs * 0.85) + '" transform="rotate(-90 ' + r1(tx) + ' ' + r1(tickY - fs * 0.3) + ')">' + fmt(x) + '</text>');
     });
     const tickX = X(L) + fs * 2.6;
-    ys.forEach((y) => {
+    ys.forEach((y, i) => {
       o.push('<line x1="' + r1(X(L)) + '" y1="' + r1(Y(y)) + '" x2="' + r1(tickX) + '" y2="' + r1(Y(y)) + '" stroke="#000" stroke-width="' + sw + '" stroke-dasharray="' + r1(u * 0.2) + ' ' + r1(u * 0.2) + '"/>');
-      o.push('<text x="' + r1(tickX + fs * 0.3) + '" y="' + r1(Y(y) + fs * 0.35) + '" font-size="' + r1(fs * 0.85) + '">' + fmt(y) + '</text>');
+      if (Math.abs(yText[i] - Y(y)) > 0.5) o.push('<line x1="' + r1(tickX) + '" y1="' + r1(Y(y)) + '" x2="' + r1(tickX + fs * 0.25) + '" y2="' + r1(yText[i]) + '" stroke="#000" stroke-width="' + sw + '"/>');
+      o.push('<text x="' + r1(tickX + fs * 0.3) + '" y="' + r1(yText[i] + fs * 0.35) + '" font-size="' + r1(fs * 0.85) + '">' + fmt(y) + '</text>');
     });
     // Nullpunkt und Maserung
     o.push('<circle cx="' + X(0) + '" cy="' + r1(Y(0)) + '" r="' + r1(u * 0.5) + '" fill="#000"/>');
@@ -205,7 +231,8 @@
       'Material: ' + escX(info.material || '–'),
       'Kante (rot): ' + (d.edges.length ? d.edges.map((e) => EDGE_TXT[e] + (d.edgeNames[e] ? ' = ' + d.edgeNames[e] : '')).join(', ') + ' – ' + escX(info.kante || 'Kantenart A') : 'keine'),
       'Maße in mm ab 0/0 (links unten). Ansicht auf die Seite mit den Anschlüssen; blau = anschließendes Teil, gestrichelt = Gegenseite bzw. Anschluss an der Kante.',
-      'Bohrungen: noch keine – folgen, wenn die Verbinder festgelegt sind.'
+      ((d.featView || []).length + (d.featOther || []).length ? 'Fräsen (schraffiert): ' + (d.featView || []).concat(d.featOther || []).map((g) => g.name + ', ' + fmt(g.x1 - g.x0) + ' lang').join('; ') + '.   ' : '') +
+        'Bohrungen: noch keine – folgen, wenn die Verbinder festgelegt sind.'
     ];
     lines.forEach((t, i) => o.push('<text x="' + r1(fs) + '" y="' + r1(ty + lh * (i + 1.1)) + '">' + t + '</text>'));
     if (info.projekt) o.push('<text x="' + r1(VW - fs) + '" y="' + r1(ty + lh * 1.1) + '" text-anchor="end">' + escX(info.projekt) + '</text>');

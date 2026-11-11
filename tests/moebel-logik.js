@@ -33,6 +33,19 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
   ok(shelf.l * (d + 1) + d * t <= W - 2 * t + 1e-6, 'Fachböden passen bei W=' + W + ' t=' + t + ' d=' + d);
   ok(r.parts.every((p) => p.size.every((v) => v === p.thick || Number.isInteger(v))), 'ganze mm');
 }
+// Rückwand in Nut: Maße aus Nutparametern
+{
+  const r = M.buildRegal({ W: 800, H: 2000, D: 300, t: 19, shelves: 4, back: true, bt: 3, backMode: 'nut', nutA: 10, nutT: 8, nutLuft: 1 });
+  const g = (n) => r.cutlist.find((c) => c.name === n);
+  ok(g('Seitenwand').w === 300 && g('Boden').w === 300, 'Korpus volle Tiefe');
+  ok(g('Fachboden').w === 287, 'Fachboden endet an der Rückwand (300-10-3)');
+  ok(g('Rückwand').l === 1962 + 14 && g('Rückwand').w === 762 + 14, 'Rückwand = Innenmaß + 2 x 7');
+  const side = r.parts.find((p) => p.name === 'Seitenwand');
+  ok(side.grooves && side.grooves[0].box[1][0] === 19 - 8 && side.grooves[0].box[1][1] === 2000 - 19 + 8, 'Seitennut gestoppt auf Höhe der Nutgründe');
+  ok(M.buildRegal({ backMode: 'nut', nutT: 19, t: 19 }).errors.length > 0, 'zu tiefe Nut wird gemeldet');
+  const a = M.buildRegal({ W: 800, H: 2000, D: 300, backMode: 'auf' });
+  ok(a.cutlist.find((c) => c.name === 'Seitenwand').w === 297 && !a.parts.some((p) => p.grooves), 'aufgesetzte Rückwand ohne Nut');
+}
 const total = m.cutlist.reduce((s, g) => s + g.qty, 0);
 const placedAll = Object.values(plan.groups).reduce((s, g) => s + g.sheets.reduce((a, sh) => a + sh.items.length, 0), 0);
 ok(total === placedAll, 'alle ' + total + ' Teile platziert (' + placedAll + ')');

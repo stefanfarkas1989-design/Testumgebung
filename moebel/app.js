@@ -29,7 +29,7 @@
   }
 
   /* ---------- Formular ---------- */
-  const pairs = ['W', 'H', 'D', 'plinth', 'shelves', 'dividers'];
+  const pairs = ['W', 'H', 'D', 'plinth', 'shelves', 'dividers', 'nutA', 'nutT', 'nutLuft', 'nutPlus'];
   function initForm() {
     Object.entries(M.MATERIALS).forEach(([k, m]) => $('material').add(new Option(m.name, k)));
     Object.entries(M.SHEETS).forEach(([k, s]) => $('sheet').add(new Option(s.name, k)));
@@ -42,9 +42,10 @@
     $('back').addEventListener('change', () => {
       const v = Number($('back').value); state.back = v > 0; if (v > 0) state.bt = v;
       if (!state.backFe || state.backFe.t !== v) { delete state.backFe; delete state.backSheet; }
-      update();
+      syncForm(); update();
     });
     $('material').addEventListener('change', () => { state.material = $('material').value; update(); });
+    $('backMode').addEventListener('change', () => { state.backMode = $('backMode').value; syncForm(); update(); });
     $('t').addEventListener('change', () => { state.t = Number($('t').value); update(); if (typeof kanten !== 'undefined') kanten.render(); });
     $('sheet').addEventListener('change', () => { state.sheet = $('sheet').value; update(); });
     $('rotate').addEventListener('change', () => { state.rotate = $('rotate').checked; update(); });
@@ -55,6 +56,9 @@
   function syncForm() {
     pairs.forEach((k) => { $(k).value = state[k]; $(k + 'n').value = state[k]; });
     $('back').value = state.back ? state.bt : 0;
+    $('backMode').value = state.backMode || 'nut';
+    $('nutBox').hidden = !state.back || state.backMode !== 'nut';
+    $('backMode').disabled = !state.back;
     $('material').value = state.material;
     $('t').value = state.t;
     $('sheet').value = state.sheet;
