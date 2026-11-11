@@ -37,8 +37,9 @@
       <label>Sockelhöhe <input type="range" id="plinth" min="0" max="200" step="5"><input type="number" id="plinthn" step="5"></label>
       <label class="row">Möbeltyp <select id="typ"><option value="regal">Regal (oben offen)</option><option value="schrank">Schrank: Deckenblende</option><option value="sideboard">Sideboard: Arbeitsplatte</option></select></label>
       <label class="row">Sockel <select id="sockel"><option value="fuesse">verstellbare Füße + Sockelblende</option><option value="seiten">Seiten bis zum Boden</option></select></label>
+      <label class="row" id="fussRow">Fuß <select id="fussTyp"><option value="hettich">Hettich 100–120 (4er-Set)</option><option value="qwork">QWORK 100–120 (20 Stk.)</option></select></label>
+      <p class="note" id="fussInfo"></p>
       <div class="vgrid" id="typBox">
-        <label data-for="fuesse">Fuß Ø <input type="number" data-k="fussD" step="1"></label>
         <label data-for="fuesse">Fuß Rand* <input type="number" data-k="fussRand" step="1"></label>
         <label data-for="sockel">Blende zurück* <input type="number" data-k="sockelRueck" step="1"></label>
         <label data-for="fuesse">Blende Luft* <input type="number" data-k="sockelLuft" step="1" min="0"></label>
@@ -49,7 +50,7 @@
         <label data-for="sideboard">Spax Rand* <input type="number" data-k="spaxRand" step="1" min="1"></label>
         <label data-for="sideboard">Überstand vorne* <input type="number" data-k="apUeb" step="1" min="0"></label>
       </div>
-      <p class="note">Höhe = Korpus inkl. Füße; Deckenblende bzw. Arbeitsplatte kommen oben dazu. * = Vorgabe, bitte prüfen. Fuß: Hettich Sockel-Verstellfuß-Set, 4 Stk., 100–120 mm, max. 200 kg, inkl. Klips (EAN 4008057011990); Schraubbild noch offen. Platte stark 0 = wie Korpus. Arbeitsplatte: Spax 4 × 35 von innen, Ø5 Durchgang im Deckel, pro Fach 4 Stück.</p>
+      <p class="note">Höhe = Korpus inkl. Füße; Deckenblende bzw. Arbeitsplatte kommen oben dazu. * = Vorgabe, bitte prüfen. Platte stark 0 = wie Korpus. Arbeitsplatte: Spax 4 × 35 von innen, Ø5 Durchgang im Deckel, pro Fach 4 Stück.</p>
     </section>
     <section>
       <h2>Aufbau</h2>

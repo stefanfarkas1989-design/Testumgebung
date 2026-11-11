@@ -73,6 +73,10 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
   ok(f.feet.length === 4 && f.feet.every((x) => x.d === 25 && x.h === 100), '4 Füße Ø25 × 100');
   ok(M.buildRegal({ plinth: 80, sockel: 'fuesse' }).warnings.some((w) => /Verstellbereich/.test(w)), 'Sockelhöhe außerhalb 100–120 wird gemeldet');
   ok(!f.warnings.some((w) => /Verstellbereich/.test(w)), '100 mm liegt im Verstellbereich');
+  const q = M.buildRegal({ fussTyp: 'qwork', plinth: 120 });
+  ok(q.feet.every((x) => x.d === 25 && x.platte === 70 && x.kopf === 46) && !q.warnings.some((w) => /Verstellbereich/.test(w)), 'QWORK: Ø25, Platte 70, 100–120');
+  ok(M.buildRegal({ fussTyp: 'qwork', plinth: 130 }).warnings.some((w) => /Verstellbereich/.test(w)), 'QWORK 130 mm außerhalb (Titelangabe 100–120)');
+  ok(M.buildRegal({ fussTyp: 'qwork', fussRand: 30 }).warnings.some((w) => /Grundplatte/.test(w)), 'Grundplatte steht über');
   ok(g(f, 'Sockelblende').l === 800 && !f.holes.some((h) => f.parts[h.part].name === 'Sockelblende'), 'Sockelblende volle Breite, geklipst, ohne Verbinder');
   const s = M.buildRegal({ typ: 'schrank', W: 800, H: 2200, D: 600, raumH: 2500, blendeLuft: 5 });
   ok(g(s, 'Deckenblende').w === 295 && g(s, 'Deckenblende').l === 800, 'Deckenblende = Raumhöhe − Höhe − Luft');

@@ -55,6 +55,7 @@
     $('person').addEventListener('change', () => { if (personMesh) personMesh.visible = $('person').checked; render(); });
     $('typ').addEventListener('change', () => { state.typ = $('typ').value; syncForm(); update(); });
     $('sockel').addEventListener('change', () => { state.sockel = $('sockel').value; syncForm(); update(); });
+    $('fussTyp').addEventListener('change', () => { state.fussTyp = $('fussTyp').value; syncForm(); update(); });
     document.querySelectorAll('#typBox input[data-k]').forEach((el) => el.addEventListener('change', () => {
       const v = Number(el.value); if (Number.isFinite(v) && v >= 0) state[el.dataset.k] = v; syncForm(); update();
     }));
@@ -71,6 +72,9 @@
     $('typ').value = state.typ || 'regal';
     $('apBox').hidden = state.typ !== 'sideboard';
     $('sockel').value = state.sockel || 'fuesse';
+    $('fussTyp').value = state.fussTyp || 'hettich';
+    $('fussRow').hidden = state.sockel !== 'fuesse';
+    $('fussInfo').textContent = state.sockel === 'fuesse' ? (M.FEET[state.fussTyp] || M.FEET.hettich).quelle + '.' : '';
     document.querySelectorAll('#typBox label').forEach((lb) => {
       const f = lb.dataset.for;
       lb.hidden = !(f === 'sockel' || f === state.sockel || f === state.typ);
@@ -189,14 +193,14 @@
     const holes = model.holes || [];
     const konf = holes.filter((h) => h.kind === 'face' && h.type === 'Konfirmat').length;
     const dueb = holes.filter((h) => h.kind === 'face' && h.type === 'Dübel').length;
-    const feet = (model.feet || []).length, set = state.fussSet || 4;
+    const feet = (model.feet || []).length, FT = M.FEET[state.fussTyp] || M.FEET.hettich, set = FT.set;
     const spax = holes.filter((h) => h.type === 'Spax-Durchgang').length;
     if (!konf && !dueb && !feet && !spax) return '';
     return '<table style="margin-top:12px"><thead><tr><th>Beschlag</th><th>Bezugsquelle</th><th class="n">Stück</th></tr></thead><tbody>' +
       (konf ? '<tr><td>Konfirmat 7 × 50</td><td>frei, z. B. Amazon – Kernloch/Senkung laut Hersteller mit Bohrbild abgleichen</td><td class="n">' + konf + '</td></tr>' : '') +
       (dueb ? '<tr><td>Rillendübel Buche 8 × 30</td><td>Frischeis 69010/0008 oder gleichwertig, z. B. Amazon</td><td class="n">' + dueb + '</td></tr>' : '') +
       (spax ? '<tr><td>Spax ' + state.spaxD + ' × ' + state.spaxL + ' (Arbeitsplatte von innen)</td><td>frei</td><td class="n">' + spax + '</td></tr>' : '') +
-      (feet ? '<tr><td>Hettich Sockelverstellfuß-Set 100–120 × Ø25 mm (' + set + ' Stk., inkl. Klips)</td><td>Hettich DIY Art.-Nr. 9149109, EAN 4008057011990</td><td class="n">' + Math.ceil(feet / set) + ' Set (' + feet + ' Füße)</td></tr>' : '') +
+      (feet ? '<tr><td>' + esc(FT.name) + '</td><td>' + esc(FT.bezug) + '</td><td class="n">' + Math.ceil(feet / set) + ' Pack (' + feet + ' Füße)</td></tr>' : '') +
       '</tbody></table>';
   }
 
@@ -606,6 +610,12 @@
       const c = new THREE.Mesh(new THREE.CylinderGeometry(f.d / 2 * k, f.d / 2 * k, f.h * k, 20), footMat);
       c.position.set(f.x * k, f.h * k / 2, f.z * k); c.castShadow = true;
       group.add(c);
+      // Grundplatte und Kopf nur, wenn das Produkt Maße dafür nennt (Höhe der Scheiben nur zur Darstellung)
+      [[f.platte, 3], [f.kopf, f.h - 6]].forEach(([dd, y]) => {
+        if (!dd) return;
+        const disc = new THREE.Mesh(new THREE.CylinderGeometry(dd / 2 * k, dd / 2 * k, 6 * k, 24), footMat);
+        disc.position.set(f.x * k, y * k, f.z * k); group.add(disc);
+      });
     });
     const topY = Math.max(...model.parts.map((pt) => pt.pos[1] + pt.size[1] / 2));
     cam.target.set(0, topY * k / 2, 0);

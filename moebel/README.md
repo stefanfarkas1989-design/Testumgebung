@@ -40,7 +40,10 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
   inkl. Klips für Frontblenden, EAN 4008057011990 (Produktbeschreibung vom Nutzer). Ø25 laut Produktname.
   Hettich-DIY-Shop: Sockelverstellfuß-Set 100–120 × Ø25 mm, Kunststoff schwarz, Art.-Nr. 9149109
   (Einzelfuß 9149088). Händler (der-technikprofi.de) nennt GTIN 4008057017015 für ein gleich beschriebenes Set.
-  Schraubbild/Montage fehlt in allen Quellen; ob 200 kg je Set oder je Fuß gilt, ist offen. Korpus steht auf Füßen, Seiten enden bündig mit dem Boden.
+  Schraubbild/Montage fehlt in allen Quellen; ob 200 kg je Set oder je Fuß gilt, ist offen.
+  Alternative **QWORK** (Amazon, 20 Stück mit Sockelclips und Verbindungsplatten): Verstellbereich 100–120 mm
+  laut Titel (Zeichnung im Angebot zeigt 100–140 mm – ungeprüft), Grundplatte 70 mm, Kopf Ø46, Clip für Ø25,
+  Verbindungsplatte 50 × 30 mit 2 Löchern (Lochabstand nicht bemaßt). Schraubbild fehlt. Korpus steht auf Füßen, Seiten enden bündig mit dem Boden.
   Füße je Senkrechte vorne und hinten, Randabstand 50 mm*. Sockelblende volle Breite, 30 mm* zurück, geklipst.
 - **Schrank:** Deckenblende zurückversetzt (5 mm*), Höhe = Raumhöhe (2500*) − Schrankhöhe − Luft (5 mm*),
   von innen durch den Deckel mit Konfirmat/Dübel verbunden.

@@ -19,6 +19,20 @@
     '2440x1220': { l: 2440, w: 1220, name: '2440 × 1220 (Baumarkt)' }
   };
 
+  // Fußtypen mit ihren Quellen. null = unbekannt (keine Annahme).
+  const FEET = {
+    hettich: {
+      name: 'Hettich Sockelverstellfuß-Set 100–120 × Ø25 mm, inkl. Klips', bezug: 'Hettich DIY Art.-Nr. 9149109, EAN 4008057011990',
+      rohr: 25, min: 100, max: 120, set: 4, platte: null, kopf: null,
+      quelle: 'Produktbeschreibung (Screenshot) und Hettich-DIY-Shop; Schraubbild fehlt'
+    },
+    qwork: {
+      name: 'QWORK Möbelfüße verstellbar, 20 Stück, mit Sockelclips und Verbindungsplatten', bezug: 'Amazon (QWORK)',
+      rohr: 25, min: 100, max: 120, set: 20, platte: 70, kopf: 46,
+      quelle: 'Amazon-Angebot (Screenshot): 100–120 mm laut Titel – die Zeichnung zeigt 100–140 mm, ungeprüft; Grundplatte 70 mm, Kopf Ø46, Clip für Ø25; Schraubbild fehlt'
+    }
+  };
+
   const DEFAULTS = {
     W: 800, H: 2000, D: 300,
     t: 19,              // Plattenstärke
@@ -27,9 +41,7 @@
     plinth: 100,        // Sockelhöhe (bei Füßen: Fußhöhe = Abstand Boden-Unterkante zum Fußboden)
     typ: 'regal',       // 'regal' | 'schrank' (Deckenblende) | 'sideboard' (Arbeitsplatte)
     sockel: 'fuesse',   // 'fuesse' = Korpus auf verstellbaren Füßen, 'seiten' = Seiten bis zum Boden
-    fussD: 25,          // Fuß-Ø laut Produktname (Hettich Sockel-Verstellfuß-Set Ø25 × 100)
-    fussMin: 100, fussMax: 120,   // Verstellbereich laut Produktbeschreibung (Hettich, EAN 4008057011990)
-    fussSet: 4,         // Füße je Set laut Produktbeschreibung
+    fussTyp: 'hettich', // siehe FEET
     fussRand: 50,       // VORGABE PRÜFEN: Abstand Fußmitte von Vorder-, Hinter- und Seitenkante des Korpus
     sockelRueck: 30,    // VORGABE PRÜFEN: Sockelblende hinter der Vorderkante
     sockelLuft: 0,      // VORGABE PRÜFEN: Luft Sockelblende zum Fußboden
@@ -90,8 +102,11 @@
     if (nut && p.nutLuft >= p.nutT) errors.push('Luft am Nutgrund muss kleiner als die Nuttiefe sein.');
     if (nut && p.nutA + bt + p.nutPlus >= D) errors.push('Nutabstand und Rückwand sind tiefer als das Regal.');
     if (p.sockel === 'fuesse' && s <= 0) errors.push('Bei Füßen bitte eine Sockelhöhe (Fußhöhe) angeben.');
-    if (p.sockel === 'fuesse' && s > 0 && (s < p.fussMin || s > p.fussMax))
-      warnings.push('Sockelhöhe ' + s + ' mm liegt außerhalb des Verstellbereichs der Füße (' + p.fussMin + '–' + p.fussMax + ' mm).');
+    const FT = FEET[p.fussTyp] || FEET.hettich;
+    if (p.sockel === 'fuesse' && s > 0 && (s < FT.min || s > FT.max))
+      warnings.push('Sockelhöhe ' + s + ' mm liegt außerhalb des Verstellbereichs der Füße (' + FT.min + '–' + FT.max + ' mm).');
+    if (p.sockel === 'fuesse' && FT.platte && p.fussRand < FT.platte / 2)
+      warnings.push('Fuß-Randabstand ' + p.fussRand + ' mm: die Grundplatte (' + FT.platte + ' mm) steht über den Korpus hinaus.');
     if (errors.length) return { p, parts: [], cutlist: [], errors, warnings, derived: {} };
 
     if (H > 4 * D) warnings.push('Schlankes Regal: an der Wand gegen Kippen sichern.');
@@ -157,9 +172,9 @@
     if (feetMode && s > 0) {
       const xs = [-W / 2 + p.fussRand, W / 2 - p.fussRand];
       for (let i = 0; i < m; i++) xs.push(-Wi / 2 + (i + 1) * cw + i * t + t / 2);
-      xs.sort((a, b) => a - b).forEach((x) => [D / 2 - p.fussRand, -D / 2 + p.fussRand].forEach((z) => feet.push({ x, z, d: p.fussD, h: s })));
+      xs.sort((a, b) => a - b).forEach((x) => [D / 2 - p.fussRand, -D / 2 + p.fussRand].forEach((z) => feet.push({ x, z, d: FT.rohr, h: s, platte: FT.platte, kopf: FT.kopf })));
       const iBoden = parts.findIndex((q) => q.name === 'Boden');
-      parts[iBoden].marks = feet.map((f) => ({ at: [f.x, s, f.z], dia: f.d, label: 'Fuß' }));
+      parts[iBoden].marks = feet.map((f) => ({ at: [f.x, s, f.z], dia: f.kopf || f.d, label: 'Fuß' + (f.kopf ? ' (Kopf)' : '') }));
     }
 
     // Rückwand und Nuten
@@ -377,7 +392,7 @@
     return result;
   }
 
-  const api = { MATERIALS, SHEETS, DEFAULTS, buildRegal, packSheets, plan };
+  const api = { MATERIALS, SHEETS, DEFAULTS, FEET, buildRegal, packSheets, plan };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Moebel = api;
 })(typeof window !== 'undefined' ? window : globalThis);
