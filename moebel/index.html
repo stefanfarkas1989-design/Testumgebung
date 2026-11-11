@@ -60,8 +60,14 @@
       <p class="note" id="dInfo">Katalog wird geladen …</p>
       <label class="row">Platte <input type="text" id="jMat" list="jArt" placeholder="Art.-Nr. + Bezeichnung"></label>
       <datalist id="jArt"></datalist>
-      <label class="row">Rückwand <input type="text" id="jBack" placeholder="Art.-Nr. HDF 3 mm"></label>
-      <label class="row">Kante A <input type="text" id="jKante" placeholder="Kante passend zur Platte"></label>
+      <label class="row">Kante suchen <input type="search" id="kSearch" placeholder="Dekor-Code, z. B. H1145"></label>
+      <div id="kList" class="dlist" role="listbox" aria-label="Kanten"></div>
+      <p class="note" id="kInfo"></p>
+      <label class="row">Kante A <input type="text" id="jKante" placeholder="Art.-Nr. + Bezeichnung"></label>
+      <label class="row">Rückwand suchen <input type="search" id="bSearch" placeholder="z. B. HDF weiß 3"></label>
+      <div id="bList" class="dlist" role="listbox" aria-label="Rückwände"></div>
+      <p class="note" id="bInfo"></p>
+      <label class="row">Rückwand <input type="text" id="jBack" placeholder="Art.-Nr. + Bezeichnung"></label>
       <label class="row">Objekt <input type="text" id="jObjekt" placeholder="z. B. Regal Flur"></label>
       <label class="row">Firma <input type="text" id="jFirma"></label>
       <label class="row">Kunden-Nr. <input type="text" id="jKunde"></label>

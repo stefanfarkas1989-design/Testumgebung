@@ -40,9 +40,13 @@
       r.addEventListener('input', () => set(r.value));
       n.addEventListener('change', () => { r.value = n.value; set(n.value); });
     });
-    $('back').addEventListener('change', () => { const v = Number($('back').value); state.back = v > 0; if (v > 0) state.bt = v; update(); });
+    $('back').addEventListener('change', () => {
+      const v = Number($('back').value); state.back = v > 0; if (v > 0) state.bt = v;
+      if (!state.backFe || state.backFe.t !== v) { delete state.backFe; delete state.backSheet; }
+      update();
+    });
     $('material').addEventListener('change', () => { state.material = $('material').value; priceOverride = null; update(); });
-    $('t').addEventListener('change', () => { state.t = Number($('t').value); update(); });
+    $('t').addEventListener('change', () => { state.t = Number($('t').value); update(); if (typeof kanten !== 'undefined') kanten.render(); });
     $('sheet').addEventListener('change', () => { state.sheet = $('sheet').value; update(); });
     $('rotate').addEventListener('change', () => { state.rotate = $('rotate').checked; update(); });
     $('price').addEventListener('change', () => { priceOverride = Number($('price').value); update(); });
@@ -99,13 +103,13 @@
   }
 
   function renderCut() {
-    let html = '<p class="note">Rohplatte ' + plan.sheet.l + ' × ' + plan.sheet.w + ' mm, je ' + 10 + ' mm Besäumschnitt, ' +
+    let html = '<p class="note">Je 10 mm Besäumschnitt, ' +
       state.kerf + ' mm Sägeblatt. Zahlen = Nr aus der Stückliste.</p>';
     const names = { plate: M.MATERIALS[state.material].name + ' ' + state.t + ' mm', back: 'HDF-Rückwand ' + state.bt + ' mm' };
     for (const key of Object.keys(plan.groups)) {
       const g = plan.groups[key];
       g.sheets.forEach((sh, i) => {
-        const S = plan.sheet;
+        const S = g.sheet;
         let svg = '<svg viewBox="0 0 ' + S.l + ' ' + S.w + '"><rect x="0" y="0" width="' + S.l + '" height="' + S.w + '" fill="none" stroke="#999" stroke-width="6"/>' +
           '<rect x="' + g.trim + '" y="' + g.trim + '" width="' + g.SL + '" height="' + g.SW + '" fill="none" stroke="#bbb" stroke-dasharray="20 14" stroke-width="3"/>';
         sh.items.forEach((it) => {
@@ -116,7 +120,7 @@
             Math.max(40, Math.min(110, it.w * 0.45)) + '" fill="#222">' + it.no + (it.rot ? '↻' : '') + '</text>';
         });
         svg += '</svg>';
-        html += '<div class="sheet"><h3>' + names[key] + ' – Platte ' + (i + 1) + ' von ' + g.sheets.length +
+        html += '<div class="sheet"><h3>' + names[key] + ' – Platte ' + (i + 1) + ' von ' + g.sheets.length + ', ' + S.l + ' × ' + S.w + ' mm' +
           ' (' + Math.round(sh.usage * 100) + ' % genutzt)</h3>' + svg + '</div>';
       });
     }
@@ -187,6 +191,8 @@
     $('jMat').value = a.nr + ' ' + a.name;
     $('jMat').dispatchEvent(new Event('change'));
     syncForm(); update(); renderDekor();
+    const code = decorCode(a.name);
+    if (code && kanten.items.length) { $('kSearch').value = code; kanten.render(); }
   }
 
   function renderDekor() {
@@ -227,6 +233,83 @@
     $('dThick').addEventListener('change', renderDekor);
     $('dList').addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (b) applyDekor(catalog[Number(b.dataset.i)]); });
     renderDekor();
+  }
+
+  /* ---------- Kanten und Rückwände aus dem Frischeis-Katalog ---------- */
+  const decorCode = (name) => { const m = /\b([A-Z]{1,2}\d{3,5})\b/.exec(name || ''); return m ? m[1] : ''; };
+  const unpack = (data) => data.artikel.map((r) => ({ nr: r[0], name: r[1], l: r[2], w: r[3], t: r[4], kat: data.kategorien[r[5]] }));
+  async function loadJson(globalName, file) {
+    if (window[globalName]) return window[globalName];
+    const r = await fetch(file); if (!r.ok) throw new Error(file); return r.json();
+  }
+
+  // Kleine Such-Liste: tippen, filtern, sortieren, anklicken
+  function makePicker(o) {
+    const p = { items: [] };
+    p.render = () => {
+      const q = $(o.search).value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      if (!p.items.length) { $(o.info).textContent = o.missing; $(o.list).innerHTML = ''; return; }
+      const hits = p.items.filter((a) => o.accept(a) && q.every((w) => (a.nr + ' ' + a.name).toLowerCase().includes(w)));
+      hits.sort((x, y) => o.rank(x) - o.rank(y) || x.name.localeCompare(y.name, 'de'));
+      const shown = q.length ? hits.slice(0, 40) : [];
+      const cur = o.current();
+      $(o.list).innerHTML = shown.map((a) => '<button type="button" role="option" data-nr="' + esc(a.nr) + '"' + (a.nr === cur ? ' class="on" aria-selected="true"' : '') + '>' +
+        '<span class="sw" style="background:' + guessColor(a.name) + '"></span><span>' + esc(a.name) + '</span><small>' + esc(a.nr) + ' · ' + o.detail(a) + '</small></button>').join('');
+      $(o.info).textContent = (q.length ? (hits.length > 40 ? '40 von ' + hits.length + ' Treffern.' : hits.length + ' Treffer.') : o.hint(p.items.length)) +
+        (cur ? ' Gewählt: ' + cur + '.' : '');
+    };
+    $(o.search).addEventListener('input', p.render);
+    $(o.list).addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-nr]'); if (!b) return;
+      const a = p.items.find((x) => x.nr === b.dataset.nr); if (a) { o.pick(a); p.render(); }
+    });
+    return p;
+  }
+
+  const kanten = makePicker({
+    search: 'kSearch', list: 'kList', info: 'kInfo', missing: 'Kantenkatalog nicht verfügbar.',
+    accept: (a) => a.w >= state.t + 1,               // Kante muss höher als die Platte sein
+    rank: (a) => Math.abs(a.w - (state.t + 4)) * 10 + a.t, // Standard: ca. 4 mm Überstand, dünne Kante zuerst
+    detail: (a) => fmtT(a.w) + ' × ' + fmtT(a.t) + ' mm, Rolle ' + Math.round(a.l / 1000) + ' m',
+    hint: (n) => n + ' Kanten von frischeis.at. Nach Dekor-Code oder Name suchen; nur Kanten, die höher als die Platte sind.',
+    current: () => state.kanteFe && state.kanteFe.nr,
+    pick: (a) => {
+      state.kanteFe = { nr: a.nr, name: a.name, w: a.w, t: a.t };
+      $('jKante').value = a.nr + ' ' + a.name; $('jKante').dispatchEvent(new Event('change')); saveState();
+    }
+  });
+
+  const rueck = makePicker({
+    search: 'bSearch', list: 'bList', info: 'bInfo', missing: 'Rückwandkatalog nicht verfügbar.',
+    accept: () => true,
+    rank: (a) => Math.abs(a.t - 3) * 10,
+    detail: (a) => fmtT(a.t) + ' mm · ' + a.l + '×' + a.w,
+    hint: (n) => n + ' dünne Platten bis 8 mm (MDF/HDF roh und dekorativ).',
+    current: () => state.backFe && state.backFe.nr,
+    pick: (a) => {
+      state.backFe = { nr: a.nr, name: a.name, l: a.l, w: a.w, t: a.t };
+      state.backSheet = { l: a.l, w: a.w, name: a.l + ' × ' + a.w };
+      state.back = true; state.bt = a.t; ensureBackOption(a.t);
+      $('jBack').value = a.nr + ' ' + a.name; $('jBack').dispatchEvent(new Event('change'));
+      syncForm(); update();
+    }
+  });
+  function ensureBackOption(t) {
+    const sel = $('back');
+    if (![...sel.options].some((o) => Number(o.value) === Number(t))) sel.add(new Option('Frischeis ' + fmtT(t) + ' mm', t), sel.options[sel.options.length - 1]);
+  }
+
+  async function initKantenRueck() {
+    if (state.backFe) ensureBackOption(state.backFe.t);
+    syncForm();
+    try { kanten.items = unpack(await loadJson('__FE_KANTEN', 'frischeis-kanten.json')); } catch (e) { kanten.items = []; }
+    try {
+      const thin = catalog.filter((a) => a.t <= 8.1);
+      const roh = unpack(await loadJson('__FE_RUECK', 'frischeis-rueckwand.json'));
+      const have = new Set(roh.map((x) => x.nr));
+      rueck.items = roh.concat(thin.filter((x) => !have.has(x.nr)));
+    } catch (e) { rueck.items = catalog.filter((a) => a.t <= 8.1); }
+    kanten.render(); rueck.render();
   }
 
   /* ---------- JAF/Frischeis-Formular ---------- */
@@ -412,7 +495,8 @@
   }
 
   loadState();
-  initForm(); restoreFe(); initTabs(); initJaf(); init3D(); syncForm(); update(); initDekor();
+  initForm(); restoreFe(); initTabs(); initJaf(); init3D(); syncForm(); update();
+  initDekor().then(initKantenRueck);
   $('btnCsv').addEventListener('click', exportCsv);
   $('btnPrint').addEventListener('click', () => window.print());
   $('btnLink').addEventListener('click', () => {

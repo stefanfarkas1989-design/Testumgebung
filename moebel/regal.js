@@ -208,10 +208,12 @@
     const result = { sheet, material: mat, groups: {}, errors: [], cost: {} };
     let total = 0;
     for (const key of Object.keys(groups)) {
-      const r = packSheets(groups[key], sheet, p.kerf, key === 'back' ? true : p.rotate);
+      const sh = key === 'back' && p.backSheet ? p.backSheet : sheet;
+      const r = packSheets(groups[key], sh, p.kerf, key === 'back' ? true : p.rotate);
+      r.sheet = sh;
       result.groups[key] = r;
       result.errors.push(...r.errors);
-      const area = (sheet.l * sheet.w) / 1e6;
+      const area = (sh.l * sh.w) / 1e6;
       const price = key === 'back' ? p.backPrice : mat.price;
       const thick = key === 'back' ? p.bt : p.t;
       const cost = r.sheets.length * area * price;
