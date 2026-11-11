@@ -179,7 +179,7 @@
     return '<table style="margin-top:12px"><thead><tr><th>Beschlag</th><th>Bezugsquelle</th><th class="n">Stück</th></tr></thead><tbody>' +
       (konf ? '<tr><td>Konfirmat 7 × 50</td><td>frei, z. B. Amazon – Kernloch/Senkung laut Hersteller mit Bohrbild abgleichen</td><td class="n">' + konf + '</td></tr>' : '') +
       (dueb ? '<tr><td>Rillendübel Buche 8 × 30</td><td>Frischeis 69010/0008 oder gleichwertig, z. B. Amazon</td><td class="n">' + dueb + '</td></tr>' : '') +
-      (feet ? '<tr><td>Hettich Sockel-Verstellfuß-Set (' + set + ' Stk., 100–120 mm, inkl. Klips)</td><td>EAN 4008057011990</td><td class="n">' + Math.ceil(feet / set) + ' Set (' + feet + ' Füße)</td></tr>' : '') +
+      (feet ? '<tr><td>Hettich Sockelverstellfuß-Set 100–120 × Ø25 mm (' + set + ' Stk., inkl. Klips)</td><td>Hettich DIY Art.-Nr. 9149109, EAN 4008057011990</td><td class="n">' + Math.ceil(feet / set) + ' Set (' + feet + ' Füße)</td></tr>' : '') +
       '</tbody></table>';
   }
 
