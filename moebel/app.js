@@ -163,8 +163,8 @@
     const dueb = holes.filter((h) => h.kind === 'face' && h.type === 'Dübel').length;
     if (!konf && !dueb) return '';
     return '<table style="margin-top:12px"><thead><tr><th>Beschlag</th><th>Bezugsquelle</th><th class="n">Stück</th></tr></thead><tbody>' +
-      (konf ? '<tr><td>Konfirmat 7 × 50</td><td>offen (nicht im Frischeis-Shop gefunden)</td><td class="n">' + konf + '</td></tr>' : '') +
-      (dueb ? '<tr><td>Rillendübel Buche 8 × 30</td><td>Frischeis 69010/0008</td><td class="n">' + dueb + '</td></tr>' : '') +
+      (konf ? '<tr><td>Konfirmat 7 × 50</td><td>frei, z. B. Amazon – Kernloch/Senkung laut Hersteller mit Bohrbild abgleichen</td><td class="n">' + konf + '</td></tr>' : '') +
+      (dueb ? '<tr><td>Rillendübel Buche 8 × 30</td><td>Frischeis 69010/0008 oder gleichwertig, z. B. Amazon</td><td class="n">' + dueb + '</td></tr>' : '') +
       '</tbody></table>';
   }
 
