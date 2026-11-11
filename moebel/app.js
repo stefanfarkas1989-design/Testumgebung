@@ -13,7 +13,7 @@
     sideboard: { W: 1800, H: 700,  D: 400, shelves: 1, dividers: 2, plinth: 100, typ: 'sideboard', korpusse: 1, doors: [], wand: false },
     hochschrank: { W: 800, H: 2200, D: 600, shelves: 5, dividers: 0, plinth: 100, typ: 'schrank', korpusse: 1, doors: [], wand: false },
     // Vorschlag Fensterwand (Wand 3540 von Wand zu Wand, Passblenden 50, Fenster-UK 800): 2 Korpusse W1000, Fronten Wildeiche H1318, Arbeitsplatte Granito anthrazit 38 mm
-    fensterwand: {"W": 3540, "H": 760, "D": 400, "plinth": 100, "shelves": 1, "dividers": 2, "korpusse": 2, "typ": "sideboard", "sockel": "fuesse", "fussTyp": "hettich", "apUeb": 20, "back": true, "bt": 8, "backMode": "nut", "doors": ["dt-l", "dt-l", "dt-r", "dt-l", "dt-r", "dt-r"], "fe": {"nr": "14148/1000", "name": "EGGER Dekorative Platte Premiumweiss W1000 ST19, 100 % PEFC", "l": 2800, "w": 2070, "t": 19, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-premiumweiss-w1000-st19--100--pefc~p18284642"}, "t": 19, "material": "fe", "sheet": "fe", "kanteFe": {"nr": "24747/0004", "name": "EGGER ABS Kante Premiumweiss W1000 ST19", "w": 23, "t": 0.8, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/egger-abs-kante-premiumweiss-w1000-st19~p6789937"}, "frontFe": {"nr": "14158/1318", "name": "EGGER Dekorative Platte Wildeiche natur H1318 ST10, 100 % PEFC", "l": 2800, "w": 2070, "t": 19, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-wildeiche-natur-h1318-st10--100--pefc~p18290159"}, "frontT": 19, "frontSheet": {"l": 2800, "w": 2070, "name": "2800 × 2070"}, "frontKanteFe": {"nr": "24565/1318", "name": "EGGER ABS Kante Wildeiche natur H1318 ST10", "w": 23, "t": 0.8, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/egger-abs-kante-wildeiche-natur-h1318-st10~p6792474"}, "apFe": {"nr": "50235/4288", "name": "Kaindl Postforming Arbeitsplatte G03/03 Granito anthrazit 4288 PE", "l": 4100, "w": 900, "t": 38, "kat": "laminat-arbeitsplatte", "url": "https://www.frischeis.at/shop/platte/arbeitsplatte/laminat-arbeitsplatte/kaindl-postforming-arbeitsplatte-g0303-granito-anthrazit-4288-pe~p63789"}, "apT": 38, "apSheet": {"l": 4100, "w": 900, "name": "4100 × 900"}, "apKanteFe": {"nr": "50382/4288", "name": "Kaindl ABS Kante Granito anthrazit 4288 PE", "w": 45, "t": 1, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/kaindl-abs-kante-granito-anthrazit-4288-pe~p14616243"}, "backFe": {"nr": "14147/1000", "name": "EGGER Dekorative Platte Premiumweiss W1000 ST19, 100 % PEFC", "l": 2800, "w": 2070, "t": 8, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-premiumweiss-w1000-st19--100--pefc~p18284638"}, "backSheet": {"l": 2800, "w": 2070, "name": "2800 × 2070"}, "wand": true, "passB": 50},
+    fensterwand: {"W": 3540, "H": 760, "D": 400, "plinth": 100, "shelves": 1, "dividers": 2, "korpusse": 2, "typ": "sideboard", "sockel": "fuesse", "fussTyp": "hettich", "apUeb": 20, "back": true, "bt": 8, "backMode": "nut", "doors": ["dt-l", "dt-l", "dt-r", "dt-l", "dt-r", "dt-r"], "fe": {"nr": "14148/1000", "name": "EGGER Dekorative Platte Premiumweiss W1000 ST19, 100 % PEFC", "l": 2800, "w": 2070, "t": 19, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-premiumweiss-w1000-st19--100--pefc~p18284642"}, "t": 19, "material": "fe", "sheet": "fe", "kanteFe": {"nr": "24747/0004", "name": "EGGER ABS Kante Premiumweiss W1000 ST19", "w": 23, "t": 0.8, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/egger-abs-kante-premiumweiss-w1000-st19~p6789937"}, "frontFe": {"nr": "14158/1318", "name": "EGGER Dekorative Platte Wildeiche natur H1318 ST10, 100 % PEFC", "l": 2800, "w": 2070, "t": 19, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-wildeiche-natur-h1318-st10--100--pefc~p18290159"}, "frontT": 19, "frontSheet": {"l": 2800, "w": 2070, "name": "2800 × 2070"}, "frontKanteFe": {"nr": "24565/1318", "name": "EGGER ABS Kante Wildeiche natur H1318 ST10", "w": 23, "t": 0.8, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/egger-abs-kante-wildeiche-natur-h1318-st10~p6792474"}, "apFe": {"nr": "50235/4288", "name": "Kaindl Postforming Arbeitsplatte G03/03 Granito anthrazit 4288 PE", "l": 4100, "w": 900, "t": 38, "kat": "laminat-arbeitsplatte", "url": "https://www.frischeis.at/shop/platte/arbeitsplatte/laminat-arbeitsplatte/kaindl-postforming-arbeitsplatte-g0303-granito-anthrazit-4288-pe~p63789"}, "apT": 38, "apSheet": {"l": 4100, "w": 900, "name": "4100 × 900"}, "apKanteFe": {"nr": "50382/4288", "name": "Kaindl ABS Kante Granito anthrazit 4288 PE", "w": 45, "t": 1, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/kaindl-abs-kante-granito-anthrazit-4288-pe~p14616243"}, "backFe": {"nr": "14147/1000", "name": "EGGER Dekorative Platte Premiumweiss W1000 ST19, 100 % PEFC", "l": 2800, "w": 2070, "t": 8, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-premiumweiss-w1000-st19--100--pefc~p18284638"}, "backSheet": {"l": 2800, "w": 2070, "name": "2800 × 2070"}, "wand": true, "passB": 50, "uebermass": 20},
     nische:    { W: 1200, H: 2400, D: 250, shelves: 7, dividers: 1, plinth: 100, typ: 'regal', korpusse: 1, doors: [], wand: false }
   };
 
@@ -80,6 +80,7 @@
     $('showDoors').addEventListener('change', () => { meshes.forEach((m) => { if (m.userData.pt.mat === 'front') m.visible = $('showDoors').checked; }); render(); });
     $('openDoors').addEventListener('input', applyExplode);
     $('wand').addEventListener('change', () => { state.wand = $('wand').checked; syncForm(); update(); });
+    $('uebermass').addEventListener('change', () => { const v = Number($('uebermass').value); if (v >= 0) state.uebermass = v; syncForm(); update(); });
     $('passB').addEventListener('change', () => { const v = Number($('passB').value); if (v > 0) state.passB = v; syncForm(); update(); });
     $('feat').addEventListener('change', () => { meshes.forEach((m) => { if (m.userData.feat) m.userData.feat.visible = $('feat').checked; }); render(); });
   }
@@ -91,6 +92,8 @@
     $('wand').checked = !!state.wand;
     $('passRow').hidden = !state.wand;
     $('passB').value = state.passB != null ? state.passB : M.DEFAULTS.passB;
+    $('uebermass').value = state.uebermass != null ? state.uebermass : M.DEFAULTS.uebermass;
+    $('uebRow').hidden = !state.wand;
     $('typ').value = state.typ || 'regal';
     $('apBox').hidden = state.typ !== 'sideboard';
     $('sockel').value = state.sockel || 'fuesse';
@@ -156,13 +159,14 @@
   function renderList() {
     const rows = model.cutlist.map((g) =>
       '<tr class="part" data-no="' + g.no + '"><td>' + g.no + '</td><td>' + esc(g.name) + '</td><td class="n">' + g.qty +
-      '</td><td class="n">' + g.l + '</td><td class="n">' + g.w + '</td><td class="n">' + g.thick + '</td></tr>').join('');
+      '</td><td class="n">' + g.l + '</td><td class="n">' + g.w + '</td><td class="n">' + g.thick + '</td><td class="n">' +
+      ((g.ol !== g.l || g.ow !== g.w) ? '<strong>' + g.ol + ' × ' + g.ow + '</strong>' : '') + '</td></tr>').join('');
     const m = M.MATERIALS[state.material];
     $('tab-list').innerHTML =
-      '<table><thead><tr><th>Nr</th><th>Teil</th><th class="n">Stk</th><th class="n">Länge mm</th><th class="n">Breite mm</th><th class="n">Dicke mm</th></tr></thead><tbody>' +
+      '<table><thead><tr><th>Nr</th><th>Teil</th><th class="n">Stk</th><th class="n">Länge mm</th><th class="n">Breite mm</th><th class="n">Dicke mm</th><th class="n">Bestellmaß</th></tr></thead><tbody>' +
       rows + '</tbody></table>' +
       '<p class="note">Material: ' + esc(m.name) + ' ' + state.t + ' mm' + (state.back ? ', Rückwand HDF ' + state.bt + ' mm' : '') +
-      '. Länge = Maserungsrichtung. Zeile anklicken, um das Teil im 3D-Modell zu markieren.</p>';
+      '. Länge = Maserungsrichtung. Maße = Fertigmaß; Bestellmaß nur bei Übermaß (Wandanschluss) – geht so ins JAF-Formular. Zeile anklicken, um das Teil im 3D-Modell zu markieren.</p>';
     $('tab-list').querySelectorAll('tr.part').forEach((tr) => {
       tr.addEventListener('mouseenter', () => highlight(Number(tr.dataset.no)));
       tr.addEventListener('click', () => highlight(Number(tr.dataset.no)));
@@ -586,8 +590,8 @@
 
   /* ---------- Export ---------- */
   function exportCsv() {
-    const lines = ['Nr;Teil;Stück;Länge mm;Breite mm;Dicke mm'];
-    model.cutlist.forEach((g) => lines.push([g.no, g.name, g.qty, g.l, g.w, g.thick].join(';')));
+    const lines = ['Nr;Teil;Stück;Länge mm;Breite mm;Dicke mm;Bestellmaß Länge;Bestellmaß Breite;Hinweis'];
+    model.cutlist.forEach((g) => lines.push([g.no, g.name, g.qty, g.l, g.w, g.thick, g.ol, g.ow, g.orderNote || ''].join(';')));
     const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'regal-stueckliste.csv'; a.click();
   }

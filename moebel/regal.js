@@ -54,7 +54,8 @@
     spaxD: 4, spaxL: 35, spaxDurch: 5,
     korpusse: 1,
     wand: false,        // von Wand zu Wand: links und rechts Passblende, Arbeitsplatte durchgehend ohne Seitenkanten
-    passB: 50,          // VORGABE PRÜFEN: Breite der Passblenden (inkl. Anpassen an die Wand)        // Anzahl gleich breiter Korpusse nebeneinander (Sideboard: eine durchgehende Arbeitsplatte)
+    passB: 50,          // VORGABE PRÜFEN: Breite der Passblenden (inkl. Anpassen an die Wand)
+    uebermass: 20,      // Übermaß je Wandseite für Arbeitsplatte (Länge) und Passblenden (Breite), Nutzer        // Anzahl gleich breiter Korpusse nebeneinander (Sideboard: eine durchgehende Arbeitsplatte)
     spaxRand: 50,       // VORGABE PRÜFEN: Abstand der Spax von Vorder-/Hinterkante und von den Senkrechten (pro Fach 4 Stück)
     // Türen je Spalte: 'offen' | 'dt-l' | 'dt-r' | 'dt-2' | 'st' (Vorgaben vom Nutzer)
     doors: [],
@@ -116,7 +117,8 @@
       const x = sx * (W / 2 - wB / 2);
       parts.push({ name: 'Passblende', cut: [Math.floor(hB), Math.floor(wB)], grain: 1, mat: 'front', edgeKind: 'C', noJoint: true,
         edgeNames: { L0: 'Unterkante', L1: 'Oberkante', [innerEdge]: 'zur Tür' }, thick: ft, back: false,
-        size: [Math.floor(wB), Math.floor(hB), ft], pos: [x, (y0 + y1) / 2, zc], edges: ['L0', 'L1', innerEdge] });
+        size: [Math.floor(wB), Math.floor(hB), ft], pos: [x, (y0 + y1) / 2, zc], edges: ['L0', 'L1', innerEdge],
+        order: [Math.floor(hB), Math.floor(wB) + p0.uebermass], orderNote: 'Breite +' + p0.uebermass + ' mm Übermaß zum Anpassen an die Wand' });
     });
     // Sockelblenden der äußeren Korpusse bis zur Wand verlängern
     const plinths = parts.filter((q) => q.name === 'Sockelblende');
@@ -132,7 +134,8 @@
       const at = p0.apT || p0.t;
       const pf = p0.apFe && /postforming/i.test(p0.apFe.name);   // Vorderkante ab Werk geformt
       parts.push({ name: 'Arbeitsplatte', cut: [Math.floor(W), Math.floor(p0.D + p0.apUeb)], grain: 0, mat: 'ap', edgeKind: 'B', edgeNames: { W0: 'Vorderkante' },
-        thick: at, back: false, size: [Math.floor(W), at, Math.floor(p0.D + p0.apUeb)], pos: [0, p0.H + at / 2, p0.apUeb / 2], edges: pf ? [] : ['W0'], noJoint: true });
+        thick: at, back: false, size: [Math.floor(W), at, Math.floor(p0.D + p0.apUeb)], pos: [0, p0.H + at / 2, p0.apUeb / 2], edges: pf ? [] : ['W0'], noJoint: true,
+        order: [Math.floor(W) + 2 * p0.uebermass, Math.floor(p0.D + p0.apUeb)], orderNote: 'Länge +2 × ' + p0.uebermass + ' mm Übermaß zum Anpassen an die Wände' });
       if (W > 4100) inner.warnings.push('Arbeitsplatte ' + W + ' mm ist länger als die Frischeis-Arbeitsplatten (4100 mm).');
       if (pf) inner.warnings.push('Arbeitsplatte Postforming: Vorderkante ab Werk geformt – keine Kante gesetzt.');
       if (p0.spaxL - p0.t >= at) inner.errors.push('Spax ' + p0.spaxD + ' × ' + p0.spaxL + ' ist zu lang für die Arbeitsplatte.');
@@ -186,7 +189,8 @@
     const map = new Map();
     parts.forEach((pt, idx) => {
       const key = pt.name + '|' + pt.cut.join('x') + '|' + pt.thick + '|' + pt.mat;
-      if (!map.has(key)) map.set(key, { name: pt.name, l: pt.cut[0], w: pt.cut[1], thick: pt.thick, back: pt.back, mat: pt.back ? 'back' : pt.mat, edgeKind: pt.edgeKind, edges: pt.edges, edgeNames: pt.edgeNames, qty: 0, ids: [] });
+      if (!map.has(key)) map.set(key, { name: pt.name, l: pt.cut[0], w: pt.cut[1], thick: pt.thick, back: pt.back, mat: pt.back ? 'back' : pt.mat, edgeKind: pt.edgeKind, edges: pt.edges, edgeNames: pt.edgeNames, qty: 0, ids: [],
+        ol: pt.order ? pt.order[0] : pt.cut[0], ow: pt.order ? pt.order[1] : pt.cut[1], orderNote: pt.orderNote || '' });
       const g = map.get(key); g.qty++; g.ids.push(idx);
     });
     const cutlist = [...map.values()].map((g, i) => { g.no = i + 1; g.ids.forEach((id) => (parts[id].group = g.no)); return g; });
@@ -593,7 +597,7 @@
     cutlist.forEach((g) => {
       const key = g.back ? 'back' : (g.mat === 'ap' || g.mat === 'front' ? g.mat : 'plate');
       (groups[key] = groups[key] || []);
-      for (let i = 0; i < g.qty; i++) groups[key].push({ no: g.no, l: g.l, w: g.w });
+      for (let i = 0; i < g.qty; i++) groups[key].push({ no: g.no, l: g.ol || g.l, w: g.ow || g.w });
     });
     const result = { sheet, material: mat, groups: {}, errors: [] };
     for (const key of Object.keys(groups)) {

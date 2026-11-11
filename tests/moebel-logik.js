@@ -146,6 +146,11 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
   ok(r.parts.filter((q) => q.name === 'Drehtür').every((q) => q.hinge === -1 || q.hinge === 1), 'Drehtüren kennen ihre Bandseite');
   const nopf = M.buildRegal({ typ: 'sideboard', W: 2000, H: 760, D: 400, wand: true, apT: 38 });
   ok(nopf.cutlist.find((c) => c.name === 'Arbeitsplatte').edges.join() === 'W0', 'ohne Postforming: nur Vorderkante');
+  const ue = M.buildRegal({ typ: 'sideboard', W: 3540, H: 760, D: 400, korpusse: 2, apT: 38, wand: true, passB: 50, uebermass: 20 });
+  const apu = ue.cutlist.find((c) => c.name === 'Arbeitsplatte'), pbu = ue.cutlist.find((c) => c.name === 'Passblende');
+  ok(apu.l === 3540 && apu.ol === 3580 && apu.ow === 420, 'Arbeitsplatte: fertig 3540, bestellt 3580');
+  ok(pbu.w === 48 && pbu.ow === 68 && pbu.ol === pbu.l, 'Passblende: fertig 48, bestellt 68');
+  ok(ue.cutlist.filter((c) => !['Arbeitsplatte', 'Passblende'].includes(c.name)).every((c) => c.ol === c.l && c.ow === c.w), 'übrige Teile ohne Übermaß');
 }
 const total = m.cutlist.reduce((s, g) => s + g.qty, 0);
 const placedAll = Object.values(plan.groups).reduce((s, g) => s + g.sheets.reduce((a, sh) => a + sh.items.length, 0), 0);

@@ -25,7 +25,7 @@
     model.cutlist.forEach((g) => {
       const mat = g.back ? opt.backMaterial : g.mat === 'ap' ? (opt.apMaterial || opt.material) : g.mat === 'front' ? (opt.frontMaterial || opt.material) : opt.material;
       const r = {
-        pos: String(g.no), mat: mat || '', thick: g.thick, name: g.name, qty: g.qty, l: g.l, w: g.w,
+        pos: String(g.no), mat: mat || '', thick: g.thick, name: g.name, qty: g.qty, l: g.ol || g.l, w: g.ow || g.w, note: g.orderNote || '',
         drehb: g.back || opt.rotate ? 1 : null, v: '', h: '', lk: '', rk: ''
       };
       // Kantenlage aus dem Modell. Zuordnung zu den Formularspalten ist eine Annahme (siehe README):
@@ -78,6 +78,7 @@
       if (r.h) xml = setCell(xml, 'N' + n, r.h);
       if (r.lk) xml = setCell(xml, 'O' + n, r.lk);
       if (r.rk) xml = setCell(xml, 'P' + n, r.rk);
+      if (r.note) xml = setCell(xml, 'Q' + n, r.note.slice(0, 120));                    // Notiz
       xml = setCached(xml, 'C' + n, r.mat + ' ' + r.thick);
       xml = setCached(xml, 'A' + n, r.drehb ? '1' : '0');
       xml = setCached(xml, 'B' + n, r.drehb ? '0' : '1');

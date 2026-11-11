@@ -88,6 +88,9 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
   Breite 50 mm* (Vorgabe, bitte prüfen – muss das Öffnen der Türen an der Wand erlauben). Befestigung noch offen.
   Sockelblenden der äußeren Korpusse laufen bis zur Wand. Arbeitsplatte wandbündig ohne Seitenkanten;
   bei „Postforming“ im Artikelnamen keine Vorderkante (ab Werk geformt).
+  Übermaß je Wandseite (Nutzer: 20 mm): Arbeitsplatte Länge +2 × 20, Passblenden Breite +20. Zeichnung, 3D und
+  Verbinder rechnen mit Fertigmaß; Bestellmaß steht in Stückliste, Zeichnung, Zuschnitt und JAF-Formular (mit Notiz).
+  Arbeitsplatte hinten bündig mit dem Korpus (kein Überstand), vorne 20 mm.
 - 3D: Regler „Türen öffnen“ – Drehtüren schwenken um die Bandkante (bis 100°), vordere Schiebetür fährt über die hintere.
 
 ## Kataloge aktualisieren
