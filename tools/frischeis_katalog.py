@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Liest öffentliche Kategorien von frischeis.at aus (ohne Login, ohne Preise).
 
-Kategorien: dekor (Dekorative Platte), kante (Kanten), rueckwand (MDF/HDF/Hartfaser roh bis 8 mm).
+Kategorien: dekor (Dekorative Platte), kante (Kanten), rueckwand (MDF/HDF/Hartfaser roh bis 8 mm),
+arbeitsplatte (Laminat-Arbeitsplatten).
 Die Seiten-Navigation des Shops endet bei ca. 1400 Treffern, daher wird nach Stärke (und bei
 Bedarf nach Unterkategorie) aufgeteilt. Beim Stärke-Filter zeigt jede Kachel die passende
 Stärke-Variante mit eigener Artikel-Nr., so kommen auch alle Varianten mit.
 
-Aufruf: python3 frischeis_katalog.py <dekor|kante|rueckwand> <ausgabe.json>
+Aufruf: python3 frischeis_katalog.py <dekor|kante|rueckwand|arbeitsplatte> <ausgabe.json>
 """
 import html as H, json, re, sys, time, urllib.request, urllib.parse
 
@@ -28,6 +29,10 @@ KATEGORIEN = {
             'kunststoffkante': '/shop/platte/kante/kunststoffkante~c14208204',
             'furnierte-kante': '/shop/platte/kante/furnierte-kante~c14208190'},
         'baender': [0, 0.45, 0.65, 0.85, 1.1, 1.6, 2.1, 3.1, 50]},
+    'arbeitsplatte': {
+        'pfad': '/shop/platte/arbeitsplatte/laminat-arbeitsplatte~c14207636',
+        'unter': {},
+        'baender': [0, 25, 60]},
     'rueckwand': {
         'pfad': '/shop/platte/mdf--hdf--hartfaserplatte-roh~c14208412',
         'unter': {},
@@ -53,7 +58,8 @@ def get(params, base=BASE):
     raise RuntimeError('Abruf fehlgeschlagen: ' + url)
 
 def num(s):
-    m = re.search(r'[\d.,]+', s or '')
+    s = re.sub(r'(?<=\d)[\s\xa0\u202f](?=\d{3}\b)', '', s or '')  # Tausender-Leerzeichen: "1 200" -> "1200"
+    m = re.search(r'[\d.,]+', s)
     if not m:
         return None
     v = float(m.group(0).replace('.', '').replace(',', '.'))

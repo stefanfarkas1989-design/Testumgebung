@@ -52,6 +52,9 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
   Von innen mit Spax 4 × 35 durch den Deckel verschraubt: Durchgang Ø5 im Deckel, keine Vorbohrung in der
   Arbeitsplatte, pro Fach 4 Stück (2 vorne, 2 hinten), 50 mm* von Vorder-/Hinterkante und von den Senkrechten.
   Prüfung: Spax-Länge − Deckelstärke muss kleiner als die Arbeitsplattenstärke sein.
+  Auswahl: Frischeis-Laminat-Arbeitsplatten (372 Artikel, 38 und 20 mm, 4100 × 600–1200) zuerst, dann Dekorplatten.
+  Viele heißen „Arbeitsplatte mit Kante MOD 100/1,5“ bzw. „Postforming“ – ob/wo ab Werk bekantet ist, bitte
+  im Shop prüfen; der Generator setzt Kantenart B vorne und an den Stirnseiten.
 - **Darstellung:** Holzmaserung im 3D-Modell ist erzeugt (kein Foto), läuft je Teil in Maserrichtung.
 
 ## Türen (Vorgaben vom Nutzer, Hettich-Daten)
@@ -75,6 +78,7 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
 python3 tools/frischeis_katalog.py dekor /tmp/dekor.json && python3 tools/frischeis_kompakt.py /tmp/dekor.json moebel/frischeis-dekor.json
 python3 tools/frischeis_katalog.py kante /tmp/kante.json && python3 tools/frischeis_kompakt.py /tmp/kante.json moebel/frischeis-kanten.json
 python3 tools/frischeis_katalog.py rueckwand /tmp/rw.json && python3 tools/frischeis_kompakt.py /tmp/rw.json moebel/frischeis-rueckwand.json
+python3 tools/frischeis_katalog.py arbeitsplatte /tmp/ap.json && python3 tools/frischeis_kompakt.py /tmp/ap.json moebel/frischeis-arbeitsplatte.json
 ```
 
 ## Tests

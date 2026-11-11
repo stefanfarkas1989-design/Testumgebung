@@ -442,9 +442,9 @@
   const apPick = makePicker({
     search: 'aSearch', list: 'aList', info: 'aInfo', missing: 'Dekorkatalog nicht verfügbar.',
     accept: () => true,
-    rank: (a) => Math.abs(a.t - (state.apT || state.t)) * 10,
-    detail: (a) => fmtT(a.t) + ' mm · ' + a.l + '×' + a.w,
-    hint: () => 'Eigenes Dekor für die Arbeitsplatte; ohne Auswahl wie der Korpus.',
+    rank: (a) => (a.ap ? 0 : 100000) + Math.abs(a.t - 38) * 10,  // Frischeis-Arbeitsplatten zuerst
+    detail: (a) => (a.ap ? 'Arbeitsplatte · ' : 'Dekorplatte · ') + fmtT(a.t) + ' mm · ' + a.l + '×' + a.w,
+    hint: (n) => n + ' Platten: Frischeis-Arbeitsplatten (38/20 mm) zuerst, dann Dekorplatten. Ohne Auswahl wie der Korpus.',
     current: () => state.apFe && state.apFe.nr, currentObj: () => state.apFe,
     pick: (a) => {
       state.apFe = { nr: a.nr, name: a.name, l: a.l, w: a.w, t: a.t, url: a.url };
@@ -502,7 +502,9 @@
       const have = new Set(roh.map((x) => x.nr));
       rueck.items = roh.concat(thin.filter((x) => !have.has(x.nr)));
     } catch (e) { rueck.items = catalog.filter((a) => a.t <= 8.1); }
-    apPick.items = catalog; apKante.items = kanten.items; frontPick.items = catalog; frontKante.items = kanten.items;
+    try { apPick.items = unpack(await loadJson('__FE_AP', 'frischeis-arbeitsplatte.json')).map((x) => Object.assign(x, { ap: true })).concat(catalog); }
+    catch (e) { apPick.items = catalog; }
+    apKante.items = kanten.items; frontPick.items = catalog; frontKante.items = kanten.items;
     kanten.render(); rueck.render(); apPick.render(); apKante.render(); frontPick.render(); frontKante.render();
   }
 
