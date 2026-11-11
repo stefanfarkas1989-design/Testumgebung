@@ -17,6 +17,13 @@ main{display:grid;grid-template-columns:300px 1fr;grid-template-areas:"c s" "c r
 #controls input[type=range]{width:100%;accent-color:var(--acc)}
 #controls select,#controls input[type=text]{width:100%}
 #controls input[type=text]{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+.dlist{max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:6px;margin-top:4px}
+.dlist:empty{display:none}
+.dlist button{display:grid;grid-template-columns:14px 1fr;gap:2px 8px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:6px 8px;font-size:13px}
+.dlist button:hover,.dlist button:focus-visible,.dlist button.on{background:var(--bg);outline:none}
+.dlist button.on{box-shadow:inset 3px 0 0 var(--acc)}
+.dlist .sw{width:14px;height:14px;border-radius:3px;border:1px solid var(--line);grid-row:span 2;align-self:center}
+.dlist small{color:var(--mut);grid-column:2;font-variant-numeric:tabular-nums}
 #btnJaf{width:100%;margin-top:6px;background:var(--acc);color:#fff;border-color:var(--acc)}
 #stage{grid-area:s;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;min-height:420px;overflow:hidden}
 #view{position:absolute;inset:0;touch-action:none}

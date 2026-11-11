@@ -53,6 +53,11 @@
     </section>
     <section>
       <h2>Bestellung Frischeis</h2>
+      <label class="row">Dekor suchen <input type="search" id="dSearch" placeholder="z. B. Eiche, U999, Egger"></label>
+      <label class="row">Kategorie <select id="dKat"><option value="">alle</option></select></label>
+      <label class="chk"><input type="checkbox" id="dThick"> nur Stärke wie eingestellt</label>
+      <div id="dList" class="dlist" role="listbox" aria-label="Dekorative Platten"></div>
+      <p class="note" id="dInfo">Katalog wird geladen …</p>
       <label class="row">Platte <input type="text" id="jMat" list="jArt" placeholder="Art.-Nr. + Bezeichnung"></label>
       <datalist id="jArt"></datalist>
       <label class="row">Rückwand <input type="text" id="jBack" placeholder="Art.-Nr. HDF 3 mm"></label>

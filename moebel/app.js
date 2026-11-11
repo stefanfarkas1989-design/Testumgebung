@@ -143,6 +143,89 @@
       '<p class="note">Werkzeug: Akkuschrauber, Bohrer 5/7/8 mm, Zollstock, Winkel, Bleistift, Zwingen, ggf. Kantenbügeleisen.</p>';
   }
 
+  /* ---------- Frischeis-Dekorkatalog ---------- */
+  const KAT_NAMES = {
+    'beschichtete-platte': 'Beschichtete Platte', 'dekorative-platte-mdf-hdf-hartfaser': 'Dekor MDF/HDF/Hartfaser',
+    'durchgefarbte-platte': 'Durchgefärbte Platte', 'grundierplatte': 'Grundierplatte', 'mobelfront': 'Möbelfront', 'prageplatte': 'Prägeplatte'
+  };
+  const COLOR_HINTS = [
+    [/weiß|weiss|white|w ?1000|w ?980|w ?1100|w ?1200|polar|alpinweiß/i, '#f1f1ec'], [/schwarz|black|u ?999|nero/i, '#2a2a2a'],
+    [/anthrazit|u ?961|u ?963|graphit|graphite/i, '#4b4e53'], [/grau|grey|gray|u ?7\d\d|silber|aluminium/i, '#9b9a96'],
+    [/nuss|walnut|noce/i, '#6e4a32'], [/eiche|oak|rovere|h ?3\d\d\d|h ?1\d\d\d/i, '#c29a63'], [/buche|beech/i, '#d4a77a'],
+    [/ahorn|maple/i, '#e5cfa5'], [/esche|ash/i, '#d9c4a0'], [/kirsch|cherry/i, '#a0583a'], [/beton|stein|marmor|stone|concrete|schiefer/i, '#b7b4ad'],
+    [/beige|sand|kaschmir|cashmere|creme|cream/i, '#d8ccb6'], [/blau|blue/i, '#4a6a8f'], [/grün|green|olive|salbei/i, '#6f8a64'],
+    [/rot|red|bordeaux/i, '#a33a32'], [/gelb|yellow|ocker/i, '#d1a84a'], [/roh|grundier|mdf/i, '#e4dfd4']
+  ];
+  const guessColor = (name) => { for (const [re, c] of COLOR_HINTS) if (re.test(name)) return c; return '#d9c9a8'; };
+  let catalog = [];
+  const fmtT = (t) => String(t).replace('.', ',');
+
+  function restoreFe() {
+    if (!state.fe) { if (state.sheet === 'fe' || state.material === 'fe') { state.sheet = '2800x2070'; state.material = 'melamin'; } return; }
+    const a = state.fe;
+    M.SHEETS.fe = { l: a.l, w: a.w, name: a.l + ' × ' + a.w + ' (Frischeis)' };
+    M.MATERIALS.fe = { name: a.nr + ' ' + a.name, color: guessColor(a.name), price: M.MATERIALS.fe ? M.MATERIALS.fe.price : 20 };
+    if (!('fe' in defaultPrices)) defaultPrices.fe = 20;
+    if (!$('material').querySelector('option[value="fe"]')) $('material').add(new Option('Frischeis-Dekor', 'fe'));
+    $('material').querySelector('option[value="fe"]').textContent = a.nr + ' ' + a.name;
+    if (!$('sheet').querySelector('option[value="fe"]')) $('sheet').add(new Option('', 'fe'));
+    $('sheet').querySelector('option[value="fe"]').textContent = M.SHEETS.fe.name;
+    ensureThick(state.t);
+  }
+  function ensureThick(t) {
+    const sel = $('t');
+    if (![...sel.options].some((o) => Number(o.value) === Number(t))) {
+      const o = new Option(fmtT(t), t); sel.add(o);
+      [...sel.options].sort((x, y) => x.value - y.value).forEach((x) => sel.appendChild(x));
+    }
+  }
+
+  function applyDekor(a) {
+    state.fe = { nr: a.nr, name: a.name, l: a.l, w: a.w, t: a.t, kat: a.kat };
+    state.t = a.t; state.sheet = 'fe'; state.material = 'fe';
+    restoreFe();
+    $('jMat').value = a.nr + ' ' + a.name;
+    $('jMat').dispatchEvent(new Event('change'));
+    syncForm(); update(); renderDekor();
+  }
+
+  function renderDekor() {
+    const q = $('dSearch').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const kat = $('dKat').value, onlyT = $('dThick').checked;
+    const hits = [];
+    for (const a of catalog) {
+      if (kat && a.kat !== kat) continue;
+      if (onlyT && Math.abs(a.t - state.t) > 0.5) continue;
+      const hay = (a.nr + ' ' + a.name).toLowerCase();
+      if (q.every((w) => hay.includes(w))) { hits.push(a); if (hits.length >= 60) break; }
+    }
+    const cur = state.fe && state.fe.nr;
+    $('dList').innerHTML = (q.length || kat || onlyT) ? hits.map((a, i) =>
+      '<button type="button" role="option" data-i="' + catalog.indexOf(a) + '"' + (a.nr === cur ? ' class="on" aria-selected="true"' : '') + '>' +
+      '<span class="sw" style="background:' + guessColor(a.name) + '"></span><span>' + esc(a.name) + '</span>' +
+      '<small>' + esc(a.nr) + ' · ' + fmtT(a.t) + ' mm · ' + a.l + '×' + a.w + '</small></button>').join('') : '';
+    const total = catalog.length;
+    $('dInfo').textContent = !total ? 'Katalog nicht verfügbar.' :
+      (q.length || kat || onlyT ? (hits.length >= 60 ? 'Erste 60 Treffer, Suche verfeinern.' : hits.length + ' Treffer.') : total + ' dekorative Platten von frischeis.at (Stand ' + catalogDate + '). Ohne Preise, die siehst du in WebCut.') +
+      (state.fe ? ' Gewählt: ' + state.fe.nr + '.' : '') + ' Farbe in 3D ist geschätzt.';
+  }
+  let catalogDate = '';
+  async function initDekor() {
+    try {
+      let data = window.__FE_DEKOR;
+      if (!data) { const r = await fetch('frischeis-dekor.json'); data = await r.json(); }
+      catalogDate = data.abgerufen;
+      catalog = data.artikel.map((r) => ({ nr: r[0], name: r[1], l: r[2], w: r[3], t: r[4], kat: data.kategorien[r[5]] }));
+      const kats = [...new Set(catalog.map((a) => a.kat))].sort();
+      kats.forEach((k) => $('dKat').add(new Option((KAT_NAMES[k] || k) + ' (' + catalog.filter((a) => a.kat === k).length + ')', k)));
+    } catch (e) { catalog = []; }
+    $('dSearch').addEventListener('input', renderDekor);
+    $('dKat').addEventListener('change', renderDekor);
+    $('dThick').addEventListener('change', renderDekor);
+    $('dList').addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (b) applyDekor(catalog[Number(b.dataset.i)]); });
+    renderDekor();
+  }
+
   /* ---------- JAF/Frischeis-Formular ---------- */
   const JAF_FIELDS = ['jMat', 'jBack', 'jKante', 'jObjekt', 'jFirma', 'jKunde'];
   function initJaf() {
@@ -326,7 +409,7 @@
   }
 
   loadState();
-  initForm(); initTabs(); initJaf(); init3D(); syncForm(); update();
+  initForm(); restoreFe(); initTabs(); initJaf(); init3D(); syncForm(); update(); initDekor();
   $('btnCsv').addEventListener('click', exportCsv);
   $('btnPrint').addEventListener('click', () => window.print());
   $('btnLink').addEventListener('click', () => {

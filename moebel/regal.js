@@ -55,7 +55,9 @@
     if (Wi <= 0) errors.push('Breite ist zu klein.');
     if (errors.length) return { p, parts: [], cutlist: [], errors, warnings, derived: {} };
 
-    const maxSpan = ({ 16: 600, 18: 700, 19: 750, 22: 850, 25: 900 }[t] || 750) *
+    const spanTab = { 16: 600, 18: 700, 19: 750, 22: 850, 25: 900 };
+    const nearT = Object.keys(spanTab).map(Number).reduce((a, b) => (Math.abs(b - t) < Math.abs(a - t) ? b : a));
+    const maxSpan = (t < 14 ? 450 : spanTab[nearT]) *
       (p.material === 'multiplex' ? 1.25 : p.material === 'spanplatte' ? 0.9 : 1);
     if (cw > maxSpan) warnings.push('Fachbreite ' + round(cw) + ' mm ist größer als ca. ' + round(maxSpan) +
       ' mm: Böden hängen mit Büchern durch. Mittelteiler einplanen oder dickere Platte wählen.');
