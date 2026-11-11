@@ -52,6 +52,23 @@
       </div>
     </section>
     <section>
+      <h2>Verbinder</h2>
+      <label class="chk"><input type="checkbox" id="verbinder"> Konfirmat + Dübel setzen</label>
+      <div id="vBox" class="vgrid">
+        <label>Randabstand <input type="number" data-k="vRand" step="1"></label>
+        <label>Raster <input type="number" data-k="vRaster" step="1"></label>
+        <label>Dübel Ø <input type="number" data-k="duebelD" step="0.5"></label>
+        <label>Dübel Fläche <input type="number" data-k="duebelFl" step="0.5"></label>
+        <label>Dübel Stirn <input type="number" data-k="duebelSt" step="0.5"></label>
+        <label>Konf. Durchg. Ø <input type="number" data-k="konfD" step="0.5"></label>
+        <label>Kernloch Ø <input type="number" data-k="konfKernD" step="0.5"></label>
+        <label>Kernloch tief <input type="number" data-k="konfKern" step="0.5"></label>
+        <label>Senkung Ø <input type="number" data-k="konfSenk" step="0.5"></label>
+        <label>Versatz MT <input type="number" data-k="mtVersatz" step="1"></label>
+      </div>
+      <p class="note">Abwechselnd Konfirmat und Dübel im Raster, vorne beginnend am Randabstand. Fachböden am Mittelteiler nur gedübelt, rechte Seite um den Versatz verschoben. Maße in mm.</p>
+    </section>
+    <section>
       <h2>Material</h2>
       <label class="row">Platte <select id="material"></select></label>
       <label class="row">Stärke <select id="t"><option>16</option><option>18</option><option selected>19</option><option>25</option></select></label>
@@ -85,6 +102,7 @@
       <h2>Ansicht</h2>
       <label>Explosion <input type="range" id="explode" min="0" max="100" step="1" value="0"></label>
       <label class="chk"><input type="checkbox" id="person" checked> Größenvergleich (Person 1,75 m)</label>
+      <label class="chk"><input type="checkbox" id="feat" checked> Nuten und Bohrungen zeigen</label>
     </section>
     <div id="warnings"></div>
   </aside>

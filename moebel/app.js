@@ -52,11 +52,19 @@
     $('preset').addEventListener('change', () => { Object.assign(state, PRESETS[$('preset').value]); syncForm(); update(); });
     $('explode').addEventListener('input', () => applyExplode());
     $('person').addEventListener('change', () => { if (personMesh) personMesh.visible = $('person').checked; render(); });
+    $('verbinder').addEventListener('change', () => { state.verbinder = $('verbinder').checked; syncForm(); update(); });
+    document.querySelectorAll('#vBox input[data-k]').forEach((el) => el.addEventListener('change', () => {
+      const v = Number(el.value); if (Number.isFinite(v) && v > 0) state[el.dataset.k] = v; syncForm(); update();
+    }));
+    $('feat').addEventListener('change', () => { meshes.forEach((m) => { if (m.userData.feat) m.userData.feat.visible = $('feat').checked; }); render(); });
   }
   function syncForm() {
     pairs.forEach((k) => { $(k).value = state[k]; $(k + 'n').value = state[k]; });
     $('back').value = state.back ? state.bt : 0;
     $('backMode').value = state.backMode || 'nut';
+    $('verbinder').checked = state.verbinder !== false;
+    $('vBox').hidden = state.verbinder === false;
+    document.querySelectorAll('#vBox input[data-k]').forEach((el) => { el.value = state[el.dataset.k] != null ? state[el.dataset.k] : M.DEFAULTS[el.dataset.k]; });
     $('nutBox').hidden = !state.back || state.backMode !== 'nut';
     $('backMode').disabled = !state.back;
     $('material').value = state.material;
@@ -145,7 +153,19 @@
       '<table><thead><tr><th>Platte</th><th class="n">Stärke</th><th class="n">Rohformat</th><th class="n">Platten lt. Zuschnittplan</th><th class="n">Fläche der Teile</th></tr></thead><tbody>' + rows + '</tbody></table>' +
       '<table style="margin-top:12px"><thead><tr><th>Kante</th><th class="n">Bekantete Länge</th></tr></thead><tbody><tr><td>' + esc(n.kante) + '</td><td class="n">' +
       model.derived.edgeM.toFixed(2).replace('.', ',') + ' m</td></tr></tbody></table>' +
-      '<p class="note">Bekantete Länge = Summe der Kanten laut Zeichnungen, ohne Zuschlag. Beschläge: noch nicht festgelegt. Preise siehst du in WebCut.</p>';
+      hardwareTable() +
+      '<p class="note">Bekantete Länge = Summe der Kanten laut Zeichnungen, ohne Zuschlag. Stückzahlen der Beschläge = Anzahl der Verbindungen laut Bohrbild, ohne Reserve. Preise siehst du in WebCut bzw. beim Beschlaghändler.</p>';
+  }
+
+  function hardwareTable() {
+    const holes = model.holes || [];
+    const konf = holes.filter((h) => h.kind === 'face' && h.type === 'Konfirmat').length;
+    const dueb = holes.filter((h) => h.kind === 'face' && h.type === 'Dübel').length;
+    if (!konf && !dueb) return '';
+    return '<table style="margin-top:12px"><thead><tr><th>Beschlag</th><th>Bezugsquelle</th><th class="n">Stück</th></tr></thead><tbody>' +
+      (konf ? '<tr><td>Konfirmat 7 × 50</td><td>offen (nicht im Frischeis-Shop gefunden)</td><td class="n">' + konf + '</td></tr>' : '') +
+      (dueb ? '<tr><td>Rillendübel Buche 8 × 30</td><td>Frischeis 69010/0008</td><td class="n">' + dueb + '</td></tr>' : '') +
+      '</tbody></table>';
   }
 
   /* ---------- Zeichnungen ---------- */
@@ -168,8 +188,12 @@
     const info = drawingInfo(), n = names();
     const zip = new window.JSZip();
     const safe = (s) => s.replace(/[^A-Za-z0-9ÄÖÜäöüß_-]+/g, '-');
-    drawings.forEach((d) => zip.file('Pos' + String(d.no).padStart(2, '0') + d.sub + '-' + safe(d.name) + '.svg',
-      window.Zeichnung.svg(d, Object.assign({}, info, { material: d.back ? n.back : n.plate }))));
+    const csv = ['Pos;Teil;Seite;Typ;x;y;Durchmesser;Tiefe;Hinweis'];
+    drawings.forEach((d) => {
+      zip.file('Pos' + String(d.no).padStart(2, '0') + d.sub + '-' + safe(d.name) + '.svg', window.Zeichnung.svg(d, Object.assign({}, info, { material: d.back ? n.back : n.plate })));
+      window.Zeichnung.holeRows(d).forEach((r) => csv.push([d.no + d.sub, d.name].concat(r).join(';')));
+    });
+    zip.file('Bohrliste.csv', '\ufeff' + csv.join('\r\n'));
     const data = await zip.generateAsync({ type: 'uint8array' });
     const filename = 'Zeichnungen-Regal-' + state.W + 'x' + state.H + 'x' + state.D + '.zip';
     try {
@@ -484,7 +508,7 @@
   function rebuild3D() {
     if (!renderer) return;
     meshes.length = 0;
-    while (group.children.length) { const c = group.children.pop(); c.geometry.dispose(); }
+    while (group.children.length) { const c = group.children.pop(); c.traverse((o) => { if (o.geometry) o.geometry.dispose(); }); }
     const k = 0.001;
     const mat = M.MATERIALS[state.material];
     model.parts.forEach((pt) => {
@@ -495,6 +519,8 @@
       mesh.userData = { pt, base: pt.pos.map((v) => v * k) };
       const edges = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({ color: 0x5a5448 }));
       mesh.add(edges);
+      const feat = buildFeatures(pt, k);
+      feat.visible = $('feat').checked; mesh.add(feat); mesh.userData.feat = feat;
       group.add(mesh); meshes.push(mesh);
     });
     cam.target.set(0, state.H * k / 2, 0);
@@ -502,6 +528,32 @@
     personMesh.position.set(state.W * k / 2 + 0.6, 0, state.D * k / 2 - 0.1);
     personMesh.visible = $('person').checked;
     applyExplode();
+  }
+
+  // Nuten und Bohrungen als dunkle Körper; an der offenen Seite 0,4 mm über die Fläche gezogen, damit sie sichtbar sind
+  const FEAT_MAT = { nut: new THREE.MeshBasicMaterial({ color: 0x3a2f26 }), Dübel: new THREE.MeshBasicMaterial({ color: 0x1b5e20 }),
+    Konfirmat: new THREE.MeshBasicMaterial({ color: 0x4a148c }), 'Konfirmat-Kernloch': new THREE.MeshBasicMaterial({ color: 0x4a148c }) };
+  function buildFeatures(pt, k) {
+    const g = new THREE.Group(), out = 0.4;
+    const ta = [0, 1, 2].reduce((x, i) => (Math.abs(pt.size[i] - pt.thick) < Math.abs(pt.size[x] - pt.thick) ? i : x), 0);
+    const pmin = pt.pos[ta] - pt.size[ta] / 2;
+    (pt.grooves || []).forEach((gr) => {
+      const b = gr.box.map((v) => v.slice());
+      if (Math.abs(b[ta][0] - pmin) < 0.6) b[ta][0] -= out; else b[ta][1] += out;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(...b.map((v) => (v[1] - v[0]) * k)), FEAT_MAT.nut);
+      m.position.set(...b.map((v, i) => ((v[0] + v[1]) / 2 - pt.pos[i]) * k));
+      g.add(m);
+    });
+    (pt.holes || []).forEach((h) => {
+      const start = h.at[h.axis] - h.dir * out, end = h.at[h.axis] + h.dir * (h.depth + (h.through ? out : 0));
+      const len = Math.abs(end - start);
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(h.dia / 2 * k, h.dia / 2 * k, len * k, 12), FEAT_MAT[h.type] || FEAT_MAT.nut);
+      const c = h.at.slice(); c[h.axis] = (start + end) / 2;
+      m.position.set(...c.map((v, i) => (v - pt.pos[i]) * k));
+      if (h.axis === 0) m.rotation.z = Math.PI / 2; else if (h.axis === 2) m.rotation.x = Math.PI / 2;
+      g.add(m);
+    });
+    return g;
   }
 
   function applyExplode() {

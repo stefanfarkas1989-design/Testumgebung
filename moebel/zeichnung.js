@@ -66,8 +66,24 @@
       const side = Math.abs(g.box[f.ta][0] - b[f.ta][0]) < EPS ? 'min' : 'max';
       feat[side].push(Object.assign({ name: g.name, width: g.width, depth: g.depth }, toLocal(f, b, g.box)));
     });
+    // Bohrungen
+    const hFace = { min: [], max: [] }, hEdge = [];
+    (P.holes || []).forEach((h) => {
+      const pt = [0, 1, 2].map((i) => [h.at[i], h.at[i]]);
+      const loc = toLocal(f, b, pt);
+      const base = { type: h.type, dia: h.dia, depth: h.depth, through: !!h.through, senk: h.senk, x: loc.x0, y: loc.y0 };
+      if (h.kind === 'face') {
+        hFace[Math.abs(h.at[f.ta] - b[f.ta][0]) < EPS ? 'min' : 'max'].push(base);
+      } else {
+        let edge;
+        if (h.axis === f.la) edge = Math.abs(h.at[f.la] - b[f.la][0]) < EPS ? 'L0' : 'L1';
+        else { const atMin = Math.abs(h.at[f.wa] - b[f.wa][0]) < EPS; edge = (atMin !== f.yFromMax) ? 'W0' : 'W1'; if (!f.yFromMax) edge = atMin ? 'W0' : 'W1'; }
+        hEdge.push(Object.assign(base, { edge }));
+      }
+    });
     // Ansichtsseite: Seite mit den meisten Anschlüssen und Bearbeitungen
-    const view = face.max.length + feat.max.length * 10 >= face.min.length + feat.min.length * 10 ? 'max' : 'min';
+    const score = (s) => face[s].length + feat[s].length * 10 + hFace[s].filter((h) => !h.through).length * 2;
+    const view = score('max') >= score('min') ? 'max' : 'min';
     const other = view === 'max' ? 'min' : 'max';
     // Händigkeit: Rechtssystem aus x-Richtung, y-Richtung und Blickrichtung (Normale der Ansichtsseite)
     const ex = [0, 0, 0]; ex[f.la] = 1;
@@ -78,7 +94,9 @@
     return {
       frame: f, viewAxis: AX[f.ta], hand: det > 0 ? 1 : -1,
       faceView: face[view].sort(sortC), faceOther: face[other].sort(sortC), edge: edge.sort(sortC),
-      featView: feat[view].sort(sortC), featOther: feat[other].sort(sortC)
+      featView: feat[view].sort(sortC), featOther: feat[other].sort(sortC),
+      holesView: hFace[view].sort((a, b2) => a.x - b2.x || a.y - b2.y), holesOther: hFace[other].sort((a, b2) => a.x - b2.x || a.y - b2.y),
+      holesEdge: hEdge.sort((a, b2) => a.edge.localeCompare(b2.edge) || a.x - b2.x || a.y - b2.y)
     };
   }
 
@@ -89,7 +107,8 @@
       const variants = new Map();
       g.ids.forEach((id) => {
         const c = contactsOf(model, id);
-        const sig = JSON.stringify([c.faceView, c.faceOther, c.edge, c.featView, c.featOther].map((l) => l.map((k) => [k.x0, k.x1, k.y0, k.y1, k.edge || ''])));
+        const sig = JSON.stringify([c.faceView, c.faceOther, c.edge, c.featView, c.featOther].map((l) => l.map((k) => [k.x0, k.x1, k.y0, k.y1, k.edge || ''])).concat(
+          [c.holesView, c.holesOther, c.holesEdge].map((l) => l.map((k) => [k.type, r1(k.x), r1(k.y), k.edge || '']))));
         if (!variants.has(sig)) variants.set(sig, { c, hands: [] });
         variants.get(sig).hands.push(c.hand);
       });
@@ -100,6 +119,7 @@
           no: g.no, sub: variants.size > 1 ? String.fromCharCode(97 + k++) : '', name: g.name, qty: v.hands.length,
           l: g.l, w: g.w, thick: g.thick, edges: g.edges || [], edgeNames: g.edgeNames || {}, back: g.back,
           faceView: v.c.faceView, faceOther: v.c.faceOther, edge: v.c.edge, featView: v.c.featView, featOther: v.c.featOther,
+          holesView: v.c.holesView, holesOther: v.c.holesOther, holesEdge: v.c.holesEdge,
           mirror: plus && minus ? { asDrawn: Math.max(plus, minus), mirrored: Math.min(plus, minus) } : null
         });
       });
@@ -110,6 +130,28 @@
   const EDGE_TXT = { W0: 'unten', W1: 'oben', L0: 'links', L1: 'rechts' }; // Lage in der Zeichnung
   const escX = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const fmt = (v) => String(r1(v)).replace('.', ',');
+
+  // Kurzfassung der Bohrungen für das Schriftfeld
+  function holeSummary(d) {
+    const cnt = (list, f) => { const m = {}; list.forEach((h) => { const k = f(h); m[k] = (m[k] || 0) + 1; }); return Object.entries(m).map(([k, n]) => n + '× ' + k).join(', '); };
+    const fl = (d.holesView || []).concat(d.holesOther || []);
+    const ed = d.holesEdge || [];
+    if (!fl.length && !ed.length) return 'Bohrungen: keine.';
+    const s = [];
+    if (fl.length) s.push('Flächenbohrungen (CNC): ' + cnt(fl, (h) => h.type + ' Ø' + fmt(h.dia) + (h.through ? ' durch' + (h.senk ? ', Senkung Ø' + fmt(h.senk) : '') : ' × ' + fmt(h.depth))));
+    if (ed.length) s.push('Kantenbohrungen (von Hand): ' + cnt(ed, (h) => h.type + ' Ø' + fmt(h.dia) + ' × ' + fmt(h.depth) + ' Kante ' + EDGE_TXT[h.edge]));
+    return s.join('.   ') + '.';
+  }
+
+  // Bohrliste einer Zeichnung als CSV-Zeilen (x/y ab Nullpunkt der Zeichnung)
+  function holeRows(d) {
+    const rows = [];
+    const side = (h, v) => (h.edge ? 'Kante ' + EDGE_TXT[h.edge] : v);
+    (d.holesView || []).forEach((h) => rows.push([side(h, 'Ansichtsseite'), h.type, fmt(h.x), fmt(h.y), fmt(h.dia), h.through ? 'durch' : fmt(h.depth), h.senk && h.through ? 'Senkung Ø' + fmt(h.senk) + ' Gegenseite' : '']));
+    (d.holesOther || []).forEach((h) => rows.push([side(h, 'Gegenseite'), h.type, fmt(h.x), fmt(h.y), fmt(h.dia), h.through ? 'durch' : fmt(h.depth), h.senk && h.through ? 'Senkung Ø' + fmt(h.senk) + ' Gegenseite' : '']));
+    (d.holesEdge || []).forEach((h) => rows.push([side(h), h.type, fmt(h.x), fmt(h.y), fmt(h.dia), fmt(h.depth), 'Mitte Plattenstärke']));
+    return rows;
+  }
 
   // SVG einer Zeichnung. info: { material, kante, projekt }
   function svg(d, info) {
@@ -156,6 +198,26 @@
         '" fill="none" stroke="#555" stroke-width="' + r1(u * 0.12) + '" stroke-dasharray="' + r1(u * 0.6) + ' ' + r1(u * 0.4) + '"/>');
       label(c, 'Pos ' + c.no + ' Gegenseite', '#555', fs * 0.8);
     });
+    // Bohrungen: Fläche = Kreis (durchgehend: mit Kreuz), Gegenseite gestrichelt, Kante = verdeckte Bohrung gestrichelt
+    const HCOL = { 'Konfirmat': '#6a1b9a', 'Konfirmat-Kernloch': '#6a1b9a', 'Dübel': '#1b5e20' };
+    const hv = d.holesView || [], ho = d.holesOther || [], he = d.holesEdge || [];
+    hv.concat(ho).forEach((h) => {
+      const other = ho.includes(h) && !h.through, col = HCOL[h.type] || '#000', cx = X(h.x), cy = Y(h.y), rr = h.dia / 2;
+      o.push('<circle cx="' + r1(cx) + '" cy="' + r1(cy) + '" r="' + r1(rr) + '" fill="' + (other ? 'none' : '#fff') + '" stroke="' + col + '" stroke-width="' + r1(u * 0.12) + '"' +
+        (other ? ' stroke-dasharray="' + r1(u * 0.25) + ' ' + r1(u * 0.2) + '"' : '') + '/>');
+      if (h.through) o.push('<path d="M' + r1(cx - rr) + ' ' + r1(cy) + 'H' + r1(cx + rr) + 'M' + r1(cx) + ' ' + r1(cy - rr) + 'V' + r1(cy + rr) + '" stroke="' + col + '" stroke-width="' + r1(u * 0.08) + '"/>');
+      if (h.through && h.senk) o.push('<circle cx="' + r1(cx) + '" cy="' + r1(cy) + '" r="' + r1(h.senk / 2) + '" fill="none" stroke="' + col + '" stroke-width="' + r1(u * 0.06) + '"/>');
+    });
+    he.forEach((h) => {
+      const col = HCOL[h.type] || '#000', rr = h.dia / 2, dash = ' stroke-dasharray="' + r1(u * 0.25) + ' ' + r1(u * 0.2) + '"';
+      let x0, y0, w, hh;
+      if (h.edge === 'L0') { x0 = X(0); y0 = Y(h.y + rr); w = h.depth; hh = h.dia; }
+      else if (h.edge === 'L1') { x0 = X(L - h.depth); y0 = Y(h.y + rr); w = h.depth; hh = h.dia; }
+      else if (h.edge === 'W0') { x0 = X(h.x - rr); y0 = Y(h.depth); w = h.dia; hh = h.depth; }
+      else { x0 = X(h.x - rr); y0 = Y(W); w = h.dia; hh = h.depth; }
+      o.push('<rect x="' + r1(x0) + '" y="' + r1(y0) + '" width="' + r1(w) + '" height="' + r1(hh) + '" fill="none" stroke="' + col + '" stroke-width="' + r1(u * 0.1) + '"' + dash + '/>');
+    });
+
     // Kanten (Bekantung)
     const ew = u * 0.6;
     const edgeLine = (e) => ({
@@ -195,8 +257,9 @@
     o.push('<text x="' + r1(dimX - fs * 0.4) + '" y="' + r1(Y(W / 2)) + '" text-anchor="middle" font-weight="bold" transform="rotate(-90 ' + r1(dimX - fs * 0.4) + ' ' + r1(Y(W / 2)) + ')">' + fmt(W) + '</text>');
     // Koordinaten-Bemaßung der Anschlüsse (ab Nullpunkt links vorne)
     const all = d.faceView.concat(d.faceOther, d.featView || [], d.featOther || []);
-    const xs = [...new Set(all.flatMap((c) => [c.x0, c.x1]).filter((v) => v > 0.05 && v < L - 0.05))].sort((a, b) => a - b);
-    const ys = [...new Set(all.flatMap((c) => [c.y0, c.y1]).filter((v) => v > 0.05 && v < W - 0.05))].sort((a, b) => a - b);
+    const hAll = (d.holesView || []).concat(d.holesOther || [], d.holesEdge || []);
+    const xs = [...new Set(all.flatMap((c) => [c.x0, c.x1]).concat(hAll.filter((h) => h.edge !== 'L0' && h.edge !== 'L1').map((h) => r1(h.x))).filter((v) => v > 0.05 && v < L - 0.05))].sort((a, b) => a - b);
+    const ys = [...new Set(all.flatMap((c) => [c.y0, c.y1]).concat(hAll.filter((h) => h.edge !== 'W0' && h.edge !== 'W1').map((h) => r1(h.y))).filter((v) => v > 0.05 && v < W - 0.05))].sort((a, b) => a - b);
     // Maßzahlen nicht überlappen lassen: Textposition mindestens eine Schrifthöhe auseinander
     const spread = (vals, toScreen, dir) => { let last = -Infinity; return vals.map((v) => { let p = toScreen(v) * dir; if (p < last + fs * 0.95) p = last + fs * 0.95; last = p; return p * dir; }); };
     const xText = spread(xs, X, 1), yText = spread(ys, Y, -1);
@@ -232,7 +295,7 @@
       'Kante (rot): ' + (d.edges.length ? d.edges.map((e) => EDGE_TXT[e] + (d.edgeNames[e] ? ' = ' + d.edgeNames[e] : '')).join(', ') + ' – ' + escX(info.kante || 'Kantenart A') : 'keine'),
       'Maße in mm ab 0/0 (links unten). Ansicht auf die Seite mit den Anschlüssen; blau = anschließendes Teil, gestrichelt = Gegenseite bzw. Anschluss an der Kante.',
       ((d.featView || []).length + (d.featOther || []).length ? 'Fräsen (schraffiert): ' + (d.featView || []).concat(d.featOther || []).map((g) => g.name + ', ' + fmt(g.x1 - g.x0) + ' lang').join('; ') + '.   ' : '') +
-        'Bohrungen: noch keine – folgen, wenn die Verbinder festgelegt sind.'
+        holeSummary(d)
     ];
     lines.forEach((t, i) => o.push('<text x="' + r1(fs) + '" y="' + r1(ty + lh * (i + 1.1)) + '">' + t + '</text>'));
     if (info.projekt) o.push('<text x="' + r1(VW - fs) + '" y="' + r1(ty + lh * 1.1) + '" text-anchor="end">' + escX(info.projekt) + '</text>');
@@ -240,6 +303,6 @@
     return o.join('\n');
   }
 
-  const api = { analyze, svg, contactsOf, frame };
+  const api = { analyze, svg, contactsOf, frame, holeRows, holeSummary };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Zeichnung = api;
 })(typeof window !== 'undefined' ? window : globalThis);

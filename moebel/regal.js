@@ -31,6 +31,14 @@
     nutT: 8,            // Nuttiefe
     nutLuft: 1,         // Luft der Rückwand am Nutgrund (je Seite)
     nutPlus: 0,         // Nutbreite = Rückwandstärke + nutPlus
+    // Verbinder (Vorgaben vom Nutzer): abwechselnd Konfirmat/Dübel im Raster, Start am Randabstand
+    verbinder: true,
+    vRand: 50,          // Abstand äußerer Verbinder von Vorder-/Hinterkante des anschließenden Teils
+    vRaster: 64,        // Raster
+    duebelD: 8, duebelFl: 13, duebelSt: 19,   // Dübel Ø8×30: Bohrtiefe Fläche / Stirnseite
+    konfD: 7, konfKernD: 5, konfKern: 36,     // Konfirmat 7×50: Durchgang Ø7, Kernloch Ø5 × 36 in der Stirnseite
+    konfSenk: 10,       // Senkung Ø (Angabe aus Händler-/Fachquellen, kein Häfele-Datenblatt geprüft)
+    mtVersatz: 32,      // Fachböden rechts am Mittelteiler: Positionen um diesen Wert versetzt (Kollision)
     material: 'melamin',
     sheet: '2800x2070',
     kerf: 4,            // Sägeblattbreite
@@ -129,6 +137,8 @@
     }
 
     (typeof grooves !== 'undefined' ? grooves : []).forEach((g) => { (parts[g.part].grooves = parts[g.part].grooves || []).push(g); });
+    const holes = p.verbinder ? joints(parts, p, warnings) : [];
+    holes.forEach((h) => { (parts[h.part].holes = parts[h.part].holes || []).push(h); });
 
     // Gruppierte Stückliste
     const map = new Map();
@@ -145,9 +155,90 @@
     const edgeM = edgeMm / 1000;
 
     return {
-      p, parts, cutlist, warnings, errors,
+      p, parts, cutlist, warnings, errors, holes,
       derived: { Wi, Hi, cw, ch, Db, Dk, Di, edgeM, nut }
     };
+  }
+
+  /* ---------- Verbinder: Konfirmat + Dübel ----------
+   * Jede Stelle, an der ein Teil P mit seiner Kante (Stirn- oder Längskante) an der Fläche eines Teils Q anliegt,
+   * bekommt Verbinder entlang der Anschlusslinie: ab vRand vom Linienanfang (vorne bzw. links/unten) im Raster vRaster,
+   * solange der Abstand zum Linienende >= vRand ist. Abwechselnd Konfirmat, Dübel, Konfirmat …
+   * Fachböden am Mittelteiler: nur Dübel; auf der rechten Seite um mtVersatz versetzt.
+   * Bohrungen: { part, kind: 'face'|'edge', type, dia, depth, through, axis, dir, at:[x,y,z] (Eintrittspunkt) } */
+  function boxOf(pt) { return [0, 1, 2].map((i) => [pt.pos[i] - pt.size[i] / 2, pt.pos[i] + pt.size[i] / 2]); }
+  function thickAxis(pt) { return [0, 1, 2].reduce((a, i) => (Math.abs(pt.size[i] - pt.thick) < Math.abs(pt.size[a] - pt.thick) ? i : a), 0); }
+
+  function joints(parts, p, warnings) {
+    const TOL = 0.6, holes = [];
+    const boxes = parts.map(boxOf), tax = parts.map(thickAxis);
+    parts.forEach((P, ip) => {
+      if (P.back) return;
+      parts.forEach((Q, iq) => {
+        if (iq === ip || Q.back) return;
+        const bP = boxes[ip], bQ = boxes[iq];
+        for (let a = 0; a < 3; a++) {
+          if (tax[iq] !== a || tax[ip] === a) continue;          // Q liegt mit Fläche, P mit Kante an
+          const pAtMin = Math.abs(bP[a][0] - bQ[a][1]) < TOL, pAtMax = Math.abs(bP[a][1] - bQ[a][0]) < TOL;
+          if (!pAtMin && !pAtMax) continue;
+          const others = [0, 1, 2].filter((i) => i !== a);
+          const ov = others.map((i) => [Math.max(bP[i][0], bQ[i][0]), Math.min(bP[i][1], bQ[i][1])]);
+          if (ov.some((o) => o[1] - o[0] < 1)) continue;
+          // Linie läuft entlang der Achse, die nicht P's Dicke ist
+          const k = others.findIndex((i) => i !== tax[ip]);
+          const lineAx = others[k], line = ov[k];
+          const thAx = tax[ip], thMid = (bP[thAx][0] + bP[thAx][1]) / 2;
+          const len = line[1] - line[0];
+          const fromMax = lineAx === 2;                            // Tiefe: von vorne (+z) zählen
+          const divider = Q.name === 'Mittelteiler' && P.name === 'Fachboden';
+          const rightSide = divider && pAtMin;                     // P liegt rechts (+x) vom Mittelteiler
+          const pos = [];
+          for (let d = p.vRand + (rightSide ? p.mtVersatz : 0); d <= len - p.vRand + 1e-6; d += p.vRaster) pos.push(d);
+          if (!pos.length) {
+            warnings.push(P.name + ' an ' + Q.name + ': Anschluss nur ' + Math.round(len) + ' mm lang, Randabstand ' + p.vRand +
+              ' mm passt nicht – Verbinder hier bitte selbst festlegen.');
+            continue;
+          }
+          const plane = pAtMin ? bP[a][0] : bP[a][1];             // Berührebene
+          const intoP = pAtMin ? 1 : -1;                           // Richtung von der Ebene ins Teil P
+          const qOuter = pAtMin ? bQ[a][0] : bQ[a][1];             // Außenfläche von Q (Konfirmat-Kopf)
+          pos.forEach((d, i) => {
+            const konf = !divider && i % 2 === 0;
+            const at = [0, 0, 0];
+            at[lineAx] = fromMax ? line[1] - d : line[0] + d;
+            at[thAx] = thMid;
+            const jid = ip + '-' + iq + '-' + i;
+            if (konf) {
+              const atQ = at.slice(); atQ[a] = qOuter;
+              holes.push({ part: iq, kind: 'face', type: 'Konfirmat', dia: p.konfD, depth: Q.thick, through: true, senk: p.konfSenk, axis: a, dir: intoP, at: atQ, joint: jid, mate: ip });
+              const atP = at.slice(); atP[a] = plane;
+              holes.push({ part: ip, kind: 'edge', type: 'Konfirmat-Kernloch', dia: p.konfKernD, depth: p.konfKern, axis: a, dir: intoP, at: atP, joint: jid, mate: iq });
+            } else {
+              const atQ = at.slice(); atQ[a] = plane;
+              holes.push({ part: iq, kind: 'face', type: 'Dübel', dia: p.duebelD, depth: p.duebelFl, axis: a, dir: -intoP, at: atQ, joint: jid, mate: ip });
+              const atP = at.slice(); atP[a] = plane;
+              holes.push({ part: ip, kind: 'edge', type: 'Dübel', dia: p.duebelD, depth: p.duebelSt, axis: a, dir: intoP, at: atP, joint: jid, mate: iq });
+            }
+          });
+        }
+      });
+    });
+    // Kollision: Flächenbohrungen von beiden Seiten an derselben Stelle, zusammen tiefer als die Platte
+    const byPart = {};
+    holes.filter((h) => h.kind === 'face').forEach((h) => (byPart[h.part] = byPart[h.part] || []).push(h));
+    Object.entries(byPart).forEach(([ip, list]) => {
+      const T = parts[ip].thick;
+      for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) {
+        const A = list[i], B = list[j];
+        if (A.dir === B.dir && !A.through && !B.through) continue;
+        const dist = Math.hypot(...[0, 1, 2].filter((x) => x !== A.axis).map((x) => A.at[x] - B.at[x]));
+        if (dist < (A.dia + B.dia) / 2 && (A.through || B.through || A.depth + B.depth > T)) {
+          warnings.push('Bohrungen kollidieren in ' + parts[ip].name + ' (' + A.type + ' / ' + B.type + '). Bitte Anordnung prüfen.');
+          return;
+        }
+      }
+    });
+    return holes;
   }
 
   /* ---------- Zuschnittoptimierung (Streifen-Packung, Guillotine-tauglich) ---------- */

@@ -25,7 +25,15 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
   Rückwand (Tiefe − Nutabstand − Rückwandstärke). Alles im Generator änderbar.
   Hinweis: Eine gefräste Nut hat an ihren Enden den Radius des Fräsers.
 - **Rückwand aufgesetzt (Alternative):** Rückwandmaß = Breite − 2 mm, Höhe − Sockel − 2 mm (Konstruktionsentscheidung).
-- **Bohrungen/Verbinder:** noch keine. Maschine bohrt nur von oben (keine Kantenbohrungen).
+- **Verbinder (Vorgaben vom Nutzer):** Konfirmat + Dübel abwechselnd im 64er-Raster, vorne beginnend mit
+  Konfirmat, Randabstand 50 mm. Dübel Ø8 × 30 (Frischeis 69010/0008), Bohrtiefe Fläche 13 / Stirn 19 mm.
+  Konfirmat 7 × 50: Durchgang Ø7 in der Fläche, Kernloch Ø5 × 36 mm in der Stirnseite.
+  Fachböden am Mittelteiler nur gedübelt, rechte Seite um 32 mm versetzt (sonst Kollision).
+  Quellen Konfirmat: Händlerangaben zu Häfele Confirmat 7 × 50 (Kernloch Ø5), Fachartikel Holz & Leim
+  (Durchgang Ø7, Stirn Ø5). **Senkung Ø10 nicht aus einem Häfele-Datenblatt geprüft.**
+- **Maschine bohrt nur von oben:** Flächenbohrungen per CNC, Kantenbohrungen (Kernlöcher, Dübel in der Stirn)
+  von Hand mit Bohrlehre. Konfirmat-Köpfe liegen außen auf Seitenwänden (Blende), Deckel-Oberseite und
+  Boden-Oberseite (Sockelblende) – bitte prüfen, ob dort sichtbar.
 
 ## Kataloge aktualisieren
 ```

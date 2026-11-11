@@ -46,6 +46,25 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
   const a = M.buildRegal({ W: 800, H: 2000, D: 300, backMode: 'auf' });
   ok(a.cutlist.find((c) => c.name === 'Seitenwand').w === 297 && !a.parts.some((p) => p.grooves), 'aufgesetzte Rückwand ohne Nut');
 }
+// Verbinder: Boden an Seitenwand, 300 tief: K 50, D 114, K 178, D 242 (von vorne)
+{
+  const r = M.buildRegal({ W: 1200, H: 2000, D: 300, shelves: 3, dividers: 1, plinth: 60 });
+  const iB = r.parts.findIndex((p) => p.name === 'Boden');
+  const left = r.parts.findIndex((p) => p.name === 'Seitenwand' && p.pos[0] < 0);
+  const hs = r.holes.filter((h) => h.part === left && h.mate === iB).sort((a, b) => b.at[2] - a.at[2]);
+  ok(hs.map((h) => h.type).join() === 'Konfirmat,Dübel,Konfirmat,Dübel', 'Abfolge K/D/K/D: ' + hs.map((h) => h.type).join());
+  ok(hs.map((h) => 150 - h.at[2]).join() === '50,114,178,242', 'Positionen ab Vorderkante: ' + hs.map((h) => 150 - h.at[2]).join());
+  ok(hs.every((h) => h.dia === (h.type === 'Dübel' ? 8 : 7)), 'Durchmesser in der Fläche');
+  const edge = r.holes.filter((h) => h.part === iB && h.kind === 'edge');
+  ok(edge.filter((h) => h.type === 'Konfirmat-Kernloch').every((h) => h.dia === 5 && h.depth === 36), 'Kernloch Ø5 × 36');
+  ok(edge.filter((h) => h.type === 'Dübel').every((h) => h.depth === 19), 'Dübel Stirn 19');
+  ok(r.holes.filter((h) => h.kind === 'face' && h.type === 'Dübel').every((h) => h.depth === 13), 'Dübel Fläche 13');
+  ok(!r.warnings.some((w) => /kollidieren/.test(w)), 'keine Kollision am Mittelteiler');
+  ok(r.warnings.some((w) => /Sockelblende an Seitenwand/.test(w)), 'zu kurze Verbindung wird gemeldet');
+  const mt = r.parts.findIndex((p) => p.name === 'Mittelteiler');
+  ok(r.holes.filter((h) => h.part === mt && h.kind === 'face').every((h) => h.type === 'Dübel'), 'am Mittelteiler nur Dübel');
+  ok(M.buildRegal({ verbinder: false }).holes.length === 0, 'Verbinder abschaltbar');
+}
 const total = m.cutlist.reduce((s, g) => s + g.qty, 0);
 const placedAll = Object.values(plan.groups).reduce((s, g) => s + g.sheets.reduce((a, sh) => a + sh.items.length, 0), 0);
 ok(total === placedAll, 'alle ' + total + ' Teile platziert (' + placedAll + ')');
