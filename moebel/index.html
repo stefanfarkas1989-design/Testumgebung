@@ -45,10 +45,11 @@
         <label data-for="schrank">Raumhöhe* <input type="number" data-k="raumH" step="5"></label>
         <label data-for="schrank">Luft Decke* <input type="number" data-k="blendeLuft" step="1" min="0"></label>
         <label data-for="schrank">Blende zurück* <input type="number" data-k="blendeRueck" step="1" min="0"></label>
-        <label data-for="sideboard">Platte stark <input type="number" data-k="apT" step="1" min="0"></label>
+        <label data-for="sideboard">Platte stark <input type="number" data-k="apT" step="0.1" min="0"></label>
+        <label data-for="sideboard">Spax Rand* <input type="number" data-k="spaxRand" step="1" min="1"></label>
         <label data-for="sideboard">Überstand vorne* <input type="number" data-k="apUeb" step="1" min="0"></label>
       </div>
-      <p class="note">Höhe = Korpus inkl. Füße; Deckenblende bzw. Arbeitsplatte kommen oben dazu. * = Vorgabe, bitte prüfen. Fuß: Hettich Sockel-Verstellfuß-Set, 4 Stk., 100–120 mm, max. 200 kg, inkl. Klips (EAN 4008057011990); Schraubbild noch offen. Platte stark 0 = wie Korpus.</p>
+      <p class="note">Höhe = Korpus inkl. Füße; Deckenblende bzw. Arbeitsplatte kommen oben dazu. * = Vorgabe, bitte prüfen. Fuß: Hettich Sockel-Verstellfuß-Set, 4 Stk., 100–120 mm, max. 200 kg, inkl. Klips (EAN 4008057011990); Schraubbild noch offen. Platte stark 0 = wie Korpus. Arbeitsplatte: Spax 4 × 35 von innen, Ø5 Durchgang im Deckel, pro Fach 4 Stück.</p>
     </section>
     <section>
       <h2>Aufbau</h2>
@@ -107,6 +108,14 @@
       <div id="bList" class="dlist" role="listbox" aria-label="Rückwände"></div>
       <p class="note" id="bInfo"></p>
       <label class="row">Rückwand <input type="text" id="jBack" placeholder="Art.-Nr. + Bezeichnung"></label>
+      <div id="apBox">
+        <label class="row">Arbeitsplatte suchen <input type="search" id="aSearch" placeholder="Dekor, z. B. U999"></label>
+        <div id="aList" class="dlist" role="listbox" aria-label="Arbeitsplatte"></div>
+        <p class="note" id="aInfo"></p>
+        <label class="row">Kante AP suchen <input type="search" id="akSearch" placeholder="Dekor-Code"></label>
+        <div id="akList" class="dlist" role="listbox" aria-label="Kante Arbeitsplatte"></div>
+        <p class="note" id="akInfo"></p>
+      </div>
       <label class="row">Objekt <input type="text" id="jObjekt" placeholder="z. B. Regal Flur"></label>
       <label class="row">Firma <input type="text" id="jFirma"></label>
       <label class="row">Kunden-Nr. <input type="text" id="jKunde"></label>

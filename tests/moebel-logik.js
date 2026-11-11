@@ -81,6 +81,14 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
   ok(g(sb, 'Arbeitsplatte').l === 1800 && g(sb, 'Arbeitsplatte').w === 420, 'Arbeitsplatte: seitlich bündig, vorne Überstand');
   ok(!sb.holes.some((h) => sb.parts[h.part].name === 'Arbeitsplatte'), 'keine Bohrungen von oben in der Arbeitsplatte');
   ok(sb.feet.length === 8, 'Füße auch unter den Mittelteilern');
+  // Arbeitsplatte: eigene Materialgruppe, Kantenart B; Spax pro Fach 4 Stück im Deckel
+  const ap = sb.cutlist.find((c) => c.name === 'Arbeitsplatte');
+  ok(ap.mat === 'ap' && ap.edgeKind === 'B', 'Arbeitsplatte eigene Gruppe, Kantenart B');
+  const iD = sb.parts.findIndex((q) => q.name === 'Deckel');
+  const spax = sb.holes.filter((h) => h.part === iD && h.type === 'Spax-Durchgang');
+  ok(spax.length === 12 && spax.every((h) => h.dia === 5 && h.through), '3 Fächer × 4 Spax, Ø5 durch');
+  ok(Object.keys(M.plan(sb).groups).includes('ap'), 'Arbeitsplatte im Zuschnitt als eigene Gruppe');
+  ok(M.buildRegal({ typ: 'sideboard', apT: 16 }).errors.some((e) => /zu lang/.test(e)), 'zu lange Spax wird gemeldet');
 }
 const total = m.cutlist.reduce((s, g) => s + g.qty, 0);
 const placedAll = Object.values(plan.groups).reduce((s, g) => s + g.sheets.reduce((a, sh) => a + sh.items.length, 0), 0);

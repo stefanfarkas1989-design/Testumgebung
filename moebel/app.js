@@ -69,6 +69,7 @@
     $('back').value = state.back ? state.bt : 0;
     $('backMode').value = state.backMode || 'nut';
     $('typ').value = state.typ || 'regal';
+    $('apBox').hidden = state.typ !== 'sideboard';
     $('sockel').value = state.sockel || 'fuesse';
     document.querySelectorAll('#typBox label').forEach((lb) => {
       const f = lb.dataset.for;
@@ -123,7 +124,9 @@
   function renderCut() {
     let html = '<p class="note">Je 10 mm Besäumschnitt, ' +
       state.kerf + ' mm Sägeblatt. Zahlen = Nr aus der Stückliste.</p>';
-    const names = { plate: M.MATERIALS[state.material].name + ' ' + state.t + ' mm', back: 'HDF-Rückwand ' + state.bt + ' mm' };
+    const nm = names();
+    const names_ = { plate: nm.plate + ' ' + fmtT(state.t) + ' mm', back: nm.back, ap: 'Arbeitsplatte: ' + nm.ap };
+    const fills = { plate: M.MATERIALS[state.material].color, back: '#c9b99a', ap: apColor() };
     for (const key of Object.keys(plan.groups)) {
       const g = plan.groups[key];
       g.sheets.forEach((sh, i) => {
@@ -133,12 +136,12 @@
         sh.items.forEach((it) => {
           const x = g.trim + it.x, y = g.trim + it.y;
           svg += '<rect x="' + x + '" y="' + y + '" width="' + it.l + '" height="' + it.w + '" fill="' +
-            (key === 'back' ? '#c9b99a' : M.MATERIALS[state.material].color) + '" stroke="#555" stroke-width="4"/>' +
+            fills[key] + '" stroke="#555" stroke-width="4"/>' +
             '<text x="' + (x + it.l / 2) + '" y="' + (y + it.w / 2) + '" text-anchor="middle" dominant-baseline="middle" font-size="' +
             Math.max(40, Math.min(110, it.w * 0.45)) + '" fill="#222">' + it.no + (it.rot ? '↻' : '') + '</text>';
         });
         svg += '</svg>';
-        html += '<div class="sheet"><h3>' + names[key] + ' – Platte ' + (i + 1) + ' von ' + g.sheets.length + ', ' + S.l + ' × ' + S.w + ' mm' +
+        html += '<div class="sheet"><h3>' + esc(names_[key]) + ' – Platte ' + (i + 1) + ' von ' + g.sheets.length + ', ' + S.l + ' × ' + S.w + ' mm' +
           ' (' + Math.round(sh.usage * 100) + ' % genutzt)</h3>' + svg + '</div>';
       });
     }
@@ -150,24 +153,36 @@
     const plate = state.fe ? state.fe.nr + ' ' + state.fe.name : M.MATERIALS[state.material].name + ' (kein Frischeis-Artikel gewählt)';
     const back = state.backFe ? state.backFe.nr + ' ' + state.backFe.name : 'Rückwand ' + fmtT(state.bt) + ' mm (kein Frischeis-Artikel gewählt)';
     const kante = state.kanteFe ? state.kanteFe.nr + ' ' + state.kanteFe.name : ($('jKante').value.trim() || 'Kantenart A (noch nicht gewählt)');
-    return { plate, back, kante };
+    const ap = state.apFe ? state.apFe.nr + ' ' + state.apFe.name : plate + ' (wie Korpus)';
+    const kanteB = state.apKanteFe ? state.apKanteFe.nr + ' ' + state.apKanteFe.name : (state.apFe ? 'Kantenart B (noch nicht gewählt)' : kante);
+    return { plate, back, kante, ap, kanteB };
   }
 
   function renderMaterial() {
     const n = names();
     let rows = '';
     for (const [key, g] of Object.entries(plan.groups)) {
-      const parts = model.cutlist.filter((c) => !!c.back === (key === 'back'));
+      const parts = model.cutlist.filter((c) => c.mat === key);
       const area = parts.reduce((s, c) => s + c.l * c.w * c.qty, 0) / 1e6;
-      rows += '<tr><td>' + esc(key === 'back' ? n.back : n.plate) + ' ' + shopLink(key === 'back' ? state.backFe : state.fe) + '</td><td class="n">' + fmtT(g.thick) + ' mm</td><td class="n">' + g.sheet.l + ' × ' + g.sheet.w +
+      const label = { plate: n.plate, back: n.back, ap: 'Arbeitsplatte: ' + n.ap }[key];
+      const obj = { plate: state.fe, back: state.backFe, ap: state.apFe || state.fe }[key];
+      rows += '<tr><td>' + esc(label) + ' ' + shopLink(obj) + '</td><td class="n">' + fmtT(g.thick) + ' mm</td><td class="n">' + g.sheet.l + ' × ' + g.sheet.w +
         '</td><td class="n">' + g.sheets.length + '</td><td class="n">' + area.toFixed(2).replace('.', ',') + ' m²</td></tr>';
     }
     $('tab-mat').innerHTML =
       '<table><thead><tr><th>Platte</th><th class="n">Stärke</th><th class="n">Rohformat</th><th class="n">Platten lt. Zuschnittplan</th><th class="n">Fläche der Teile</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-      '<table style="margin-top:12px"><thead><tr><th>Kante</th><th class="n">Bekantete Länge</th></tr></thead><tbody><tr><td>' + esc(n.kante) + ' ' + shopLink(state.kanteFe) + '</td><td class="n">' +
-      model.derived.edgeM.toFixed(2).replace('.', ',') + ' m</td></tr></tbody></table>' +
+      edgeTable(n) +
       hardwareTable() +
       '<p class="note">Bekantete Länge = Summe der Kanten laut Zeichnungen, ohne Zuschlag. Stückzahlen der Beschläge = Anzahl der Verbindungen laut Bohrbild, ohne Reserve. Preise siehst du in WebCut bzw. beim Beschlaghändler.</p>';
+  }
+
+  // Kantenlänge je Kantenart aus den Teilen (gleiche Regel wie Zeichnung)
+  function edgeTable(n) {
+    const len = {};
+    model.parts.forEach((pt) => pt.edges.forEach((e) => { len[pt.edgeKind] = (len[pt.edgeKind] || 0) + (e[0] === 'W' ? pt.cut[0] : pt.cut[1]); }));
+    const rows = Object.entries(len).sort().map(([k, mm]) => '<tr><td>Kantenart ' + k + ': ' + esc(k === 'B' ? n.kanteB : n.kante) + ' ' +
+      shopLink(k === 'B' ? state.apKanteFe : state.kanteFe) + '</td><td class="n">' + (mm / 1000).toFixed(2).replace('.', ',') + ' m</td></tr>').join('');
+    return '<table style="margin-top:12px"><thead><tr><th>Kante</th><th class="n">Bekantete Länge</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   function hardwareTable() {
@@ -175,10 +190,12 @@
     const konf = holes.filter((h) => h.kind === 'face' && h.type === 'Konfirmat').length;
     const dueb = holes.filter((h) => h.kind === 'face' && h.type === 'Dübel').length;
     const feet = (model.feet || []).length, set = state.fussSet || 4;
-    if (!konf && !dueb && !feet) return '';
+    const spax = holes.filter((h) => h.type === 'Spax-Durchgang').length;
+    if (!konf && !dueb && !feet && !spax) return '';
     return '<table style="margin-top:12px"><thead><tr><th>Beschlag</th><th>Bezugsquelle</th><th class="n">Stück</th></tr></thead><tbody>' +
       (konf ? '<tr><td>Konfirmat 7 × 50</td><td>frei, z. B. Amazon – Kernloch/Senkung laut Hersteller mit Bohrbild abgleichen</td><td class="n">' + konf + '</td></tr>' : '') +
       (dueb ? '<tr><td>Rillendübel Buche 8 × 30</td><td>Frischeis 69010/0008 oder gleichwertig, z. B. Amazon</td><td class="n">' + dueb + '</td></tr>' : '') +
+      (spax ? '<tr><td>Spax ' + state.spaxD + ' × ' + state.spaxL + ' (Arbeitsplatte von innen)</td><td>frei</td><td class="n">' + spax + '</td></tr>' : '') +
       (feet ? '<tr><td>Hettich Sockelverstellfuß-Set 100–120 × Ø25 mm (' + set + ' Stk., inkl. Klips)</td><td>Hettich DIY Art.-Nr. 9149109, EAN 4008057011990</td><td class="n">' + Math.ceil(feet / set) + ' Set (' + feet + ' Füße)</td></tr>' : '') +
       '</tbody></table>';
   }
@@ -189,12 +206,16 @@
     const n = names();
     return { material: n.plate, kante: n.kante, projekt: ($('jObjekt') && $('jObjekt').value.trim()) || ('Regal ' + state.W + ' × ' + state.H + ' × ' + state.D) };
   }
+  const drawInfo = (d, info, n) => Object.assign({}, info, {
+    material: d.mat === 'back' ? n.back : d.mat === 'ap' ? n.ap : n.plate,
+    kante: d.edgeKind === 'B' ? n.kanteB : n.kante
+  });
   function renderDrawings() {
     drawings = window.Zeichnung.analyze(model);
     const info = drawingInfo(), n = names();
     $('tab-draw').innerHTML = '<div class="drawbar"><button type="button" id="btnDraw">Alle Zeichnungen als ZIP (SVG)</button><span class="note" id="drawMsg">' +
       drawings.length + ' Zeichnungen. Rote Linie = Kante, blau = anschließendes Teil.</span></div>' +
-      drawings.map((d) => '<figure class="drawing">' + window.Zeichnung.svg(d, Object.assign({}, info, { material: d.back ? n.back : n.plate })) + '</figure>').join('');
+      drawings.map((d) => '<figure class="drawing">' + window.Zeichnung.svg(d, drawInfo(d, info, n)) + '</figure>').join('');
     $('btnDraw').addEventListener('click', exportDrawings);
   }
   async function exportDrawings() {
@@ -205,7 +226,7 @@
     const safe = (s) => s.replace(/[^A-Za-z0-9ÄÖÜäöüß_-]+/g, '-');
     const csv = ['Pos;Teil;Seite;Typ;x;y;Durchmesser;Tiefe;Hinweis'];
     drawings.forEach((d) => {
-      zip.file('Pos' + String(d.no).padStart(2, '0') + d.sub + '-' + safe(d.name) + '.svg', window.Zeichnung.svg(d, Object.assign({}, info, { material: d.back ? n.back : n.plate })));
+      zip.file('Pos' + String(d.no).padStart(2, '0') + d.sub + '-' + safe(d.name) + '.svg', window.Zeichnung.svg(d, drawInfo(d, info, n)));
       window.Zeichnung.holeRows(d).forEach((r) => csv.push([d.no + d.sub, d.name].concat(r).join(';')));
     });
     zip.file('Bohrliste.csv', '\ufeff' + csv.join('\r\n'));
@@ -374,6 +395,30 @@
       syncForm(); update();
     }
   });
+  const apPick = makePicker({
+    search: 'aSearch', list: 'aList', info: 'aInfo', missing: 'Dekorkatalog nicht verfügbar.',
+    accept: () => true,
+    rank: (a) => Math.abs(a.t - (state.apT || state.t)) * 10,
+    detail: (a) => fmtT(a.t) + ' mm · ' + a.l + '×' + a.w,
+    hint: () => 'Eigenes Dekor für die Arbeitsplatte; ohne Auswahl wie der Korpus.',
+    current: () => state.apFe && state.apFe.nr, currentObj: () => state.apFe,
+    pick: (a) => {
+      state.apFe = { nr: a.nr, name: a.name, l: a.l, w: a.w, t: a.t, url: a.url };
+      state.apT = a.t; state.apSheet = { l: a.l, w: a.w, name: a.l + ' × ' + a.w };
+      const code = decorCode(a.name);
+      if (code) { $('akSearch').value = code; }
+      syncForm(); update(); apKante.render();
+    }
+  });
+  const apKante = makePicker({
+    search: 'akSearch', list: 'akList', info: 'akInfo', missing: 'Kantenkatalog nicht verfügbar.',
+    accept: (a) => a.w >= (state.apT || state.t) + 1,
+    rank: (a) => Math.abs(a.w - ((state.apT || state.t) + 4)) * 10 + a.t,
+    detail: (a) => fmtT(a.w) + ' × ' + fmtT(a.t) + ' mm, Rolle ' + Math.round(a.l / 1000) + ' m',
+    hint: () => 'Kante für die Arbeitsplatte (Kantenart B im JAF-Formular).',
+    current: () => state.apKanteFe && state.apKanteFe.nr, currentObj: () => state.apKanteFe,
+    pick: (a) => { state.apKanteFe = { nr: a.nr, name: a.name, w: a.w, t: a.t, url: a.url }; update(); }
+  });
   function ensureBackOption(t) {
     const sel = $('back');
     if (![...sel.options].some((o) => Number(o.value) === Number(t))) sel.add(new Option('Frischeis ' + fmtT(t) + ' mm', t), sel.options[sel.options.length - 1]);
@@ -389,7 +434,8 @@
       const have = new Set(roh.map((x) => x.nr));
       rueck.items = roh.concat(thin.filter((x) => !have.has(x.nr)));
     } catch (e) { rueck.items = catalog.filter((a) => a.t <= 8.1); }
-    kanten.render(); rueck.render();
+    apPick.items = catalog; apKante.items = kanten.items;
+    kanten.render(); rueck.render(); apPick.render(); apKante.render();
   }
 
   /* ---------- JAF/Frischeis-Formular ---------- */
@@ -425,6 +471,8 @@
     try {
       const data = await window.JAF.fill(await loadTemplate(), model, {
         material: $('jMat').value.trim(), backMaterial: $('jBack').value.trim(), kante: $('jKante').value.trim(),
+        apMaterial: state.apFe ? state.apFe.nr + ' ' + state.apFe.name : $('jMat').value.trim(),
+        kanteB: state.apKanteFe ? state.apKanteFe.nr + ' ' + state.apKanteFe.name : (state.apFe ? '' : $('jKante').value.trim()),
         objekt: $('jObjekt').value.trim() || ('Regal ' + state.W + 'x' + state.H + 'x' + state.D), firma: $('jFirma').value.trim(),
         kundenNr: $('jKunde').value.trim(), rotate: state.rotate
       });
@@ -538,9 +586,11 @@
     const k = 0.001;
     const mat = M.MATERIALS[state.material];
     const wood = isWood();
+    const apWood = state.apFe ? WOOD_RE.test(state.apFe.name) : wood;
     model.parts.forEach((pt) => {
-      const color = pt.back ? '#b8a98a' : mat.color;
-      const m = (wood && !pt.back) ? woodMaterials(pt, color) : new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.75 });
+      const isAp = pt.mat === 'ap';
+      const color = pt.back ? '#b8a98a' : isAp ? apColor() : mat.color;
+      const m = ((isAp ? apWood : wood) && !pt.back) ? woodMaterials(pt, color) : new THREE.MeshStandardMaterial({ color: new THREE.Color(color), roughness: 0.75 });
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(pt.size[0] * k, pt.size[1] * k, pt.size[2] * k), m);
       mesh.castShadow = mesh.receiveShadow = true;
       mesh.userData = { pt, base: pt.pos.map((v) => v * k) };
@@ -567,6 +617,7 @@
 
   /* ---------- Holzmaserung (erzeugt, nicht fotografisch) ---------- */
   const WOOD_RE = /eiche|nuss|buche|ahorn|esche|kirsch|holz|oak|walnut|wood|teak|lärche|kiefer|fichte|ulme|akazie|zeder|birke|pinie|olive|cherry|beech|maple|chestnut|kastanie|\bH ?\d{4}\b/i;
+  function apColor() { return state.apFe ? guessColor(state.apFe.name) : M.MATERIALS[state.material].color; }
   function isWood() {
     if (state.material === 'fe' && state.fe) return WOOD_RE.test(state.fe.name);
     return state.material === 'eiche' || state.material === 'multiplex';

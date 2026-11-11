@@ -45,7 +45,10 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
 - **Schrank:** Deckenblende zurückversetzt (5 mm*), Höhe = Raumhöhe (2500*) − Schrankhöhe − Luft (5 mm*),
   von innen durch den Deckel mit Konfirmat/Dübel verbunden.
 - **Sideboard:** Arbeitsplatte oben drauf, nur vorne Überstand (20 mm*), seitlich/hinten bündig,
-  Kanten vorne + Stirnseiten; Verschraubung von unten noch offen.
+  Kanten vorne + Stirnseiten (Kantenart B im JAF-Formular). Eigenes Dekor möglich (eigene Zuschnittgruppe).
+  Von innen mit Spax 4 × 35 durch den Deckel verschraubt: Durchgang Ø5 im Deckel, keine Vorbohrung in der
+  Arbeitsplatte, pro Fach 4 Stück (2 vorne, 2 hinten), 50 mm* von Vorder-/Hinterkante und von den Senkrechten.
+  Prüfung: Spax-Länge − Deckelstärke muss kleiner als die Arbeitsplattenstärke sein.
 - **Darstellung:** Holzmaserung im 3D-Modell ist erzeugt (kein Foto), läuft je Teil in Maserrichtung.
 
 ## Kataloge aktualisieren

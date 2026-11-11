@@ -38,6 +38,9 @@
     blendeRueck: 5,     // VORGABE PRÜFEN: Deckenblende hinter der Vorderkante (zurückversetzt)
     apT: 0,             // Stärke Arbeitsplatte (0 = wie Plattenstärke)
     apUeb: 20,          // VORGABE PRÜFEN: Überstand Arbeitsplatte vorne
+    // Arbeitsplatte von innen mit Spax durch den Deckel (Vorgaben vom Nutzer): 4 × 35, Durchgang Ø5, keine Vorbohrung
+    spaxD: 4, spaxL: 35, spaxDurch: 5,
+    spaxRand: 50,       // VORGABE PRÜFEN: Abstand der Spax von Vorder-/Hinterkante und von den Senkrechten (pro Fach 4 Stück)
     back: true, bt: 3,  // Rückwand
     backMode: 'nut',    // 'nut' = in Nut (Seiten, Boden, Deckel), 'auf' = hinten aufgesetzt
     nutA: 10,           // Abstand Hinterkante bis Nut
@@ -99,10 +102,10 @@
     const mm = (v) => Math.floor(v + 1e-6);
     // cut = [Maß in Maserrichtung (= Länge im Formular), Maß quer]; grain = Weltachse der Maserung (0 = x, 1 = y)
     const EDGE_NAMES = { Seitenwand: { W0: 'Vorderkante', L1: 'Oberkante' } };
-    const add = (name, cut, size, pos, edges, grain) => parts.push({
-      name, cut: [mm(cut[0]), mm(cut[1])], grain, edgeNames: Object.assign({ W0: 'Vorderkante' }, EDGE_NAMES[name]),
+    const add = (name, cut, size, pos, edges, grain, extra) => parts.push(Object.assign({
+      name, cut: [mm(cut[0]), mm(cut[1])], grain, mat: 'plate', edgeKind: 'A', edgeNames: Object.assign({ W0: 'Vorderkante' }, EDGE_NAMES[name]),
       thick: size.thick, back: !!size.back, size: size.dims.map((v) => (v === size.thick ? v : mm(v))), pos, edges: edges || []
-    });
+    }, extra || {}));
 
     // Seitenwände (bei Füßen: ab Sockelhöhe, Boden bündig mit Unterkante)
     const feetMode = p.sockel === 'fuesse';
@@ -144,9 +147,10 @@
     // Sideboard: Arbeitsplatte oben drauf, vorne Überstand, seitlich und hinten bündig (von unten verschraubt)
     if (p.typ === 'sideboard') {
       const at = p.apT || t;
-      add('Arbeitsplatte', [W, D + p.apUeb], { thick: at, dims: [W, at, D + p.apUeb] }, [0, H + at / 2, p.apUeb / 2], ['W0', 'L0', 'L1'], 0);
+      add('Arbeitsplatte', [W, D + p.apUeb], { thick: at, dims: [W, at, D + p.apUeb] }, [0, H + at / 2, p.apUeb / 2], ['W0', 'L0', 'L1'], 0,
+        { mat: 'ap', edgeKind: 'B' });
       parts[parts.length - 1].noJoint = true;   // keine Konfirmat von oben; Verschraubung von unten noch offen
-      warnings.push('Arbeitsplatte: Verschraubung von unten durch den Deckel ist noch nicht festgelegt (Schraube, Bohrdurchmesser, Abstände).');
+      if (p.spaxL - t >= at) errors.push('Spax ' + p.spaxD + ' × ' + p.spaxL + ' ist zu lang: kommt durch die Arbeitsplatte (Deckel ' + t + ' + Platte ' + at + ' mm).');
     }
     // Füße: unter dem Boden, je Senkrechte (Seiten mit Randabstand, Mittelteiler mittig), vorne und hinten
     const feet = [];
@@ -185,13 +189,26 @@
 
     (typeof grooves !== 'undefined' ? grooves : []).forEach((g) => { (parts[g.part].grooves = parts[g.part].grooves || []).push(g); });
     const holes = p.verbinder ? joints(parts, p, warnings) : [];
+    // Spax: pro Fach (zwischen den Senkrechten) 2 vorne + 2 hinten, Durchgang im Deckel von innen (unten)
+    const iDeckel = parts.findIndex((q) => q.name === 'Deckel');
+    if (p.typ === 'sideboard' && iDeckel >= 0) {
+      const dk = parts[iDeckel], db = boxOf(dk);
+      const verts = parts.filter((q) => q.name === 'Seitenwand' || q.name === 'Mittelteiler').map(boxOf).sort((a, b) => a[0][0] - b[0][0]);
+      for (let i = 0; i + 1 < verts.length; i++) {
+        const x0 = verts[i][0][1], x1 = verts[i + 1][0][0];
+        if (x1 - x0 < 2 * p.spaxRand) { warnings.push('Spax: Fach ' + (i + 1) + ' ist schmaler als 2 × Randabstand – bitte Lage selbst festlegen.'); continue; }
+        [x0 + p.spaxRand, x1 - p.spaxRand].forEach((x) => [db[2][1] - p.spaxRand, db[2][0] + p.spaxRand].forEach((z) => {
+          holes.push({ part: iDeckel, kind: 'face', type: 'Spax-Durchgang', dia: p.spaxDurch, depth: dk.thick, through: true, axis: 1, dir: 1, at: [x, db[1][0], z] });
+        }));
+      }
+    }
     holes.forEach((h) => { (parts[h.part].holes = parts[h.part].holes || []).push(h); });
 
     // Gruppierte Stückliste
     const map = new Map();
     parts.forEach((pt, idx) => {
-      const key = pt.name + '|' + pt.cut.join('x') + '|' + pt.thick;
-      if (!map.has(key)) map.set(key, { name: pt.name, l: pt.cut[0], w: pt.cut[1], thick: pt.thick, back: pt.back, edges: pt.edges, edgeNames: pt.edgeNames, qty: 0, ids: [] });
+      const key = pt.name + '|' + pt.cut.join('x') + '|' + pt.thick + '|' + pt.mat;
+      if (!map.has(key)) map.set(key, { name: pt.name, l: pt.cut[0], w: pt.cut[1], thick: pt.thick, back: pt.back, mat: pt.back ? 'back' : pt.mat, edgeKind: pt.edgeKind, edges: pt.edges, edgeNames: pt.edgeNames, qty: 0, ids: [] });
       const g = map.get(key); g.qty++; g.ids.push(idx);
     });
     const cutlist = [...map.values()].map((g, i) => { g.no = i + 1; g.ids.forEach((id) => (parts[id].group = g.no)); return g; });
@@ -344,16 +361,16 @@
     const mat = MATERIALS[p.material];
     const groups = {};
     cutlist.forEach((g) => {
-      const key = g.back ? 'back' : 'plate';
+      const key = g.back ? 'back' : (g.mat === 'ap' ? 'ap' : 'plate');
       (groups[key] = groups[key] || []);
       for (let i = 0; i < g.qty; i++) groups[key].push({ no: g.no, l: g.l, w: g.w });
     });
     const result = { sheet, material: mat, groups: {}, errors: [] };
     for (const key of Object.keys(groups)) {
-      const sh = key === 'back' && p.backSheet ? p.backSheet : sheet;
+      const sh = key === 'back' && p.backSheet ? p.backSheet : key === 'ap' && p.apSheet ? p.apSheet : sheet;
       const r = packSheets(groups[key], sh, p.kerf, key === 'back' ? true : p.rotate);
       r.sheet = sh;
-      r.thick = key === 'back' ? p.bt : p.t;
+      r.thick = key === 'back' ? p.bt : key === 'ap' ? (p.apT || p.t) : p.t;
       result.groups[key] = r;
       result.errors.push(...r.errors);
     }

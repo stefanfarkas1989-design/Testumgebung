@@ -29,7 +29,7 @@ a.shop{color:var(--acc)}
 .dlist .sw{width:14px;height:14px;border-radius:3px;border:1px solid var(--line);grid-row:span 2;align-self:center}
 .dlist small{color:var(--mut);grid-column:2;font-variant-numeric:tabular-nums}
 #btnJaf{width:100%;margin-top:6px;background:var(--acc);color:#fff;border-color:var(--acc)}
-#stage{grid-area:s;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;min-height:420px;overflow:hidden}
+#stage{grid-area:s;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;height:min(68vh,640px);min-height:340px;align-self:start;overflow:hidden}
 #view{position:absolute;inset:0;touch-action:none}
 #view canvas{display:block;width:100%;height:100%}
 #dims{position:absolute;left:10px;bottom:8px;font-size:13px;color:var(--mut);background:var(--panel);padding:3px 8px;border-radius:6px;border:1px solid var(--line)}

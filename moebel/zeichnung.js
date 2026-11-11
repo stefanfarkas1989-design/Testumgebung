@@ -123,7 +123,7 @@
         const plus = v.hands.filter((h) => h > 0).length, minus = v.hands.length - plus;
         out.push({
           no: g.no, sub: variants.size > 1 ? String.fromCharCode(97 + k++) : '', name: g.name, qty: v.hands.length,
-          l: g.l, w: g.w, thick: g.thick, edges: g.edges || [], edgeNames: g.edgeNames || {}, back: g.back,
+          l: g.l, w: g.w, thick: g.thick, edges: g.edges || [], edgeNames: g.edgeNames || {}, back: g.back, mat: g.mat, edgeKind: g.edgeKind || 'A',
           faceView: v.c.faceView, faceOther: v.c.faceOther, edge: v.c.edge, featView: v.c.featView, featOther: v.c.featOther,
           holesView: v.c.holesView, holesOther: v.c.holesOther, holesEdge: v.c.holesEdge, marks: v.c.marks,
           mirror: plus && minus ? { asDrawn: Math.max(plus, minus), mirrored: Math.min(plus, minus) } : null
@@ -206,7 +206,7 @@
       label(c, 'Pos ' + c.no + ' Gegenseite', '#555', fs * 0.8);
     });
     // Bohrungen: Fläche = Kreis (durchgehend: mit Kreuz), Gegenseite gestrichelt, Kante = verdeckte Bohrung gestrichelt
-    const HCOL = { 'Konfirmat': '#6a1b9a', 'Konfirmat-Kernloch': '#6a1b9a', 'Dübel': '#1b5e20' };
+    const HCOL = { 'Konfirmat': '#6a1b9a', 'Konfirmat-Kernloch': '#6a1b9a', 'Dübel': '#1b5e20', 'Spax-Durchgang': '#0d47a1' };
     const hv = d.holesView || [], ho = d.holesOther || [], he = d.holesEdge || [];
     hv.concat(ho).forEach((h) => {
       const other = ho.includes(h) && !h.through, col = HCOL[h.type] || '#000', cx = X(h.x), cy = Y(h.y), rr = h.dia / 2;
@@ -307,7 +307,7 @@
       '<tspan font-weight="bold" font-size="' + r1(fs * 1.25) + '">Pos ' + d.no + d.sub + ' – ' + escX(d.name) + '</tspan>',
       'Stück: ' + d.qty + (d.mirror ? ' (davon ' + d.mirror.mirrored + '× spiegelbildlich)' : '') + '   Fertigmaß: ' + fmt(L) + ' × ' + fmt(W) + ' × ' + fmt(d.thick) + ' mm (inkl. Kante)',
       'Material: ' + escX(info.material || '–'),
-      'Kante (rot): ' + (d.edges.length ? d.edges.map((e) => EDGE_TXT[e] + (d.edgeNames[e] ? ' = ' + d.edgeNames[e] : '')).join(', ') + ' – ' + escX(info.kante || 'Kantenart A') : 'keine'),
+      'Kante (rot): ' + (d.edges.length ? d.edges.map((e) => EDGE_TXT[e] + (d.edgeNames[e] ? ' = ' + d.edgeNames[e] : '')).join(', ') + ' – Kantenart ' + d.edgeKind + ': ' + escX(info.kante || 'noch nicht gewählt') : 'keine'),
       'Maße in mm ab 0/0 (links unten). Ansicht auf die Seite mit den Anschlüssen; blau = anschließendes Teil, gestrichelt = Gegenseite bzw. Anschluss an der Kante.',
       ((d.featView || []).length + (d.featOther || []).length ? 'Fräsen (schraffiert): ' + (d.featView || []).concat(d.featOther || []).map((g) => g.name + ', ' + fmt(g.x1 - g.x0) + ' lang').join('; ') + '.   ' : '') +
         holeSummary(d)

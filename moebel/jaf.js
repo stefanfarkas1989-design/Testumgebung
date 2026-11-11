@@ -23,18 +23,18 @@
   function rowsFromModel(model, opt) {
     const rows = [];
     model.cutlist.forEach((g) => {
-      const mat = g.back ? opt.backMaterial : opt.material;
+      const mat = g.back ? opt.backMaterial : g.mat === 'ap' ? (opt.apMaterial || opt.material) : opt.material;
       const r = {
         pos: String(g.no), mat: mat || '', thick: g.thick, name: g.name, qty: g.qty, l: g.l, w: g.w,
         drehb: g.back || opt.rotate ? 1 : null, v: '', h: '', lk: '', rk: ''
       };
       // Kantenlage aus dem Modell. Zuordnung zu den Formularspalten ist eine Annahme (siehe README):
       // V/H = Kanten entlang der Länge (W0 = vorne, W1 = hinten), L/R = Kanten an den Enden (L0, L1)
-      const edges = g.edges || [];
-      if (edges.includes('W0')) r.v = 'A';
-      if (edges.includes('W1')) r.h = 'A';
-      if (edges.includes('L0')) r.lk = 'A';
-      if (edges.includes('L1')) r.rk = 'A';
+      const edges = g.edges || [], ek = g.edgeKind || 'A';
+      if (edges.includes('W0')) r.v = ek;
+      if (edges.includes('W1')) r.h = ek;
+      if (edges.includes('L0')) r.lk = ek;
+      if (edges.includes('L1')) r.rk = ek;
       rows.push(r);
     });
     return rows;
@@ -61,6 +61,7 @@
     if (opt.kundenNr) xml = setCell(xml, 'F8', opt.kundenNr);
     if (opt.objekt) xml = setCell(xml, 'I8', opt.objekt);
     if (opt.kante) xml = setCell(xml, 'F10', opt.kante); // Kantenart A
+    if (opt.kanteB) xml = setCell(xml, 'F11', opt.kanteB); // Kantenart B (Arbeitsplatte)
 
     rows.forEach((r, i) => {
       const n = FIRST_ROW + i;
