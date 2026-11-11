@@ -117,6 +117,21 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
   ok(tall.holes.filter((h) => h.type === 'Topf').length === 8, 'Tür über 1800 mm: 4 Bänder je Tür');
   ok(M.buildRegal({ W: 800, H: 700, D: 400, doors: ['st'], frontT: 22 }).errors.length > 0, 'Schiebetür über 20 mm wird gemeldet');
 }
+// Mehrere Korpusse unter einer Arbeitsplatte
+{
+  const r = M.buildRegal({ typ: 'sideboard', W: 3530, H: 760, D: 400, korpusse: 2, dividers: 2, shelves: 1, apT: 38,
+    doors: ['dt-l', 'dt-l', 'dt-r', 'dt-l', 'dt-r', 'dt-r'] });
+  const g = (n) => r.cutlist.find((c) => c.name === n);
+  ok(!r.errors.length, '2 Korpusse ohne Fehler');
+  ok(g('Seitenwand').qty === 4 && g('Boden').qty === 2 && g('Boden').l === 1765 - 38, 'je Korpus eigene Seiten/Böden (1765 breit)');
+  ok(g('Arbeitsplatte').qty === 1 && g('Arbeitsplatte').l === 3530, 'eine durchgehende Arbeitsplatte');
+  ok(r.feet.length === 16, 'Füße je Korpus');
+  ok(r.cutlist.filter((c) => c.name === 'Drehtür').reduce((s, c) => s + c.qty, 0) === 6, '6 Türen');
+  ok(!r.warnings.some((w) => /kollid/.test(w)), 'Anschläge ohne Kollision am Mittelteiler');
+  ok(r.holes.every((h) => h.part < r.parts.length), 'Bohrungen zeigen auf gültige Teile');
+  const xs = r.parts.filter((q) => q.name === 'Seitenwand').map((q) => q.pos[0]).sort((a, b) => a - b);
+  ok(Math.abs(xs[0] + 3530 / 2 - 9.5) < 0.01 && Math.abs(xs[3] - 3530 / 2 + 9.5) < 0.01, 'Seiten außen bündig mit Gesamtbreite');
+}
 const total = m.cutlist.reduce((s, g) => s + g.qty, 0);
 const placedAll = Object.values(plan.groups).reduce((s, g) => s + g.sheets.reduce((a, sh) => a + sh.items.length, 0), 0);
 ok(total === placedAll, 'alle ' + total + ' Teile platziert (' + placedAll + ')');

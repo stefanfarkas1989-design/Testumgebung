@@ -52,6 +52,7 @@
     apUeb: 20,          // VORGABE PRÜFEN: Überstand Arbeitsplatte vorne
     // Arbeitsplatte von innen mit Spax durch den Deckel (Vorgaben vom Nutzer): 4 × 35, Durchgang Ø5, keine Vorbohrung
     spaxD: 4, spaxL: 35, spaxDurch: 5,
+    korpusse: 1,        // Anzahl gleich breiter Korpusse nebeneinander (Sideboard: eine durchgehende Arbeitsplatte)
     spaxRand: 50,       // VORGABE PRÜFEN: Abstand der Spax von Vorder-/Hinterkante und von den Senkrechten (pro Fach 4 Stück)
     // Türen je Spalte: 'offen' | 'dt-l' | 'dt-r' | 'dt-2' | 'st' (Vorgaben vom Nutzer)
     doors: [],
@@ -91,8 +92,61 @@
   const round = (v) => Math.round(v);
 
   /* ---------- Modell ---------- */
+  // Mehrere Korpusse nebeneinander: jeder Korpus wird einzeln gebaut und verschoben, die Arbeitsplatte geht durch
   function buildRegal(input) {
     const p = Object.assign({}, DEFAULTS, input);
+    const nk = Math.max(1, Math.round(p.korpusse || 1));
+    if (nk === 1) return buildOne(p);
+    const Wk = p.W / nk, colsPer = (p.dividers || 0) + 1;
+    const all = { parts: [], holes: [], feet: [], profiles: [], hinges: [], warnings: [], errors: [] };
+    let first = null;
+    for (let i = 0; i < nk; i++) {
+      const sub = buildOne(Object.assign({}, p, { W: Wk, korpusse: 1, noAp: true, doors: (p.doors || []).slice(i * colsPer, (i + 1) * colsPer) }));
+      first = first || sub;
+      sub.errors.forEach((e) => all.errors.includes(e) || all.errors.push(e));
+      sub.warnings.forEach((w) => all.warnings.includes(w) || all.warnings.push(w));
+      if (sub.errors.length) continue;
+      const dx = -p.W / 2 + Wk * (i + 0.5), off = all.parts.length;
+      sub.parts.forEach((pt) => {
+        pt.pos = pt.pos.slice(); pt.pos[0] += dx; pt.korpus = i + 1;
+        (pt.holes || []).forEach((h) => { h.at = h.at.slice(); h.at[0] += dx; h.part += off; if (h.mate != null) h.mate += off; });
+        (pt.grooves || []).forEach((g) => { g.box = g.box.map((v, k) => (k === 0 ? [v[0] + dx, v[1] + dx] : v)); g.part += off; });
+        (pt.marks || []).forEach((mk) => { mk.at = mk.at.slice(); mk.at[0] += dx; });
+        if (pt.col != null) pt.col += i * colsPer;
+      });
+      all.parts.push(...sub.parts);
+      all.holes.push(...sub.holes);
+      all.feet.push(...sub.feet.map((f) => Object.assign({}, f, { x: f.x + dx })));
+      all.profiles.push(...sub.profiles.map((pr) => Object.assign({}, pr, { x0: pr.x0 + dx, x1: pr.x1 + dx })));
+      all.hinges.push(...sub.hinges.map((h) => Object.assign({}, h, { vert: h.vert + off })));
+    }
+    if (all.errors.length) return { p, parts: [], cutlist: [], errors: all.errors, warnings: all.warnings, derived: {}, holes: [], feet: [], profiles: [], hinges: [] };
+    if (p.typ === 'sideboard') {
+      const at = p.apT || p.t;
+      all.parts.push({ name: 'Arbeitsplatte', cut: [Math.floor(p.W), Math.floor(p.D + p.apUeb)], grain: 0, mat: 'ap', edgeKind: 'B', edgeNames: { W0: 'Vorderkante' },
+        thick: at, back: false, size: [Math.floor(p.W), at, Math.floor(p.D + p.apUeb)], pos: [0, p.H + at / 2, p.apUeb / 2], edges: ['W0', 'L0', 'L1'], noJoint: true });
+      if (p.W > 4100) all.warnings.push('Arbeitsplatte ' + p.W + ' mm ist länger als die Frischeis-Arbeitsplatten (4100 mm).');
+    }
+    all.warnings.push(nk + ' Korpusse à ' + Math.round(Wk) + ' mm nebeneinander: Seitenwände untereinander verschrauben (Verbindung noch nicht festgelegt).');
+    const res = finish(p, all.parts, all.warnings, all.errors, all.holes, all.feet, all.profiles, all.hinges);
+    res.derived = Object.assign({}, first.derived, { edgeM: res.derived.edgeM, korpusse: nk, Wk });
+    return res;
+  }
+
+  function finish(p, parts, warnings, errors, holes, feet, profiles, hinges) {
+    const map = new Map();
+    parts.forEach((pt, idx) => {
+      const key = pt.name + '|' + pt.cut.join('x') + '|' + pt.thick + '|' + pt.mat;
+      if (!map.has(key)) map.set(key, { name: pt.name, l: pt.cut[0], w: pt.cut[1], thick: pt.thick, back: pt.back, mat: pt.back ? 'back' : pt.mat, edgeKind: pt.edgeKind, edges: pt.edges, edgeNames: pt.edgeNames, qty: 0, ids: [] });
+      const g = map.get(key); g.qty++; g.ids.push(idx);
+    });
+    const cutlist = [...map.values()].map((g, i) => { g.no = i + 1; g.ids.forEach((id) => (parts[id].group = g.no)); return g; });
+    let edgeMm = 0;
+    parts.forEach((pt) => pt.edges.forEach((e) => { edgeMm += e[0] === 'W' ? pt.cut[0] : pt.cut[1]; }));
+    return { p, parts, cutlist, warnings, errors, holes, feet, profiles, hinges, derived: { edgeM: edgeMm / 1000 } };
+  }
+
+  function buildOne(p) {
     const { W, H, D, t, shelves: n, dividers: m, plinth: s } = p;
     const bt = p.back ? p.bt : 0;
     const nut = p.back && p.backMode === 'nut';
@@ -173,7 +227,7 @@
       else warnings.push('Deckenblende: nur ' + Math.round(bh) + ' mm bis zur Decke – keine Blende eingeplant.');
     }
     // Sideboard: Arbeitsplatte oben drauf, vorne Überstand, seitlich und hinten bündig (von unten verschraubt)
-    if (p.typ === 'sideboard') {
+    if (p.typ === 'sideboard' && !p.noAp) {
       const at = p.apT || t;
       add('Arbeitsplatte', [W, D + p.apUeb], { thick: at, dims: [W, at, D + p.apUeb] }, [0, H + at / 2, p.apUeb / 2], ['W0', 'L0', 'L1'], 0,
         { mat: 'ap', edgeKind: 'B' });

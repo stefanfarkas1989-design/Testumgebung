@@ -7,12 +7,14 @@
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
   const PRESETS = {
-    buch:      { W: 800,  H: 2000, D: 300, shelves: 4, dividers: 0, plinth: 100, typ: 'regal' },
-    wuerfel:   { W: 1500, H: 1500, D: 380, shelves: 3, dividers: 3, plinth: 100, typ: 'regal' },
-    schuh:     { W: 900,  H: 600,  D: 300, shelves: 2, dividers: 0, plinth: 100, typ: 'regal' },
-    sideboard: { W: 1800, H: 700,  D: 400, shelves: 1, dividers: 2, plinth: 100, typ: 'sideboard' },
-    hochschrank: { W: 800, H: 2200, D: 600, shelves: 5, dividers: 0, plinth: 100, typ: 'schrank' },
-    nische:    { W: 1200, H: 2400, D: 250, shelves: 7, dividers: 1, plinth: 100, typ: 'regal' }
+    buch:      { W: 800,  H: 2000, D: 300, shelves: 4, dividers: 0, plinth: 100, typ: 'regal', korpusse: 1, doors: [] },
+    wuerfel:   { W: 1500, H: 1500, D: 380, shelves: 3, dividers: 3, plinth: 100, typ: 'regal', korpusse: 1, doors: [] },
+    schuh:     { W: 900,  H: 600,  D: 300, shelves: 2, dividers: 0, plinth: 100, typ: 'regal', korpusse: 1, doors: [] },
+    sideboard: { W: 1800, H: 700,  D: 400, shelves: 1, dividers: 2, plinth: 100, typ: 'sideboard', korpusse: 1, doors: [] },
+    hochschrank: { W: 800, H: 2200, D: 600, shelves: 5, dividers: 0, plinth: 100, typ: 'schrank', korpusse: 1, doors: [] },
+    // Vorschlag Fensterwand (Wand 3540, Fenster-UK 800): 2 Korpusse W1000, Fronten Wildeiche H1318, Arbeitsplatte Granito anthrazit 38 mm
+    fensterwand: {"W": 3530, "H": 760, "D": 400, "plinth": 100, "shelves": 1, "dividers": 2, "korpusse": 2, "typ": "sideboard", "sockel": "fuesse", "fussTyp": "hettich", "apUeb": 20, "back": true, "bt": 3, "backMode": "nut", "doors": ["dt-l", "dt-l", "dt-r", "dt-l", "dt-r", "dt-r"], "fe": {"nr": "14148/1000", "name": "EGGER Dekorative Platte Premiumweiss W1000 ST19, 100 % PEFC", "l": 2800, "w": 2070, "t": 19, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-premiumweiss-w1000-st19--100--pefc~p18284642"}, "t": 19, "material": "fe", "sheet": "fe", "kanteFe": {"nr": "24747/0004", "name": "EGGER ABS Kante Premiumweiss W1000 ST19", "w": 23, "t": 0.8, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/egger-abs-kante-premiumweiss-w1000-st19~p6789937"}, "frontFe": {"nr": "14158/1318", "name": "EGGER Dekorative Platte Wildeiche natur H1318 ST10, 100 % PEFC", "l": 2800, "w": 2070, "t": 19, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-wildeiche-natur-h1318-st10--100--pefc~p18290159"}, "frontT": 19, "frontSheet": {"l": 2800, "w": 2070, "name": "2800 × 2070"}, "frontKanteFe": {"nr": "24565/1318", "name": "EGGER ABS Kante Wildeiche natur H1318 ST10", "w": 23, "t": 0.8, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/egger-abs-kante-wildeiche-natur-h1318-st10~p6792474"}, "apFe": {"nr": "50235/4288", "name": "Kaindl Postforming Arbeitsplatte G03/03 Granito anthrazit 4288 PE", "l": 4100, "w": 900, "t": 38, "kat": "laminat-arbeitsplatte", "url": "https://www.frischeis.at/shop/platte/arbeitsplatte/laminat-arbeitsplatte/kaindl-postforming-arbeitsplatte-g0303-granito-anthrazit-4288-pe~p63789"}, "apT": 38, "apSheet": {"l": 4100, "w": 900, "name": "4100 × 900"}, "apKanteFe": {"nr": "50382/4288", "name": "Kaindl ABS Kante Granito anthrazit 4288 PE", "w": 45, "t": 1, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/kaindl-abs-kante-granito-anthrazit-4288-pe~p14616243"}, "backFe": {"nr": "04333/0015", "name": "FINSA Fibraprint Weiß HDF einseitig lackiert E-Z", "l": 2440, "w": 1220, "t": 3, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/finsa-fibraprint-weiss-hdf-einseitig-lackiert-e-z~p11198379"}, "backSheet": {"l": 2440, "w": 1220, "name": "2440 × 1220"}},
+    nische:    { W: 1200, H: 2400, D: 250, shelves: 7, dividers: 1, plinth: 100, typ: 'regal', korpusse: 1, doors: [] }
   };
 
   let state = Object.assign({}, M.DEFAULTS, PRESETS.buch);
@@ -30,13 +32,13 @@
   }
 
   /* ---------- Formular ---------- */
-  const pairs = ['W', 'H', 'D', 'plinth', 'shelves', 'dividers', 'nutA', 'nutT', 'nutLuft', 'nutPlus'];
+  const pairs = ['W', 'H', 'D', 'plinth', 'shelves', 'dividers', 'korpusse', 'nutA', 'nutT', 'nutLuft', 'nutPlus'];
   function initForm() {
     Object.entries(M.MATERIALS).forEach(([k, m]) => $('material').add(new Option(m.name, k)));
     Object.entries(M.SHEETS).forEach(([k, s]) => $('sheet').add(new Option(s.name, k)));
     pairs.forEach((k) => {
       const r = $(k), n = $(k + 'n');
-      const set = (v) => { state[k] = Number(v); if (k === 'dividers') syncForm(); update(); };
+      const set = (v) => { state[k] = Number(v); if (k === 'dividers' || k === 'korpusse') syncForm(); update(); };
       r.addEventListener('input', () => set(r.value));
       n.addEventListener('change', () => { r.value = n.value; set(n.value); });
     });
@@ -50,7 +52,19 @@
     $('t').addEventListener('change', () => { state.t = Number($('t').value); update(); if (typeof kanten !== 'undefined') kanten.render(); });
     $('sheet').addEventListener('change', () => { state.sheet = $('sheet').value; update(); });
     $('rotate').addEventListener('change', () => { state.rotate = $('rotate').checked; update(); });
-    $('preset').addEventListener('change', () => { Object.assign(state, PRESETS[$('preset').value]); syncForm(); update(); });
+    $('preset').addEventListener('change', () => {
+      const pr = JSON.parse(JSON.stringify(PRESETS[$('preset').value]));
+      Object.assign(state, pr);
+      restoreFe();
+      if (state.backFe) ensureBackOption(state.backFe.t);
+      // Bestellfelder aus den gewählten Frischeis-Artikeln
+      if (pr.fe) $('jMat').value = pr.fe.nr + ' ' + pr.fe.name;
+      if (pr.kanteFe) $('jKante').value = pr.kanteFe.nr + ' ' + pr.kanteFe.name;
+      if (pr.backFe) $('jBack').value = pr.backFe.nr + ' ' + pr.backFe.name;
+      if (pr.fe || pr.kanteFe || pr.backFe) $('jMat').dispatchEvent(new Event('change'));
+      syncForm(); update();
+      if (typeof renderDekor === 'function') { renderDekor(); kanten.render(); rueck.render(); apPick.render(); apKante.render(); frontPick.render(); frontKante.render(); }
+    });
     $('explode').addEventListener('input', () => applyExplode());
     $('person').addEventListener('change', () => { if (personMesh) personMesh.visible = $('person').checked; render(); });
     $('typ').addEventListener('change', () => { state.typ = $('typ').value; syncForm(); update(); });
@@ -96,14 +110,15 @@
   /* ---------- Türen je Spalte ---------- */
   const DOOR_OPTS = [['offen', 'offen'], ['dt-l', 'Drehtür, Band links'], ['dt-r', 'Drehtür, Band rechts'], ['dt-2', '2 Drehtüren'], ['st', 'Schiebetüren']];
   function renderDoorUI() {
-    const n = (state.dividers || 0) + 1;
+    const per = (state.dividers || 0) + 1, nk = Math.max(1, state.korpusse || 1), n = per * nk;
     state.doors = (state.doors || []).slice(0, n);
     const box = $('doorsBox');
-    if (box.children.length !== n) {
+    if (box.children.length !== n || box.dataset.per !== String(per)) {
+      box.dataset.per = per;
       box.innerHTML = '';
       for (let c = 0; c < n; c++) {
         const lb = document.createElement('label'); lb.className = 'row';
-        lb.textContent = 'Spalte ' + (c + 1) + ' ';
+        lb.textContent = (nk > 1 ? 'K' + (Math.floor(c / per) + 1) + ' Spalte ' + (c % per + 1) : 'Spalte ' + (c + 1)) + ' ';
         const sel = document.createElement('select'); sel.id = 'door' + c;
         DOOR_OPTS.forEach(([v, t]) => sel.add(new Option(t, v)));
         sel.addEventListener('change', () => { state.doors[c] = sel.value; syncForm(); update(); });
