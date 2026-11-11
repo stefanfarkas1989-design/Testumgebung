@@ -35,6 +35,16 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
   von Hand mit Bohrlehre. Konfirmat-Köpfe liegen außen auf Seitenwänden (Blende), Deckel-Oberseite und
   Boden-Oberseite (Sockelblende) – bitte prüfen, ob dort sichtbar.
 
+## Möbeltypen, Sockel (Vorgaben vom Nutzer, Maße mit * im Generator = bitte prüfen)
+- **Füße:** Hettich Sockel-Verstellfuß-Set Ø25 × 100 mm inkl. Klips (laut Produktname; Datenblatt mit
+  Verstellbereich und Schraubbild fehlt noch). Korpus steht auf Füßen, Seiten enden bündig mit dem Boden.
+  Füße je Senkrechte vorne und hinten, Randabstand 50 mm*. Sockelblende volle Breite, 30 mm* zurück, geklipst.
+- **Schrank:** Deckenblende zurückversetzt (5 mm*), Höhe = Raumhöhe (2500*) − Schrankhöhe − Luft (5 mm*),
+  von innen durch den Deckel mit Konfirmat/Dübel verbunden.
+- **Sideboard:** Arbeitsplatte oben drauf, nur vorne Überstand (20 mm*), seitlich/hinten bündig,
+  Kanten vorne + Stirnseiten; Verschraubung von unten noch offen.
+- **Darstellung:** Holzmaserung im 3D-Modell ist erzeugt (kein Foto), läuft je Teil in Maserrichtung.
+
 ## Kataloge aktualisieren
 ```
 python3 tools/frischeis_katalog.py dekor /tmp/dekor.json && python3 tools/frischeis_kompakt.py /tmp/dekor.json moebel/frischeis-dekor.json

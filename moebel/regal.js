@@ -142,6 +142,7 @@
       const at = p.apT || t;
       add('Arbeitsplatte', [W, D + p.apUeb], { thick: at, dims: [W, at, D + p.apUeb] }, [0, H + at / 2, p.apUeb / 2], ['W0', 'L0', 'L1'], 0);
       parts[parts.length - 1].noJoint = true;   // keine Konfirmat von oben; Verschraubung von unten noch offen
+      warnings.push('Arbeitsplatte: Verschraubung von unten durch den Deckel ist noch nicht festgelegt (Schraube, Bohrdurchmesser, Abstände).');
     }
     // Füße: unter dem Boden, je Senkrechte (Seiten mit Randabstand, Mittelteiler mittig), vorne und hinten
     const feet = [];
