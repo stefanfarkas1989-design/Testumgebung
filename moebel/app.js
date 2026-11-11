@@ -7,14 +7,14 @@
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
   const PRESETS = {
-    buch:      { W: 800,  H: 2000, D: 300, shelves: 4, dividers: 0, plinth: 100, typ: 'regal', korpusse: 1, doors: [] },
-    wuerfel:   { W: 1500, H: 1500, D: 380, shelves: 3, dividers: 3, plinth: 100, typ: 'regal', korpusse: 1, doors: [] },
-    schuh:     { W: 900,  H: 600,  D: 300, shelves: 2, dividers: 0, plinth: 100, typ: 'regal', korpusse: 1, doors: [] },
-    sideboard: { W: 1800, H: 700,  D: 400, shelves: 1, dividers: 2, plinth: 100, typ: 'sideboard', korpusse: 1, doors: [] },
-    hochschrank: { W: 800, H: 2200, D: 600, shelves: 5, dividers: 0, plinth: 100, typ: 'schrank', korpusse: 1, doors: [] },
-    // Vorschlag Fensterwand (Wand 3540, Fenster-UK 800): 2 Korpusse W1000, Fronten Wildeiche H1318, Arbeitsplatte Granito anthrazit 38 mm
-    fensterwand: {"W": 3530, "H": 760, "D": 400, "plinth": 100, "shelves": 1, "dividers": 2, "korpusse": 2, "typ": "sideboard", "sockel": "fuesse", "fussTyp": "hettich", "apUeb": 20, "back": true, "bt": 3, "backMode": "nut", "doors": ["dt-l", "dt-l", "dt-r", "dt-l", "dt-r", "dt-r"], "fe": {"nr": "14148/1000", "name": "EGGER Dekorative Platte Premiumweiss W1000 ST19, 100 % PEFC", "l": 2800, "w": 2070, "t": 19, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-premiumweiss-w1000-st19--100--pefc~p18284642"}, "t": 19, "material": "fe", "sheet": "fe", "kanteFe": {"nr": "24747/0004", "name": "EGGER ABS Kante Premiumweiss W1000 ST19", "w": 23, "t": 0.8, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/egger-abs-kante-premiumweiss-w1000-st19~p6789937"}, "frontFe": {"nr": "14158/1318", "name": "EGGER Dekorative Platte Wildeiche natur H1318 ST10, 100 % PEFC", "l": 2800, "w": 2070, "t": 19, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-wildeiche-natur-h1318-st10--100--pefc~p18290159"}, "frontT": 19, "frontSheet": {"l": 2800, "w": 2070, "name": "2800 × 2070"}, "frontKanteFe": {"nr": "24565/1318", "name": "EGGER ABS Kante Wildeiche natur H1318 ST10", "w": 23, "t": 0.8, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/egger-abs-kante-wildeiche-natur-h1318-st10~p6792474"}, "apFe": {"nr": "50235/4288", "name": "Kaindl Postforming Arbeitsplatte G03/03 Granito anthrazit 4288 PE", "l": 4100, "w": 900, "t": 38, "kat": "laminat-arbeitsplatte", "url": "https://www.frischeis.at/shop/platte/arbeitsplatte/laminat-arbeitsplatte/kaindl-postforming-arbeitsplatte-g0303-granito-anthrazit-4288-pe~p63789"}, "apT": 38, "apSheet": {"l": 4100, "w": 900, "name": "4100 × 900"}, "apKanteFe": {"nr": "50382/4288", "name": "Kaindl ABS Kante Granito anthrazit 4288 PE", "w": 45, "t": 1, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/kaindl-abs-kante-granito-anthrazit-4288-pe~p14616243"}, "backFe": {"nr": "04333/0015", "name": "FINSA Fibraprint Weiß HDF einseitig lackiert E-Z", "l": 2440, "w": 1220, "t": 3, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/finsa-fibraprint-weiss-hdf-einseitig-lackiert-e-z~p11198379"}, "backSheet": {"l": 2440, "w": 1220, "name": "2440 × 1220"}},
-    nische:    { W: 1200, H: 2400, D: 250, shelves: 7, dividers: 1, plinth: 100, typ: 'regal', korpusse: 1, doors: [] }
+    buch:      { W: 800,  H: 2000, D: 300, shelves: 4, dividers: 0, plinth: 100, typ: 'regal', korpusse: 1, doors: [], wand: false },
+    wuerfel:   { W: 1500, H: 1500, D: 380, shelves: 3, dividers: 3, plinth: 100, typ: 'regal', korpusse: 1, doors: [], wand: false },
+    schuh:     { W: 900,  H: 600,  D: 300, shelves: 2, dividers: 0, plinth: 100, typ: 'regal', korpusse: 1, doors: [], wand: false },
+    sideboard: { W: 1800, H: 700,  D: 400, shelves: 1, dividers: 2, plinth: 100, typ: 'sideboard', korpusse: 1, doors: [], wand: false },
+    hochschrank: { W: 800, H: 2200, D: 600, shelves: 5, dividers: 0, plinth: 100, typ: 'schrank', korpusse: 1, doors: [], wand: false },
+    // Vorschlag Fensterwand (Wand 3540 von Wand zu Wand, Passblenden 50, Fenster-UK 800): 2 Korpusse W1000, Fronten Wildeiche H1318, Arbeitsplatte Granito anthrazit 38 mm
+    fensterwand: {"W": 3540, "H": 760, "D": 400, "plinth": 100, "shelves": 1, "dividers": 2, "korpusse": 2, "typ": "sideboard", "sockel": "fuesse", "fussTyp": "hettich", "apUeb": 20, "back": true, "bt": 3, "backMode": "nut", "doors": ["dt-l", "dt-l", "dt-r", "dt-l", "dt-r", "dt-r"], "fe": {"nr": "14148/1000", "name": "EGGER Dekorative Platte Premiumweiss W1000 ST19, 100 % PEFC", "l": 2800, "w": 2070, "t": 19, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-premiumweiss-w1000-st19--100--pefc~p18284642"}, "t": 19, "material": "fe", "sheet": "fe", "kanteFe": {"nr": "24747/0004", "name": "EGGER ABS Kante Premiumweiss W1000 ST19", "w": 23, "t": 0.8, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/egger-abs-kante-premiumweiss-w1000-st19~p6789937"}, "frontFe": {"nr": "14158/1318", "name": "EGGER Dekorative Platte Wildeiche natur H1318 ST10, 100 % PEFC", "l": 2800, "w": 2070, "t": 19, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/egger-dekorative-platte-wildeiche-natur-h1318-st10--100--pefc~p18290159"}, "frontT": 19, "frontSheet": {"l": 2800, "w": 2070, "name": "2800 × 2070"}, "frontKanteFe": {"nr": "24565/1318", "name": "EGGER ABS Kante Wildeiche natur H1318 ST10", "w": 23, "t": 0.8, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/egger-abs-kante-wildeiche-natur-h1318-st10~p6792474"}, "apFe": {"nr": "50235/4288", "name": "Kaindl Postforming Arbeitsplatte G03/03 Granito anthrazit 4288 PE", "l": 4100, "w": 900, "t": 38, "kat": "laminat-arbeitsplatte", "url": "https://www.frischeis.at/shop/platte/arbeitsplatte/laminat-arbeitsplatte/kaindl-postforming-arbeitsplatte-g0303-granito-anthrazit-4288-pe~p63789"}, "apT": 38, "apSheet": {"l": 4100, "w": 900, "name": "4100 × 900"}, "apKanteFe": {"nr": "50382/4288", "name": "Kaindl ABS Kante Granito anthrazit 4288 PE", "w": 45, "t": 1, "url": "https://www.frischeis.at/shop/platte/kante/kunststoffkante/kaindl-abs-kante-granito-anthrazit-4288-pe~p14616243"}, "backFe": {"nr": "04333/0015", "name": "FINSA Fibraprint Weiß HDF einseitig lackiert E-Z", "l": 2440, "w": 1220, "t": 3, "kat": "beschichtete-platte", "url": "https://www.frischeis.at/shop/platte/dekorative-platte/beschichtete-platte/finsa-fibraprint-weiss-hdf-einseitig-lackiert-e-z~p11198379"}, "backSheet": {"l": 2440, "w": 1220, "name": "2440 × 1220"}, "wand": true, "passB": 50},
+    nische:    { W: 1200, H: 2400, D: 250, shelves: 7, dividers: 1, plinth: 100, typ: 'regal', korpusse: 1, doors: [], wand: false }
   };
 
   let state = Object.assign({}, M.DEFAULTS, PRESETS.buch);
@@ -78,6 +78,9 @@
       const v = Number(el.value); if (Number.isFinite(v) && v > 0) state[el.dataset.k] = v; syncForm(); update();
     }));
     $('showDoors').addEventListener('change', () => { meshes.forEach((m) => { if (m.userData.pt.mat === 'front') m.visible = $('showDoors').checked; }); render(); });
+    $('openDoors').addEventListener('input', applyExplode);
+    $('wand').addEventListener('change', () => { state.wand = $('wand').checked; syncForm(); update(); });
+    $('passB').addEventListener('change', () => { const v = Number($('passB').value); if (v > 0) state.passB = v; syncForm(); update(); });
     $('feat').addEventListener('change', () => { meshes.forEach((m) => { if (m.userData.feat) m.userData.feat.visible = $('feat').checked; }); render(); });
   }
   function syncForm() {
@@ -85,6 +88,9 @@
     $('back').value = state.back ? state.bt : 0;
     $('backMode').value = state.backMode || 'nut';
     renderDoorUI();
+    $('wand').checked = !!state.wand;
+    $('passRow').hidden = !state.wand;
+    $('passB').value = state.passB != null ? state.passB : M.DEFAULTS.passB;
     $('typ').value = state.typ || 'regal';
     $('apBox').hidden = state.typ !== 'sideboard';
     $('sockel').value = state.sockel || 'fuesse';
@@ -789,6 +795,19 @@
     meshes.forEach((m) => {
       const b = m.userData.base, c = state.H * 0.001 / 2;
       m.position.set(b[0] * (1 + f * 0.8), c + (b[1] - c) * (1 + f * 0.8), b[2] + (m.userData.pt.back ? -f * 0.4 : 0));
+      m.rotation.set(0, 0, 0);
+      // Türen öffnen: Drehtüren um die Bandkante (Rückseite der Tür), Schiebetür vorne schiebt über die hintere
+      const pt = m.userData.pt, o = Number($('openDoors').value) / 100;
+      if (o > 0 && pt.hinge) {
+        const k = 0.001, hx = (pt.pos[0] + pt.hinge * pt.size[0] / 2) * k, hz = (pt.pos[2] - pt.size[2] / 2) * k;
+        const th = pt.hinge * o * (100 / 180) * Math.PI;       // bis 100° (Sensys öffnet 110°), Tür schwenkt nach vorne
+        const dx = m.position.x - hx * (1 + f * 0.8), dz = m.position.z - hz;
+        m.position.x = hx * (1 + f * 0.8) + dx * Math.cos(th) + dz * Math.sin(th);
+        m.position.z = hz - dx * Math.sin(th) + dz * Math.cos(th);
+        m.rotation.y = th;
+      } else if (o > 0 && pt.slide) {
+        m.position.x += pt.slide * 0.001 * o;
+      }
     });
     render();
   }

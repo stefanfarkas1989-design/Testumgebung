@@ -58,6 +58,8 @@
       <label>Fachböden <input type="range" id="shelves" min="0" max="12" step="1"><input type="number" id="shelvesn"></label>
       <label>Mittelteiler/Korpus <input type="range" id="dividers" min="0" max="6" step="1"><input type="number" id="dividersn"></label>
       <label>Korpusse <input type="range" id="korpusse" min="1" max="4" step="1"><input type="number" id="korpussen"></label>
+      <label class="chk"><input type="checkbox" id="wand"> Von Wand zu Wand (Passblenden links/rechts)</label>
+      <label class="row" id="passRow">Passblende* <input type="number" id="passB" step="1" min="10"></label>
       <label class="row">Rückwand
         <select id="back"><option value="3">HDF 3 mm</option><option value="0">keine</option></select>
       </label>
@@ -143,6 +145,7 @@
       <label>Explosion <input type="range" id="explode" min="0" max="100" step="1" value="0"></label>
       <label class="chk"><input type="checkbox" id="person" checked> Größenvergleich (Person 1,75 m)</label>
       <label class="chk"><input type="checkbox" id="feat" checked> Nuten und Bohrungen zeigen</label>
+      <label>Türen öffnen <input type="range" id="openDoors" min="0" max="100" step="1" value="0"></label>
       <label class="chk"><input type="checkbox" id="showDoors" checked> Türen zeigen</label>
     </section>
     <div id="warnings"></div>

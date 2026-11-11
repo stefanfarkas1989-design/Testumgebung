@@ -52,7 +52,9 @@
     apUeb: 20,          // VORGABE PRÜFEN: Überstand Arbeitsplatte vorne
     // Arbeitsplatte von innen mit Spax durch den Deckel (Vorgaben vom Nutzer): 4 × 35, Durchgang Ø5, keine Vorbohrung
     spaxD: 4, spaxL: 35, spaxDurch: 5,
-    korpusse: 1,        // Anzahl gleich breiter Korpusse nebeneinander (Sideboard: eine durchgehende Arbeitsplatte)
+    korpusse: 1,
+    wand: false,        // von Wand zu Wand: links und rechts Passblende, Arbeitsplatte durchgehend ohne Seitenkanten
+    passB: 50,          // VORGABE PRÜFEN: Breite der Passblenden (inkl. Anpassen an die Wand)        // Anzahl gleich breiter Korpusse nebeneinander (Sideboard: eine durchgehende Arbeitsplatte)
     spaxRand: 50,       // VORGABE PRÜFEN: Abstand der Spax von Vorder-/Hinterkante und von den Senkrechten (pro Fach 4 Stück)
     // Türen je Spalte: 'offen' | 'dt-l' | 'dt-r' | 'dt-2' | 'st' (Vorgaben vom Nutzer)
     doors: [],
@@ -94,7 +96,54 @@
   /* ---------- Modell ---------- */
   // Mehrere Korpusse nebeneinander: jeder Korpus wird einzeln gebaut und verschoben, die Arbeitsplatte geht durch
   function buildRegal(input) {
-    const p = Object.assign({}, DEFAULTS, input);
+    const p0 = Object.assign({}, DEFAULTS, input);
+    if (!p0.wand) return buildRow(p0);
+    // Wand zu Wand: Korpus(se) um 2 × Passblende schmaler, Blenden und Arbeitsplatte bis an die Wand
+    const b = p0.passB, W = p0.W;
+    const inner = buildRow(Object.assign({}, p0, { W: W - 2 * b, wand: false, noAp: true }));
+    inner.p = p0;
+    if (inner.errors.length) return inner;
+    const parts = inner.parts;
+    const fronts = parts.filter((q) => q.mat === 'front');
+    const ref = fronts.length ? fronts[0] : null;
+    const ft = p0.frontT || p0.t, fuge = p0.fuge;
+    const yb = p0.sockel === 'fuesse' ? p0.plinth : 0;
+    const y0 = ref ? ref.pos[1] - ref.size[1] / 2 : yb + fuge / 2, y1 = ref ? ref.pos[1] + ref.size[1] / 2 : p0.H - fuge / 2;
+    const zc = ref && ref.name === 'Drehtür' ? ref.pos[2] : p0.D / 2 + ft / 2;
+    const hB = y1 - y0, wB = b - fuge / 2;
+    if (wB < 10) inner.errors.push('Passblende zu schmal.');
+    [[-1, 'W1'], [1, 'W0']].forEach(([sx, innerEdge]) => {
+      const x = sx * (W / 2 - wB / 2);
+      parts.push({ name: 'Passblende', cut: [Math.floor(hB), Math.floor(wB)], grain: 1, mat: 'front', edgeKind: 'C', noJoint: true,
+        edgeNames: { L0: 'Unterkante', L1: 'Oberkante', [innerEdge]: 'zur Tür' }, thick: ft, back: false,
+        size: [Math.floor(wB), Math.floor(hB), ft], pos: [x, (y0 + y1) / 2, zc], edges: ['L0', 'L1', innerEdge] });
+    });
+    // Sockelblenden der äußeren Korpusse bis zur Wand verlängern
+    const plinths = parts.filter((q) => q.name === 'Sockelblende');
+    if (plinths.length) {
+      const lo = plinths.reduce((a, q) => (q.pos[0] < a.pos[0] ? q : a)), hi = plinths.reduce((a, q) => (q.pos[0] > a.pos[0] ? q : a));
+      [[lo, -1], [hi, 1]].forEach(([q, sx]) => {
+        q.size = q.size.slice(); q.pos = q.pos.slice();
+        q.size[0] += b; q.cut = [q.cut[0] + b, q.cut[1]]; q.pos[0] += sx * b / 2;
+      });
+      if (lo === hi) { /* ein Korpus: beide Seiten an einem Teil, oben schon zweimal verlängert */ }
+    }
+    if (p0.typ === 'sideboard') {
+      const at = p0.apT || p0.t;
+      const pf = p0.apFe && /postforming/i.test(p0.apFe.name);   // Vorderkante ab Werk geformt
+      parts.push({ name: 'Arbeitsplatte', cut: [Math.floor(W), Math.floor(p0.D + p0.apUeb)], grain: 0, mat: 'ap', edgeKind: 'B', edgeNames: { W0: 'Vorderkante' },
+        thick: at, back: false, size: [Math.floor(W), at, Math.floor(p0.D + p0.apUeb)], pos: [0, p0.H + at / 2, p0.apUeb / 2], edges: pf ? [] : ['W0'], noJoint: true });
+      if (W > 4100) inner.warnings.push('Arbeitsplatte ' + W + ' mm ist länger als die Frischeis-Arbeitsplatten (4100 mm).');
+      if (pf) inner.warnings.push('Arbeitsplatte Postforming: Vorderkante ab Werk geformt – keine Kante gesetzt.');
+      if (p0.spaxL - p0.t >= at) inner.errors.push('Spax ' + p0.spaxD + ' × ' + p0.spaxL + ' ist zu lang für die Arbeitsplatte.');
+    }
+    inner.warnings.push('Passblenden ' + Math.round(wB) + ' mm: Befestigung am Korpus noch nicht festgelegt; an der Wand anpassen.');
+    const res = finish(p0, parts, inner.warnings, inner.errors, inner.holes, inner.feet, inner.profiles, inner.hinges);
+    res.derived = Object.assign({}, inner.derived, { edgeM: res.derived.edgeM, passB: wB });
+    return res;
+  }
+
+  function buildRow(p) {
     const nk = Math.max(1, Math.round(p.korpusse || 1));
     if (nk === 1) return buildOne(p);
     const Wk = p.W / nk, colsPer = (p.dividers || 0) + 1;
@@ -121,7 +170,7 @@
       all.hinges.push(...sub.hinges.map((h) => Object.assign({}, h, { vert: h.vert + off })));
     }
     if (all.errors.length) return { p, parts: [], cutlist: [], errors: all.errors, warnings: all.warnings, derived: {}, holes: [], feet: [], profiles: [], hinges: [] };
-    if (p.typ === 'sideboard') {
+    if (p.typ === 'sideboard' && !p.noAp) {
       const at = p.apT || p.t;
       all.parts.push({ name: 'Arbeitsplatte', cut: [Math.floor(p.W), Math.floor(p.D + p.apUeb)], grain: 0, mat: 'ap', edgeKind: 'B', edgeNames: { W0: 'Vorderkante' },
         thick: at, back: false, size: [Math.floor(p.W), at, Math.floor(p.D + p.apUeb)], pos: [0, p.H + at / 2, p.apUeb / 2], edges: ['W0', 'L0', 'L1'], noJoint: true });
@@ -291,7 +340,7 @@
         if (TH > 2000) warnings.push('Schiebetür Spalte ' + (c + 1) + ': Türhöhe über 2000 mm – laut Hettich nicht zulässig.');
         const yd = yb + t + p.stProfilH + TH / 2;
         const zFront = zf - p.stVorne - ft / 2, zBack = zf - p.stVorne - p.stSpur - ft / 2;
-        add('Schiebetür', [TH, TB], { thick: ft, dims: [TB, TH, ft] }, [x0 + p.stSeite + TB / 2, yd, zFront], ['W0', 'W1', 'L0', 'L1'], 1, { mat: 'front', edgeKind: 'C', noJoint: true, edgeNames: { L0: 'Unterkante', L1: 'Oberkante', W0: 'links (von vorne)', W1: 'rechts (von vorne)' } });
+        add('Schiebetür', [TH, TB], { thick: ft, dims: [TB, TH, ft] }, [x0 + p.stSeite + TB / 2, yd, zFront], ['W0', 'W1', 'L0', 'L1'], 1, { mat: 'front', edgeKind: 'C', noJoint: true, slide: TB - p.stUeberlapp, edgeNames: { L0: 'Unterkante', L1: 'Oberkante', W0: 'links (von vorne)', W1: 'rechts (von vorne)' } });
         doorInfo.push({ part: parts.length - 1, typ: 'st' });
         add('Schiebetür', [TH, TB], { thick: ft, dims: [TB, TH, ft] }, [x1 - p.stSeite - TB / 2, yd, zBack], ['W0', 'W1', 'L0', 'L1'], 1, { mat: 'front', edgeKind: 'C', noJoint: true, edgeNames: { L0: 'Unterkante', L1: 'Oberkante', W0: 'links (von vorne)', W1: 'rechts (von vorne)' } });
         doorInfo.push({ part: parts.length - 1, typ: 'st' });
@@ -312,7 +361,7 @@
       const y0d = yb + p.fuge / 2, y1d = yt - p.fuge / 2, hD = y1d - y0d;
       const zc = zf + ft / 2;
       const mk = (a, b, side, vert) => {
-        add('Drehtür', [hD, b - a], { thick: ft, dims: [b - a, hD, ft] }, [(a + b) / 2, (y0d + y1d) / 2, zc], ['W0', 'W1', 'L0', 'L1'], 1, { mat: 'front', edgeKind: 'C', noJoint: true, edgeNames: { L0: 'Unterkante', L1: 'Oberkante', W0: 'links (von vorne)', W1: 'rechts (von vorne)' } });
+        add('Drehtür', [hD, b - a], { thick: ft, dims: [b - a, hD, ft] }, [(a + b) / 2, (y0d + y1d) / 2, zc], ['W0', 'W1', 'L0', 'L1'], 1, { mat: 'front', edgeKind: 'C', noJoint: true, hinge: side, edgeNames: { L0: 'Unterkante', L1: 'Oberkante', W0: 'links (von vorne)', W1: 'rechts (von vorne)' } });
         doorInfo.push({ part: parts.length - 1, typ: 'dt', side, vert });
       };
       if (typ === 'dt-2') { const m = (xl + xr) / 2; mk(xl, m - p.fuge / 2, -1, L); mk(m + p.fuge / 2, xr, 1, R); }

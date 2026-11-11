@@ -77,10 +77,18 @@ Starten: im Repo-Ordner `python3 -m http.server 8000`, dann `http://localhost:80
 - „Korpusse“ = Anzahl gleich breiter Korpusse nebeneinander (z. B. weil Böden länger als 2800 mm nicht aus einer
   Dekorplatte gehen). Beim Sideboard eine durchgehende Arbeitsplatte (Frischeis bis 4100 mm). Türen je Spalte über alle
   Korpusse. Verbindung der Korpusse untereinander noch nicht festgelegt.
-- Vorlage „Vorschlag: Sideboard Fensterwand 3540“: 3530 breit (je 5 mm Luft zur Wand), Korpus 760 inkl. Füße 100,
+- Vorlage „Vorschlag: Sideboard Fensterwand 3540“: 3540 von Wand zu Wand mit Passblenden 50 mm, Korpus 760 inkl. Füße 100,
   Arbeitsplatte 38 → 798 bis Fenster-UK 800; 2 Korpusse à 3 Spalten, 6 Drehtüren; Korpus EGGER W1000 ST19
   (14148/1000), Fronten EGGER Wildeiche natur H1318 (14158/1318), Arbeitsplatte Kaindl Granito anthrazit 4288
   (50235/4288, Postforming 38 mm), Kanten 24747/0004, 24565/1318, 50382/4288, Rückwand FINSA HDF weiß 3 mm (04333/0015).
+
+## Wand zu Wand
+- Option „Von Wand zu Wand“: Korpusse um 2 × Passblende schmaler, Passblenden links/rechts in Frontmaterial
+  (Kantenart C oben, unten und zur Tür; Wandseite unbekantet zum Anpassen), Höhe wie die Türen, in Frontebene.
+  Breite 50 mm* (Vorgabe, bitte prüfen – muss das Öffnen der Türen an der Wand erlauben). Befestigung noch offen.
+  Sockelblenden der äußeren Korpusse laufen bis zur Wand. Arbeitsplatte wandbündig ohne Seitenkanten;
+  bei „Postforming“ im Artikelnamen keine Vorderkante (ab Werk geformt).
+- 3D: Regler „Türen öffnen“ – Drehtüren schwenken um die Bandkante (bis 100°), vordere Schiebetür fährt über die hintere.
 
 ## Kataloge aktualisieren
 ```

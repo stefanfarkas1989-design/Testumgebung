@@ -132,6 +132,21 @@ for (const W of [800, 1001, 1200, 1499]) for (const t of [19, 18.9]) for (const 
   const xs = r.parts.filter((q) => q.name === 'Seitenwand').map((q) => q.pos[0]).sort((a, b) => a - b);
   ok(Math.abs(xs[0] + 3530 / 2 - 9.5) < 0.01 && Math.abs(xs[3] - 3530 / 2 + 9.5) < 0.01, 'Seiten außen bündig mit Gesamtbreite');
 }
+// Wand zu Wand mit Passblenden
+{
+  const r = M.buildRegal({ typ: 'sideboard', W: 3540, H: 760, D: 400, korpusse: 2, dividers: 2, shelves: 1, apT: 38, wand: true, passB: 50,
+    doors: ['dt-l', 'dt-l', 'dt-r', 'dt-l', 'dt-r', 'dt-r'], apFe: { name: 'Kaindl Postforming Arbeitsplatte' } });
+  const g = (n) => r.cutlist.find((c) => c.name === n);
+  ok(!r.errors.length, 'Wand zu Wand ohne Fehler');
+  ok(g('Arbeitsplatte').l === 3540 && g('Arbeitsplatte').edges.length === 0, 'Arbeitsplatte wandbündig, keine Seitenkanten, Postforming vorne ohne Kante');
+  ok(g('Boden').l === 1720 - 38, 'Korpus = (3540 − 2 × 50) / 2');
+  ok(g('Passblende').qty === 2 && g('Passblende').w === 48, 'Passblenden 50 − halbe Fuge');
+  const pl = r.parts.filter((q) => q.name === 'Sockelblende');
+  ok(Math.abs(Math.min(...pl.map((q) => q.pos[0] - q.size[0] / 2)) + 1770) < 0.01 && Math.abs(Math.max(...pl.map((q) => q.pos[0] + q.size[0] / 2)) - 1770) < 0.01, 'Sockelblenden bis zur Wand');
+  ok(r.parts.filter((q) => q.name === 'Drehtür').every((q) => q.hinge === -1 || q.hinge === 1), 'Drehtüren kennen ihre Bandseite');
+  const nopf = M.buildRegal({ typ: 'sideboard', W: 2000, H: 760, D: 400, wand: true, apT: 38 });
+  ok(nopf.cutlist.find((c) => c.name === 'Arbeitsplatte').edges.join() === 'W0', 'ohne Postforming: nur Vorderkante');
+}
 const total = m.cutlist.reduce((s, g) => s + g.qty, 0);
 const placedAll = Object.values(plan.groups).reduce((s, g) => s + g.sheets.reduce((a, sh) => a + sh.items.length, 0), 0);
 ok(total === placedAll, 'alle ' + total + ' Teile platziert (' + placedAll + ')');
