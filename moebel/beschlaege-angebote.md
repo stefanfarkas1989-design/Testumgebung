@@ -36,3 +36,39 @@ Stand: Suche am 11.11.2026, Preise aus Suchergebnissen bzw. Shop-Titeln, **nicht
 - [Leitermann Sockelverstellfuß-Set](https://www.leitermann.de/hettich-sockelverstellfuss-set-100-120-x-oe-25-mm-kunststoff-schwarz-100-120-mm/1597983/)
 - [Hornbach.at Holzdübel](https://www.hornbach.at/s/holzd%C3%BCbel), [Frischeis Verbindungstechnik](https://www.frischeis.at/shop/platte/tischlerzubehor/verbindungstechnik~c14209184)
 - [Galaxus.at SPAX 4 × 35, 200 Stk](https://www.galaxus.at/en/s4/product/spax-universal-screws-4-x-35-mm-200-pieces-200-screws-per-piece-screws-13851791), [OBI.at SPAX 4 × 35, 500 Stk](https://www.obi.at/p/7598618/spax-senkkopf-universalschraube-t-star-plus-antrieb-4-mm-x-35-mm-500-stueck)
+
+---
+
+# Alternativen zu Frischeis für Privatkunden (Zuschnitt + Bekantung, Österreich)
+
+Recherche 11.11.2026. Nichts bestellt, Preise und Bedingungen bitte direkt beim Anbieter bestätigen.
+
+| Anbieter | Ort | Privatkunden | Bestellweg | EGGER W1000 / H1318 / Granit-AP | Hinweise |
+|---|---|---|---|---|---|
+| **PKS Kaiser** (Wolfgang Kaiser GmbH) | 8234 Rohrbach/Lafnitz (Stmk.) | ja (FAQ auf der Startseite erwähnt Widerrufsrecht für Privatkunden) | Online-Shop, Beratung vor Ort | W1000 ST19 in 8 und 19 mm ✔, H1318 ST10 in 8/19/25 mm ✔, Arbeitsplatten-Dekor F032 Cascia Granit grau als APL 38 mm gelistet (Preis ohne Angabe) | Zuschnitt, Bekantung (Plasma-Nullfuge oder verleimt), CNC und Laser „ab Stückzahl 1“; Versand per Paketdienst oder Spedition, Kosten im Angebot; Abholung möglich |
+| **Holzwurm** | Wiener Neustadt (NÖ) | ja | Excel-Formular per E-Mail (verkauf@holzwurm.at) | Dekore nicht geprüft | Zuschnitt und Bekantung, Lieferung oder Abholung |
+| **Holz-HRAD** | 1230 Wien | nicht angegeben | Online-Eingabe der Zuschnitte mit Schnittoptimierung | EGGER, Fundermax, Kaindl (einzelne Dekore nicht geprüft) | verrechnet nur die bestellte Fläche (ab 0,1 m²) plus Kanten-Laufmeter (1 oder 2 mm) |
+| **profimoebel.at** | 8323 Krumegg (Stmk.) | richtet sich an „Heimwerker und Profis“ | Online-Konfigurator mit Kantenwahl V/H/L/R | W1000 und H1318 **nicht** in der Lagerkollektion gelistet | Laserkante, ab 1 Woche Lieferzeit |
+| plattenshop.eu | Scheer (DE) | – | Konfigurator mit **CSV-Import** | W1000 ja, H1318 nein | **liefert nicht mehr außerhalb Deutschlands** – scheidet aus |
+
+## PKS Kaiser – Richtpreise aus der Preisliste (für Gewerbekunden, exkl. MwSt.)
+- W1000 ST19, 19 mm: 35,81 €/m² zugeschnitten; 8 mm: 32,19 €/m²
+- H1318 ST10, 19 mm: 27,70 €/m²
+- Kanten aufgeklebt: 3,10 / 4,88 / 6,27 €/lfm sowie 3,74 / 5,59 / 7,03 €/lfm. Laut Spaltenüberschrift „1 mm / 23 mm“
+  bis „2 mm / 43 mm“; ich lese den ersten Wert als 1 × 23 mm (Zuordnung im Text nicht eindeutig).
+
+**Grobe Hochrechnung für das Sideboard** (Flächen aus dem Generator, Kanten mit 3,10 €/lfm angenommen):
+W1000 19 mm 6,31 m² ≈ 226 € · W1000 8 mm (Rückwand) 2,16 m² ≈ 69 € · H1318 19 mm 2,34 m² ≈ 65 € ·
+Kanten 16,7 m + 16,2 m ≈ 102 € → **≈ 462 € exkl. MwSt.**, ohne Arbeitsplatte (Preis auf Anfrage), ohne Versand,
+ohne Mindestverrechnung. Privatkundenpreise können abweichen.
+
+**Arbeitsplatte:** PKS führt EGGER F032 Cascia Granit grau als 38-mm-Arbeitsplatte (APL). Der bisher gewählte
+Kaindl Granito anthrazit (Frischeis 50235/4288) ist dort nicht gelistet.
+
+## Quellen
+- [PKS Kaiser](https://www.pks-kaiser.at/), [Preisliste EGGER](https://www.pks-kaiser.at/shop/preisliste/Egger), [Zuschnittdekore 2026 (PDF)](https://www.pks-kaiser.at/dateien/PKS_Zuschnittprogramm_2026.pdf), [Zuschnitt](https://www.pks-kaiser.at/leistungen/zuschnitt)
+- [Holzwurm – Zuschnitt](https://www.holzwurm.at/service/zuschnitt), [Holzwurm – Bekantung](https://www.holzwurm.at/service/bekantung)
+- [Holz-HRAD – Zuschnitte](https://holz-platten.at/1_43_Zuschnitte.html)
+- [profimoebel.at – Zuschnitt](https://www.profimoebel.at/shop/zuschnitt-k1-25mm/)
+- [plattenshop.eu](https://www.plattenshop.eu/index.php)
+- Übersicht: [klopfaufholz.at – Online-Zuschnitt Anbieter Österreich](https://klopfaufholz.at/zuschnitt/)
