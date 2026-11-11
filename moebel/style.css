@@ -15,7 +15,9 @@ main{display:grid;grid-template-columns:300px 1fr;grid-template-areas:"c s" "c r
 #controls label.chk{display:flex;gap:6px;font-size:13px;color:var(--mut)}
 #controls input[type=number]{width:70px}
 #controls input[type=range]{width:100%;accent-color:var(--acc)}
-#controls select{width:100%}
+#controls select,#controls input[type=text]{width:100%}
+#controls input[type=text]{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+#btnJaf{width:100%;margin-top:6px;background:var(--acc);color:#fff;border-color:var(--acc)}
 #stage{grid-area:s;position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;min-height:420px;overflow:hidden}
 #view{position:absolute;inset:0;touch-action:none}
 #view canvas{display:block;width:100%;height:100%}

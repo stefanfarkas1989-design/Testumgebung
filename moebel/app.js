@@ -143,6 +143,57 @@
       '<p class="note">Werkzeug: Akkuschrauber, Bohrer 5/7/8 mm, Zollstock, Winkel, Bleistift, Zwingen, ggf. Kantenbügeleisen.</p>';
   }
 
+  /* ---------- JAF/Frischeis-Formular ---------- */
+  const JAF_FIELDS = ['jMat', 'jBack', 'jKante', 'jObjekt', 'jFirma', 'jKunde'];
+  function initJaf() {
+    (window.FrischeisArtikel || []).forEach((a) => {
+      const o = document.createElement('option');
+      o.value = a.nr + ' ' + a.name; o.label = a.l + '×' + a.w + ', ' + a.dicken;
+      $('jArt').appendChild(o);
+    });
+    try { const s = JSON.parse(localStorage.getItem('moebel-jaf') || '{}'); JAF_FIELDS.forEach((k) => { if (s[k]) $(k).value = s[k]; }); } catch (e) { /* ignorieren */ }
+    JAF_FIELDS.forEach((k) => $(k).addEventListener('change', () => {
+      try { const s = {}; JAF_FIELDS.forEach((f) => (s[f] = $(f).value)); localStorage.setItem('moebel-jaf', JSON.stringify(s)); } catch (e) { /* ignorieren */ }
+    }));
+    $('btnJaf').addEventListener('click', exportJaf);
+  }
+  async function loadTemplate() {
+    if (window.__JAF_TEMPLATE_B64) {
+      const bin = atob(window.__JAF_TEMPLATE_B64); const u = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      return u.buffer;
+    }
+    const r = await fetch('vorlagen/JAF_AT_Zuschnitt_Formular_v43.xlsx');
+    if (!r.ok) throw new Error('Vorlage nicht gefunden');
+    return r.arrayBuffer();
+  }
+  async function exportJaf() {
+    const msg = $('jafMsg');
+    const set = (t) => { msg.textContent = t; };
+    if (!model || model.errors.length) { set('Bitte zuerst die Maße korrigieren.'); return; }
+    if (!window.JSZip) { set('JSZip konnte nicht geladen werden (Internetverbindung?).'); return; }
+    if (!$('jMat').value.trim()) { set('Bitte Art.-Nr./Bezeichnung der Platte eintragen.'); $('jMat').focus(); return; }
+    try {
+      const data = await window.JAF.fill(await loadTemplate(), model, {
+        material: $('jMat').value.trim(), backMaterial: $('jBack').value.trim(), kante: $('jKante').value.trim(),
+        objekt: $('jObjekt').value.trim() || ('Regal ' + state.W + 'x' + state.H + 'x' + state.D), firma: $('jFirma').value.trim(),
+        kundenNr: $('jKunde').value.trim(), rotate: state.rotate
+      });
+      const filename = 'JAF-Zuschnitt-Regal-' + state.W + 'x' + state.H + 'x' + state.D + '.xlsx';
+      let dl = null;
+      try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (e) { dl = null; }
+      if (dl) { await dl.save({ filename, data }); }
+      else {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+        a.download = filename; a.click();
+      }
+      set('Formular erstellt: ' + filename + '. Bitte vor dem Senden in Excel prüfen (Material, Kanten).');
+    } catch (e) {
+      set(e && e.code === 'declined' ? 'Speichern abgebrochen.' : 'Fehler: ' + (e && e.message || e));
+    }
+  }
+
   /* ---------- Export ---------- */
   function exportCsv() {
     const lines = ['Nr;Teil;Stück;Länge mm;Breite mm;Dicke mm'];
@@ -275,7 +326,7 @@
   }
 
   loadState();
-  initForm(); initTabs(); init3D(); syncForm(); update();
+  initForm(); initTabs(); initJaf(); init3D(); syncForm(); update();
   $('btnCsv').addEventListener('click', exportCsv);
   $('btnPrint').addEventListener('click', () => window.print());
   $('btnLink').addEventListener('click', () => {

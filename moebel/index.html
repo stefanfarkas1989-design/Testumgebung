@@ -52,6 +52,18 @@
       <label class="chk"><input type="checkbox" id="rotate"> Teile dürfen gedreht werden (Dekor ohne Maserung)</label>
     </section>
     <section>
+      <h2>Bestellung Frischeis</h2>
+      <label class="row">Platte <input type="text" id="jMat" list="jArt" placeholder="Art.-Nr. + Bezeichnung"></label>
+      <datalist id="jArt"></datalist>
+      <label class="row">Rückwand <input type="text" id="jBack" placeholder="Art.-Nr. HDF 3 mm"></label>
+      <label class="row">Kante A <input type="text" id="jKante" placeholder="Kante passend zur Platte"></label>
+      <label class="row">Objekt <input type="text" id="jObjekt" placeholder="z. B. Regal Flur"></label>
+      <label class="row">Firma <input type="text" id="jFirma"></label>
+      <label class="row">Kunden-Nr. <input type="text" id="jKunde"></label>
+      <button id="btnJaf" type="button">Zuschnitt-Formular (xlsx)</button>
+      <p class="note" id="jafMsg">Füllt das JAF-Formular v4.3. Art.-Nr. und Kante trägst du aus deinem Frischeis-Konto ein.</p>
+    </section>
+    <section>
       <h2>Ansicht</h2>
       <label>Explosion <input type="range" id="explode" min="0" max="100" step="1" value="0"></label>
       <label class="chk"><input type="checkbox" id="person" checked> Größenvergleich (Person 1,75 m)</label>
@@ -79,7 +91,10 @@
 </main>
 
 <script src="../lib/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="regal.js"></script>
+<script src="frischeis.js"></script>
+<script src="jaf.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
