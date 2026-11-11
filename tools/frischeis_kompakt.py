@@ -3,6 +3,8 @@
 Aufruf: python3 frischeis_kompakt.py <roh.json> moebel/frischeis-dekor.json"""
 import json, sys
 src = json.load(open(sys.argv[1], encoding='utf-8'))
+for a in src['artikel']:
+    a['kat'] = a['kat'] or 'sonstige'
 kats = sorted({a['kat'] for a in src['artikel']})
 out = {'quelle': src['quelle'], 'abgerufen': src['abgerufen'], 'hinweis': 'Öffentliche Artikeldaten ohne Preise',
        'kategorien': kats,

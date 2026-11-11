@@ -15,8 +15,8 @@ main{display:grid;grid-template-columns:300px 1fr;grid-template-areas:"c s" "c r
 #controls label.chk{display:flex;gap:6px;font-size:13px;color:var(--mut)}
 #controls input[type=number]{width:70px}
 #controls input[type=range]{width:100%;accent-color:var(--acc)}
-#controls select,#controls input[type=text]{width:100%}
-#controls input[type=text]{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+#controls select,#controls input[type=text],#controls input[type=search]{width:100%;min-width:0}
+#controls input[type=text],#controls input[type=search]{font:inherit;color:inherit;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
 .dlist{max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:6px;margin-top:4px}
 .dlist:empty{display:none}
 .dlist button{display:grid;grid-template-columns:14px 1fr;gap:2px 8px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:6px 8px;font-size:13px}

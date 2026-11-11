@@ -146,7 +146,7 @@
   /* ---------- Frischeis-Dekorkatalog ---------- */
   const KAT_NAMES = {
     'beschichtete-platte': 'Beschichtete Platte', 'dekorative-platte-mdf-hdf-hartfaser': 'Dekor MDF/HDF/Hartfaser',
-    'durchgefarbte-platte': 'Durchgefärbte Platte', 'grundierplatte': 'Grundierplatte', 'mobelfront': 'Möbelfront', 'prageplatte': 'Prägeplatte'
+    'durchgefarbte-platte': 'Durchgefärbte Platte', 'grundierplatte': 'Grundierplatte', 'mobelfront': 'Möbelfront', 'prageplatte': 'Prägeplatte', 'sonstige': 'Dekor-MDF/HDF, Prägeplatte u. a.'
   };
   const COLOR_HINTS = [
     [/weiß|weiss|white|w ?1000|w ?980|w ?1100|w ?1200|polar|alpinweiß/i, '#f1f1ec'], [/schwarz|black|u ?999|nero/i, '#2a2a2a'],
@@ -197,8 +197,11 @@
       if (kat && a.kat !== kat) continue;
       if (onlyT && Math.abs(a.t - state.t) > 0.5) continue;
       const hay = (a.nr + ' ' + a.name).toLowerCase();
-      if (q.every((w) => hay.includes(w))) { hits.push(a); if (hits.length >= 60) break; }
+      if (q.every((w) => hay.includes(w))) hits.push(a);
     }
+    // passende Stärke zuerst
+    hits.sort((x, y) => Math.abs(x.t - state.t) - Math.abs(y.t - state.t) || x.name.localeCompare(y.name, 'de'));
+    const more = hits.length > 60; hits.length = Math.min(hits.length, 60);
     const cur = state.fe && state.fe.nr;
     $('dList').innerHTML = (q.length || kat || onlyT) ? hits.map((a, i) =>
       '<button type="button" role="option" data-i="' + catalog.indexOf(a) + '"' + (a.nr === cur ? ' class="on" aria-selected="true"' : '') + '>' +
@@ -206,7 +209,7 @@
       '<small>' + esc(a.nr) + ' · ' + fmtT(a.t) + ' mm · ' + a.l + '×' + a.w + '</small></button>').join('') : '';
     const total = catalog.length;
     $('dInfo').textContent = !total ? 'Katalog nicht verfügbar.' :
-      (q.length || kat || onlyT ? (hits.length >= 60 ? 'Erste 60 Treffer, Suche verfeinern.' : hits.length + ' Treffer.') : total + ' dekorative Platten von frischeis.at (Stand ' + catalogDate + '). Ohne Preise, die siehst du in WebCut.') +
+      (q.length || kat || onlyT ? (more ? '60 von mehr Treffern, Suche verfeinern.' : hits.length + ' Treffer.') : total + ' dekorative Platten von frischeis.at (Stand ' + catalogDate + '). Ohne Preise, die siehst du in WebCut.') +
       (state.fe ? ' Gewählt: ' + state.fe.nr + '.' : '') + ' Farbe in 3D ist geschätzt.';
   }
   let catalogDate = '';
